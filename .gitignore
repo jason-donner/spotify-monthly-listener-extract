@@ -1,0 +1,41 @@
+# Ignore virtual environment
+.venv/
+
+# Ignore environment variables file
+.env
+
+# Ignore Spotipy and other cache files
+.cache
+.cache-*
+
+# Ignore results directory
+src/results/
+
+# Ignore log files
+*.log
+
+# Ignore Python bytecode
+__pycache__/
+*.pyc
+
+# VS Code settings
+.vscode/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Test output
+htmlcov/
+.coverage
+*.cover
+*.pytest_cache/
+.pytest_cache/
+
+# Jupyter Notebook checkpoints (if you ever use notebooks)
+.ipynb_checkpoints/
+
+# Backup files
+*.bak
+*.swp
+*.swo

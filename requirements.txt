@@ -1,0 +1,6 @@
+selenium
+tqdm
+colorama
+spotipy
+python-dotenv
+pytest
