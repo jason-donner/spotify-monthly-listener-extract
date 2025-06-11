@@ -21,9 +21,11 @@ from colorama import Fore, Style, init
 import logging
 import sys
 import argparse
+from dotenv import load_dotenv
 
 # Initialize colorama for colored console output
 init(autoreset=True)
+load_dotenv()
 
 
 def setup_driver(headless=False, chromedriver_path=None, user_data_dir=None):
