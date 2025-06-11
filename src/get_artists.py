@@ -119,6 +119,51 @@ def save_artist_list(artist_list, output_path):
         print(f"Failed to save artist list: {e}")
 
 
+def load_master_artist_list(master_path):
+    if os.path.exists(master_path):
+        with open(master_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return []
+
+
+def save_master_artist_list(artist_list, master_path):
+    output_dir = os.path.dirname(master_path)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+    with open(master_path, 'w', encoding='utf-8') as f:
+        json.dump(artist_list, f, indent=2)
+    logging.info(f"Saved {len(artist_list)} artists to {master_path}")
+    print(f"Saved {len(artist_list)} artists to {master_path}")
+
+
+def update_master_artist_list(master_list, current_list, today):
+    """
+    Update the master artist list with current followed artists.
+    Marks removed artists and adds new ones.
+    """
+    current_urls = {a['url'] for a in current_list}
+    master_urls = {a['url'] for a in master_list}
+
+    # Mark removed artists
+    for artist in master_list:
+        if artist['url'] not in current_urls and not artist.get('removed', False):
+            artist['removed'] = True
+            artist['date_removed'] = today
+        # If artist was previously removed but is now back, unmark as removed
+        if artist['url'] in current_urls and artist.get('removed', False):
+            artist['removed'] = False
+            artist.pop('date_removed', None)
+
+    # Add new artists
+    for artist in current_list:
+        if artist['url'] not in master_urls:
+            artist['date_added'] = today
+            artist['removed'] = False
+            master_list.append(artist)
+
+    return master_list
+
+
 def parse_args():
     """
     Parse command-line arguments for output file location, logging, and limits.
@@ -165,19 +210,14 @@ def report(artist_list, output_path):
 
 def main():
     """
-    Main workflow: authenticate, fetch followed artists, and save to file.
+    Main workflow: authenticate, fetch followed artists, and update master file.
     """
     args = parse_args()
 
-    # --- Ensure output is always in the results folder unless absolute path is given ---
     script_dir = os.path.dirname(os.path.abspath(__file__))
     results_dir = os.path.join(script_dir, "results")
     os.makedirs(results_dir, exist_ok=True)
-    if not os.path.isabs(args.output):
-        output_path = os.path.join(results_dir, os.path.basename(args.output))
-    else:
-        output_path = args.output
-    # -------------------------------------------------------------------------------
+    master_path = os.path.join(results_dir, "spotify-followed-artists-master.json")
 
     # --- Ensure logs are always in the script directory unless absolute path is given ---
     if not os.path.isabs(args.log):
@@ -217,28 +257,35 @@ def main():
 
     print("A browser window will open for Spotify authentication. Please log in and authorize the app.")
 
-    # Check if output file exists and handle according to --no-prompt flag
-    if os.path.exists(output_path) and not args.no_prompt:
-        while True:
-            confirm = input(f"File {output_path} exists. Overwrite? (y/N): ").strip().lower()
-            if confirm in ('y', 'n', ''):
-                break
-            print("Please enter 'y' or 'n'.")
-        if confirm != 'y':
-            print("Aborted by user.")
-            sys.exit(1)
+    today = datetime.now().strftime('%Y-%m-%d')
 
-    # Fetch followed artists and save to file
+    # Fetch followed artists
     artist_list = get_followed_artists(sp, limit=args.limit)
     if not artist_list:
         print("No followed artists found for this user.")
-    save_artist_list(artist_list, output_path)
+
+    # Load master, update, and save
+    master_list = load_master_artist_list(master_path)
+    before_urls = {a['url'] for a in master_list}
+    before_removed = {a['url'] for a in master_list if a.get('removed', False)}
+
+    updated_master = update_master_artist_list(master_list, artist_list, today)
+    after_urls = {a['url'] for a in updated_master}
+    after_removed = {a['url'] for a in updated_master if a.get('removed', False)}
+
+    num_added = len(after_urls - before_urls)
+    num_removed = len(after_removed - before_removed)
+
+    save_master_artist_list(updated_master, master_path)
 
     # Print summary report
-    report(artist_list, output_path)
+    print("\nSummary:")
+    print(f"  Total artists in master: {len(updated_master)}")
+    print(f"  New artists added: {num_added}")
+    print(f"  Artists marked as removed: {num_removed}")
+    print(f"  Output file: {master_path}")
 
-    # Inform the user of successful completion and exit with code 0
-    print(f"Done! Results saved to {output_path}")
+    print(f"Done! Master artist list saved to {master_path}")
     sys.exit(0)
 
 

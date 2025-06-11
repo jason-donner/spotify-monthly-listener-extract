@@ -50,21 +50,20 @@ def setup_driver(headless=False, chromedriver_path=None, user_data_dir=None):
 
 def load_urls(input_path=None):
     """
-    Load the list of artist URLs from the specified JSON file or the latest scraped file.
+    Load the list of artist URLs from the specified JSON file or the master artist file.
     """
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    results_dir = os.path.join(script_dir, "results")
+    master_artist_file = os.path.join(results_dir, 'spotify-followed-artists-master.json')
+
     if input_path:
         with open(input_path, 'r', encoding='utf-8') as f:
             return json.load(f)
-    # Always use absolute path based on script location
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    results_dir = os.path.join(script_dir, "results")
-    list_files = glob.glob(os.path.join(results_dir, 'spotify-artist-urls-*.json'))
-    if not list_files:
-        raise FileNotFoundError("No spotify-artist-urls-*.json files found in results/.")
-    latest_file = max(list_files, key=os.path.getctime)  # Get the most recently created file
-    tqdm.write(f"Using URL list: {latest_file}")
-    with open(latest_file, 'r', encoding='utf-8') as f:
-        return json.load(f)
+    elif os.path.exists(master_artist_file):
+        with open(master_artist_file, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    else:
+        raise FileNotFoundError("No artist URL file found. Please run get_artists.py first.")
 
 
 def scrape_artist(driver, url, wait_time=7):
@@ -168,6 +167,28 @@ def save_results(results, today, output_path=None):
     return output_file
 
 
+def append_to_master(results, master_path='results/spotify-monthly-listeners-master.json'):
+    """
+    Append new results to the master JSON file, avoiding duplicates by URL and date.
+    """
+    if os.path.exists(master_path):
+        with open(master_path, 'r', encoding='utf-8') as f:
+            master_data = json.load(f)
+    else:
+        master_data = []
+
+    # Avoid duplicates: only add if (url, date) not already present
+    existing = {(item['url'], item['date']) for item in master_data}
+    new_items = [r for r in results if (r['url'], r['date']) not in existing]
+    if new_items:
+        master_data.extend(new_items)
+        with open(master_path, 'w', encoding='utf-8') as f:
+            json.dump(master_data, f, indent=2)
+        tqdm.write(Fore.GREEN + f"Appended {len(new_items)} new records to {master_path}")
+    else:
+        tqdm.write(Fore.YELLOW + "No new records to append to master file.")
+
+
 def report(results, failed_urls):
     """
     Print a summary report of the scraping session, including failed URLs.
@@ -252,20 +273,13 @@ def parse_args():
 def main():
     """
     Main entry point for the script.
-    Loads URLs, scrapes data, retries failures, saves results, and prints a report.
+    Loads URLs, scrapes data, retries failures, saves results to master, and prints a report.
     """
-    # Parse command-line arguments
     args = parse_args()
 
-    # --- BEGIN FIX: Always write to results folder ---
     script_dir = os.path.dirname(os.path.abspath(__file__))
     results_dir = os.path.join(script_dir, "results")
     os.makedirs(results_dir, exist_ok=True)
-    if not os.path.isabs(args.output):
-        output_path = os.path.join(results_dir, os.path.basename(args.output))
-    else:
-        output_path = args.output
-    # --- END FIX ---
 
     # --- BEGIN FIX: Always write logs to script directory ---
     if not os.path.isabs(args.log):
@@ -283,11 +297,9 @@ def main():
         level=logging.INFO
     )
     today = datetime.now().strftime('%Y-%m-%d')
-    # Set up progress bar format
     bar_format = "{l_bar}{bar}| {n_fmt}/{total_fmt} artists scraped | Elapsed: {elapsed} | ETA: {remaining}"
     tqdm.write(f"[{now()}] Starting scrape...")
 
-    # Set up Selenium driver
     driver = None
     try:
         driver = setup_driver(
@@ -295,38 +307,27 @@ def main():
             chromedriver_path=args.chromedriver,
             user_data_dir=args.user_data_dir
         )
-        # Load artist URLs
         urls = load_urls(args.input)
         if not urls:
             tqdm.write(Fore.YELLOW + "No URLs loaded. Exiting.")
             logging.warning("No URLs loaded. Exiting.")
             return
         logging.info(f"Loaded {len(urls)} URLs for scraping.")
-        # Optionally limit number of artists
         if args.limit:
             urls = urls[:args.limit]
-        # Scrape all artists
         results, failed_urls = scrape_all(driver, urls, today, bar_format, wait_time=args.wait)
-        # Retry failed URLs
         retry_results = retry_failed(driver, failed_urls, today)
         results.extend(retry_results)
-        # Print failed URLs after retry
         still_failed = [url for url in failed_urls if url not in [r['url'] for r in retry_results]]
         if still_failed:
             tqdm.write(Fore.RED + f"{len(still_failed)} URLs still failed after retry:")
             for url in still_failed:
                 tqdm.write(Fore.RED + f"  {url['url'] if isinstance(url, dict) else url}")
-        # Save results to file
-        if os.path.exists(output_path) and not getattr(args, 'no_prompt', False):
-            confirm = input(f"File {output_path} exists. Overwrite? (y/N): ")
-            if confirm.lower() != 'y':
-                print("Aborted by user.")
-                sys.exit(1)
-        save_results(results, today, output_path=output_path)
-        # Print summary report
+        # --- Only append to master file ---
+        master_path = os.path.join(results_dir, 'spotify-monthly-listeners-master.json')
+        append_to_master(results, master_path=master_path)
         report(results, failed_urls)
-        logging.info(f"Scraping completed successfully. {len(results)} results saved.")
-        # Warn if high failure rate
+        logging.info(f"Scraping completed successfully. {len(results)} results saved to master.")
         if len(failed_urls) > 0.5 * len(urls):
             tqdm.write(Fore.RED + "Warning: More than 50% of URLs failed. Check your network or login status.")
     except KeyboardInterrupt:
@@ -338,12 +339,10 @@ def main():
         logging.error(f"File error: {fnf}")
         sys.exit(1)
     except Exception as e:
-        # Handle any fatal errors
         logging.error(f"Script crashed: {e}", exc_info=True)
         tqdm.write(Fore.RED + "A fatal error occurred. See scrape.log for details.")
         sys.exit(1)
     finally:
-        # Always close the Selenium driver
         if driver:
             driver.quit()
         tqdm.write(Fore.CYAN + "Scraping session finished. Goodbye!")
