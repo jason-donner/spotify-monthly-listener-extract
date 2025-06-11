@@ -133,10 +133,45 @@ python src/scrape.py
 
 ---
 
+### How Artist Tracking Works
+
+- When you run `get_artists.py`, it exports your currently followed artists to a dated JSON file (e.g., `results/spotify-artist-urls-YYYYMMDD.json`).
+- It also updates a **master file**:  
+  `results/spotify-followed-artists-master.json`
+    - This file keeps a running history of every artist you've ever followed.
+    - Each artist entry includes:
+      - `artist_name`
+      - `url`
+      - `date_added`: The date you first followed the artist (or when they were first detected)
+      - `removed`: `true` if you have unfollowed the artist, `false` otherwise
+      - `date_removed`: The date you unfollowed the artist (if applicable)
+    - If you re-follow an artist, their `removed` status is reset.
+
+### Scraping and Master Listener File
+
+- When you run `scrape.py`, it scrapes monthly listener counts for all artists in your master file (or a specific input file).
+- Scraped results are saved to a dated file (e.g., `results/spotify-scraped-listeners-YYYYMMDD.json`).
+- All scraped data is also appended to a **master listener file**:  
+  `results/spotify-monthly-listeners-master.json`
+    - This file contains every scrape result, with:
+      - `artist_name`
+      - `url`
+      - `monthly_listeners`
+      - `date` (when the data was scraped)
+    - Duplicate entries (same artist and date) are avoided.
+
+---
+
 ## Output
 
-- All results are saved in the `results/` folder by default.
-- Log files are saved as `get_artists.log`, `scrape.log`, and `automation.log`.
+- **Dated export files**:  
+  - `results/spotify-artist-urls-YYYYMMDD.json`: Your followed artists at a point in time.
+  - `results/spotify-scraped-listeners-YYYYMMDD.json`: Listener counts scraped on a given date.
+- **Master files**:  
+  - `results/spotify-followed-artists-master.json`:  
+    Tracks all artists you’ve ever followed, with `date_added`, `removed`, and `date_removed` fields.
+  - `results/spotify-monthly-listeners-master.json`:  
+    Tracks all scraped listener data over time for all artists.
 
 ---
 
@@ -145,6 +180,8 @@ python src/scrape.py
 - Both scripts support command-line arguments for output file, logging, and limits.
 - See `python src/get_artists.py --help` and `python src/scrape.py --help` for all options.
 - **No file paths are hardcoded:** All paths can be set via arguments or environment variables.
+- **Artist history is preserved:**  
+  The master artist file allows you to see when you started or stopped following each artist.
 
 ---
 
