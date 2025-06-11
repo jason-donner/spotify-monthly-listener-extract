@@ -160,13 +160,32 @@ You can automate the entire workflow using the provided batch file.
 cd /d "%~dp0"
 call .venv\Scripts\activate
 python src\get_artists.py --no-prompt --log get_artists.log
-python src\scrape.py --no-prompt --log scrape.log --chromedriver "C:\path\to\chromedriver.exe"
+python src\scrape.py --no-prompt --log scrape.log
 echo %DATE% %TIME% - Monthly listener workflow completed >> automation.log
 ```
 
 - `%~dp0` ensures the batch file always runs from the project folder, no matter where it's launched from.
 - This batch file runs both scripts with no prompts and logs all output to `automation.log`.
-- **Update the `--chromedriver` path to match your system.**
+- **Do not hardcode your ChromeDriver path in the batch file. Instead, set it in your `.env` file as described below.**
+
+---
+
+### Setting the ChromeDriver Path
+
+Before running the workflow, you must tell the scripts where to find your `chromedriver.exe`.  
+**Create or edit a `.env` file in your project folder and add:**
+
+```
+CHROMEDRIVER_PATH=C:\Path\To\chromedriver.exe
+```
+
+- Replace `C:\Path\To\chromedriver.exe` with the actual path to your ChromeDriver executable.
+- On Windows, backslashes are fine.
+- Do **not** commit your `.env` file to version control.
+
+If you do not have ChromeDriver, download it from [https://chromedriver.chromium.org/downloads](https://chromedriver.chromium.org/downloads) and place it somewhere on your system.
+
+---
 
 ### Scheduling with Windows Task Scheduler
 
