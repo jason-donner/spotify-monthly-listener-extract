@@ -39,3 +39,6 @@ htmlcov/
 *.bak
 *.swp
 *.swo
+
+# ignore token cache
+app/spotify-listener-tracker/spotify_token_cache.json
