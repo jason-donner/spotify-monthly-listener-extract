@@ -1,0 +1,358 @@
+<!doctype html>
+<html>
+<head>
+    <title>Spotify Listener Tracker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            background: #191414;
+            color: #fff;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        h1 {
+            color: #1DB954;
+            text-align: center;
+            margin-top: 32px;
+            letter-spacing: 2px;
+        }
+        form {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            margin: 32px 0 24px 0;
+        }
+        input[type="text"] {
+            padding: 12px 16px;
+            border: none;
+            border-radius: 24px 0 0 24px;
+            outline: none;
+            width: 320px;
+            font-size: 1.1em;
+            background: #222326;
+            color: #fff;
+        }
+        button[type="submit"] {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 0 24px 24px 0;
+            background: #1DB954;
+            color: #fff;
+            font-weight: bold;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button[type="submit"]:hover {
+            background: #1ed760;
+        }
+        #suggestion-box {
+            position: absolute;
+            left: 0;
+            top: 100%;
+            background: #222326;
+            border: 1px solid #1DB954;
+            z-index: 1000;
+            width: 100%;
+            display: none;
+            border-radius: 0 0 12px 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+        }
+        #suggestion-box div {
+            padding: 10px 16px;
+            cursor: pointer;
+            color: #fff;
+            transition: background 0.15s;
+        }
+        #suggestion-box div:hover {
+            background: #1DB954;
+            color: #191414;
+        }
+        table {
+            margin: 0 auto;
+            border-collapse: collapse;
+            width: 90%;
+            background: #222326;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+        }
+        th, td {
+            padding: 14px 18px;
+            text-align: left;
+        }
+        th {
+            background: #1DB954;
+            color: #191414;
+            font-size: 1.05em;
+            letter-spacing: 1px;
+        }
+        tr:nth-child(even) {
+            background: #191414;
+        }
+        tr:nth-child(odd) {
+            background: #222326;
+        }
+        a {
+            color: #1DB954;
+            text-decoration: none;
+            font-weight: bold;
+            transition: color 0.2s;
+        }
+        a:hover {
+            color: #1ed760;
+            text-decoration: underline;
+        }
+        @media (max-width: 600px) {
+            input[type="text"] {
+                width: 140px;
+                font-size: 1em;
+            }
+            table, th, td {
+                font-size: 0.95em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>
+        <a href="/" style="color:#1DB954;text-decoration:none;cursor:pointer;">Spotify Listener Tracker</a>
+    </h1>
+    <form method="get">
+        <input type="text" name="artist" placeholder="Search artist..." value="{{ query }}" autocomplete="off">
+        <button type="submit">Search</button>
+        <div id="suggestion-box"></div>
+    </form>
+    {% if results %}
+        <h2 style="text-align:center; color:#fff; font-weight:normal;">Results for "<span style="color:#1DB954;">{{ query }}</span>"</h2>
+        <table>
+            <tr>
+                <th>Artist Name</th>
+                <th>Monthly Listeners</th>
+                <th>Date</th>
+            </tr>
+            {% for r in results %}
+            <tr>
+                <td>
+                    <a href="{{ r.url }}" target="_blank">{{ r.artist_name }}</a>
+                </td>
+                <td>{{ r.monthly_listeners }}</td>
+                <td>{{ r.date }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% if results and results|length > 1 %}
+        <div style="max-width:700px;margin:32px auto;">
+            <canvas id="trendChart"></canvas>
+        </div>
+        <script>
+            // Prepare data for the chart
+            const trendLabels = [
+                {% for r in results[::-1] %}"{{ r.date }}",{% endfor %}
+            ];
+            const trendData = [
+                {% for r in results[::-1] %}{{ r.monthly_listeners }},{% endfor %}
+            ];
+
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: trendLabels,
+                    datasets: [{
+                        label: 'Monthly Listeners',
+                        data: trendData,
+                        borderColor: '#1DB954',
+                        backgroundColor: 'rgba(29,185,84,0.1)',
+                        tension: 0.3,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#1DB954',
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Date', color: '#fff' },
+                            ticks: { color: '#fff' }
+                        },
+                        y: {
+                            title: { display: true, text: 'Listeners', color: '#fff' },
+                            ticks: { color: '#fff' }
+                        }
+                    }
+                }
+            });
+        </script>
+        {% endif %}
+        <div id="artist-sections" style="display:flex;gap:32px;justify-content:center;align-items:flex-start;margin:32px auto 0 auto;max-width:1200px;">
+    <div style="flex:2;display:flex;justify-content:center;">
+        <div id="top-tracks" style="width:100%;max-width:700px;"></div>
+    </div>
+    <div style="flex:1;min-width:320px;max-width:400px;display:flex;flex-direction:column;align-items:center;">
+        <div id="artist-info" style="width:100%;"></div>
+        <div id="single-player" style="width:100%;margin-top:24px;"></div>
+    </div>
+</div>
+        <script>
+        // Automatically fetch top tracks for the first artist in results
+        const artistUrl = "{{ results[0].url }}";
+        const artistName = "{{ results[0].artist_name }}";
+        const artistId = artistUrl.split('/').pop();
+        fetch(`/top_tracks/${artistId}`)
+            .then(res => res.json())
+            .then(tracks => {
+                const div = document.getElementById('top-tracks');
+                if (!tracks.length) {
+                    div.innerHTML = `<h3 style="color:#1DB954;">No top tracks found for ${artistName}.</h3>`;
+                    return;
+                }
+                div.innerHTML = `<h3 style="color:#1DB954; text-align:center;">Top Tracks for ${artistName}</h3>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;justify-items:center;">` +
+                    tracks.map(t => {
+                        const match = t.url.match(/track\/([a-zA-Z0-9]+)/);
+                        const trackId = match ? match[1] : null;
+                        return `
+                        <div style="background:#191414;padding:12px 8px;border-radius:12px;width:95%;max-width:340px;box-shadow:0 2px 8px rgba(0,0,0,0.3);text-align:left;display:flex;align-items:center;gap:18px;margin:0 auto;">
+                            <img src="${t.album_image}" alt="${t.name}" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:2px solid #1DB954;cursor:pointer;" onclick="playTrack('${trackId}', '${t.name.replace(/'/g, "\\'")}')">
+                            <div>
+                                <a href="#" onclick="playTrack('${trackId}', '${t.name.replace(/'/g, "\\'")}'); return false;" style="text-decoration:none;color:#1DB954;font-weight:bold;font-size:1.08em;cursor:pointer;">${t.name}</a>
+                            </div>
+                        </div>
+                        `;
+                    }).join('') +
+                    `</div>`;
+            });
+        </script>
+        <script>
+        const artistUrl2 = "{{ results[0].url }}";
+        const artistId2 = artistUrl2.split('/').pop();
+        fetch(`/artist_info/${artistId2}`)
+            .then(res => res.json())
+            .then(info => {
+                if (!info.name) return;
+                let genres = info.genres.length ? info.genres.join(', ') : 'N/A';
+                document.getElementById('artist-info').innerHTML = `
+                    <div style="display:flex;align-items:center;gap:24px;background:#222326;padding:24px;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.4);">
+                        <img src="${info.image}" alt="${info.name}" style="width:120px;height:120px;object-fit:cover;border-radius:12px;border:3px solid #1DB954;">
+                        <div>
+                            <h2 style="margin:0 0 8px 0;color:#1DB954;">${info.name}</h2>
+                            <p style="margin:4px 0;"><strong>Genres:</strong> ${genres}</p>
+                            <p style="margin:4px 0;"><strong>Followers:</strong> ${info.followers.toLocaleString()}</p>
+                            <a href="${info.url}" target="_blank" style="color:#1DB954;">View on Spotify</a>
+                        </div>
+                    </div>
+                `;
+            });
+        </script>
+    {% else %}
+        {% if query %}
+        <p style="text-align:center; color:#fff;">No results found.</p>
+        {% endif %}
+    {% endif %}
+    {% if not results and not query %}
+<div style="max-width:600px;margin:48px auto 0 auto;text-align:center;">
+    <h2 style="color:#1DB954;">Welcome to Spotify Listener Tracker</h2>
+    <p style="font-size:1.15em;">
+        Search for any artist to view their monthly listener trends, top tracks, and more Spotify stats.<br>
+        Start by typing an artist's name in the search box above! Results are based on my followed artists only.
+    </p>
+    <h3 style="color:#1DB954;margin-top:32px;">Try one of my top artists:</h3>
+    <div id="suggested-artists" style="display:flex;justify-content:center;gap:18px;flex-wrap:wrap;margin-bottom:24px;">
+    <!-- JS will fill this in -->
+    </div>
+    <script>
+    const topArtists = [
+        "see through person",
+        "red sun",
+        "Pomfret",
+        "no problemo!",
+        "Collars"
+    ];
+
+    const container = document.getElementById('suggested-artists');
+    topArtists.forEach(name => {
+        // You need a backend endpoint like /artist_image?name=...
+        fetch(`/artist_image?name=${encodeURIComponent(name)}`)
+            .then(res => res.json())
+            .then(data => {
+                const div = document.createElement('div');
+                div.style.display = "flex";
+                div.style.flexDirection = "column";
+                div.style.alignItems = "center";
+                div.innerHTML = `
+                    <a href="?artist=${encodeURIComponent(name)}">${name}</a>
+                    <img src="${data.image}" alt="${name}" style="width:64px;height:64px;border-radius:50%;margin-top:6px;">
+                `;
+                container.appendChild(div);
+            });
+    });
+    </script>
+    <ul style="max-width:500px;margin:32px auto 0 auto;color:#ccc;font-size:1.08em;text-align:center;display:block;">
+        <li style="margin-bottom:8px;">Track monthly Spotify listeners over time</li>
+        <li style="margin-bottom:8px;">See top tracks and play previews</li>
+        <li style="margin-bottom:8px;">View genres and follower counts</li>
+        <li>Direct links to Spotify artist pages</li>
+    </ul>
+    <div style="text-align:center;margin-top:32px;">
+        <img src="https://storage.googleapis.com/pr-newsroom-wp/1/2018/11/Spotify_Logo_CMYK_Green.png" alt="Spotify Logo" style="height:48px;">
+    </div>
+</div>
+{% endif %}
+    <script>
+document.addEventListener('DOMContentLoaded', function() {
+    const input = document.querySelector('input[name="artist"]');
+    const suggestionBox = document.getElementById('suggestion-box');
+    const form = input.closest('form');
+
+    input.addEventListener('input', function() {
+        const val = this.value;
+        if (val.length < 2) {
+            suggestionBox.style.display = 'none';
+            return;
+        }
+        fetch(`/suggest?term=${encodeURIComponent(val)}`)
+            .then(res => res.json())
+            .then(data => {
+                suggestionBox.innerHTML = '';
+                if (data.length === 0) {
+                    suggestionBox.style.display = 'none';
+                    return;
+                }
+                data.forEach(item => {
+                    const div = document.createElement('div');
+                    div.textContent = item;
+                    div.addEventListener('mousedown', function() {
+                        input.value = item;
+                        suggestionBox.style.display = 'none';
+                        form.submit();
+                    });
+                    suggestionBox.appendChild(div);
+                });
+                suggestionBox.style.display = 'block';
+            });
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!suggestionBox.contains(e.target) && e.target !== input) {
+            suggestionBox.style.display = 'none';
+        }
+    });
+});
+    </script>
+    <script>
+function playTrack(trackId, trackName) {
+    if (!trackId) return;
+    document.getElementById('single-player').innerHTML = `
+        <h4 style="color:#1DB954;text-align:center;margin-bottom:8px;">Now Playing: ${trackName}</h4>
+        <iframe src="https://open.spotify.com/embed/track/${trackId}" width="100%" height="80" frameborder="0" allowtransparency="true" allow="encrypted-media" style="border-radius:8px;"></iframe>
+    `;
+}
+</script>
+</body>
+</html>
