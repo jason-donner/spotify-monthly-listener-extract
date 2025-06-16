@@ -114,6 +114,7 @@
             }
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <h1>
@@ -146,47 +147,98 @@
         <div style="max-width:700px;margin:32px auto;">
             <canvas id="trendChart"></canvas>
         </div>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script>
             // Prepare data for the chart
             const trendLabels = [
-                {% for r in results[::-1] %}"{{ r.date }}",{% endfor %}
+                {% for r in results_for_chart %}"{{ r.date }}"{% if not loop.last %},{% endif %}{% endfor %}
             ];
             const trendData = [
-                {% for r in results[::-1] %}{{ r.monthly_listeners }},{% endfor %}
+                {% for r in results_for_chart %}{{ r.monthly_listeners }}{% if not loop.last %},{% endif %}{% endfor %}
             ];
 
-            const ctx = document.getElementById('trendChart').getContext('2d');
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: trendLabels,
-                    datasets: [{
-                        label: 'Monthly Listeners',
-                        data: trendData,
-                        borderColor: '#1DB954',
-                        backgroundColor: 'rgba(29,185,84,0.1)',
-                        tension: 0.3,
-                        pointRadius: 4,
-                        pointBackgroundColor: '#1DB954',
-                        fill: true
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: { display: false }
-                    },
-                    scales: {
-                        x: {
-                            title: { display: true, text: 'Date', color: '#fff' },
-                            ticks: { color: '#fff' }
+            function getGradient(ctx, chartArea) {
+                const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                gradient.addColorStop(0, 'rgba(29,185,84,0.35)');
+                gradient.addColorStop(1, 'rgba(29,185,84,0.05)');
+                return gradient;
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+                const ctx = document.getElementById('trendChart').getContext('2d');
+                let chart;
+
+                function renderChart() {
+                    if (chart) chart.destroy();
+                    chart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: trendLabels,
+                            datasets: [{
+                                label: 'Monthly Listeners',
+                                data: trendData,
+                                borderColor: '#1DB954',
+                                backgroundColor: (context) => {
+                                    const chart = context.chart;
+                                    const {ctx, chartArea} = chart;
+                                    if (!chartArea) return null;
+                                    return getGradient(ctx, chartArea);
+                                },
+                                tension: 0.4,
+                                pointRadius: 5,
+                                pointHoverRadius: 8,
+                                pointBackgroundColor: '#1DB954',
+                                pointBorderColor: '#fff',
+                                pointBorderWidth: 2,
+                                fill: true
+                            }]
                         },
-                        y: {
-                            title: { display: true, text: 'Listeners', color: '#fff' },
-                            ticks: { color: '#fff' }
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    backgroundColor: '#222326',
+                                    titleColor: '#1DB954',
+                                    bodyColor: '#fff',
+                                    borderColor: '#1DB954',
+                                    borderWidth: 1,
+                                    padding: 12
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    title: { display: true, text: 'Date', color: '#fff' },
+                                    ticks: {
+                                        color: '#fff',
+                                        maxRotation: 45,
+                                        minRotation: 45,
+                                        autoSkip: true,
+                                        maxTicksLimit: 8,
+                                        font: { size: 13 }
+                                    },
+                                    grid: {
+                                        color: 'rgba(255,255,255,0.07)'
+                                    }
+                                },
+                                y: {
+                                    title: { display: true, text: 'Listeners', color: '#fff' },
+                                    ticks: {
+                                        color: '#fff',
+                                        callback: function(value) {
+                                            return value.toLocaleString();
+                                        }
+                                    },
+                                    grid: {
+                                        color: 'rgba(255,255,255,0.10)'
+                                    }
+                                }
+                            }
                         }
-                    }
+                    });
                 }
+
+                setTimeout(renderChart, 100);
             });
         </script>
         {% endif %}
