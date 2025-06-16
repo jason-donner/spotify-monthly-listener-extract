@@ -126,182 +126,199 @@
         <div id="suggestion-box"></div>
     </form>
     {% if results %}
-        <h2 style="text-align:center; color:#fff; font-weight:normal;">Results for "<span style="color:#1DB954;">{{ query }}</span>"</h2>
-        <table>
-            <tr>
-                <th>Artist Name</th>
-                <th>Monthly Listeners</th>
-                <th>Date</th>
-            </tr>
-            {% for r in results %}
-            <tr>
-                <td>
-                    <a href="{{ r.url }}" target="_blank">{{ r.artist_name }}</a>
-                </td>
-                <td>{{ r.monthly_listeners }}</td>
-                <td>{{ r.date }}</td>
-            </tr>
-            {% endfor %}
-        </table>
-        {% if results and results|length > 1 %}
-        <div style="max-width:700px;margin:32px auto;">
+    <h2 style="text-align:center; color:#fff; font-weight:normal;">Results for "<span style="color:#1DB954;">{{ query }}</span>"</h2>
+    <!-- Centered, expanded artist info section -->
+    <div style="display:flex;justify-content:center;margin:32px 0 24px 0;">
+        <div id="artist-info" style="width:100%;max-width:700px;"></div>
+    </div>
+    <div id="single-player" style="width:100%;max-width:700px;margin:0 auto 24px auto;"></div>
+    <script>
+    // Fetch artist info for the first artist in results
+    const artistUrl2 = "{{ results[0].url }}";
+    const artistId2 = artistUrl2.split('/').pop();
+    fetch(`/artist_info/${artistId2}`)
+        .then(res => res.json())
+        .then(info => {
+            if (!info.name) return;
+            let genres = info.genres.length ? info.genres.join(', ') : 'N/A';
+            document.getElementById('artist-info').innerHTML = `
+                <div style="display:flex;align-items:center;gap:32px;background:#222326;padding:32px;border-radius:20px;box-shadow:0 4px 32px rgba(0,0,0,0.5);margin:0 auto;">
+                    <img src="${info.image}" alt="${info.name}" style="width:140px;height:140px;object-fit:cover;border-radius:14px;border:4px solid #1DB954;">
+                    <div>
+                        <h2 style="margin:0 0 10px 0;color:#1DB954;font-size:2em;">${info.name}</h2>
+                        <p style="margin:6px 0;font-size:1.1em;"><strong>Genres:</strong> ${genres}</p>
+                        <p style="margin:6px 0;font-size:1.1em;"><strong>Followers:</strong> ${info.followers.toLocaleString()}</p>
+                        <a href="${info.url}" target="_blank" style="color:#1DB954;">View on Spotify</a>
+                    </div>
+                </div>
+            `;
+        });
+    </script>
+    <table>
+        <tr>
+            <th>Artist Name</th>
+            <th>Monthly Listeners</th>
+            <th>Date</th>
+        </tr>
+        {% for r in results %}
+        <tr>
+            <td>
+                <a href="{{ r.url }}" target="_blank">{{ r.artist_name }}</a>
+            </td>
+            <td>{{ "{:,}".format(r.monthly_listeners | int) }}</td>
+            <td>{{ r.date | datetimeformat }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% if results and results|length > 1 %}
+    <div style="display:flex;gap:32px;justify-content:center;align-items:flex-start;margin:32px auto 0 auto;max-width:1200px;">
+        <!-- Chart: bigger, on the left, takes half the space -->
+        <div style="flex:1 1 0;max-width:600px;min-width:320px;">
             <canvas id="trendChart"></canvas>
         </div>
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <script>
-            // Prepare data for the chart
-            const trendLabels = [
-                {% for r in results_for_chart %}"{{ r.date }}"{% if not loop.last %},{% endif %}{% endfor %}
-            ];
-            const trendData = [
-                {% for r in results_for_chart %}{{ r.monthly_listeners }}{% if not loop.last %},{% endif %}{% endfor %}
-            ];
-
-            function getGradient(ctx, chartArea) {
-                const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-                gradient.addColorStop(0, 'rgba(29,185,84,0.35)');
-                gradient.addColorStop(1, 'rgba(29,185,84,0.05)');
-                return gradient;
+        <!-- Top tracks: right side, takes half the space -->
+        <div style="flex:1 1 0;max-width:600px;min-width:320px;">
+            <div id="top-tracks"></div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Prepare data for the chart
+        const trendLabelsRaw = {{ results_for_chart | map(attribute='date') | list | tojson }};
+        const trendLabels = trendLabelsRaw.map(function(d) {
+            const parts = d.split("-");
+            if (parts.length === 3) {
+                return parts[1] + "-" + parts[2] + "-" + parts[0];
             }
+            return d;
+        });
+        const trendData = [
+            {% for r in results_for_chart %}{{ r.monthly_listeners }}{% if not loop.last %},{% endif %}{% endfor %}
+        ];
 
-            document.addEventListener('DOMContentLoaded', function() {
-                const ctx = document.getElementById('trendChart').getContext('2d');
-                let chart;
+        function getGradient(ctx, chartArea) {
+            const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+            gradient.addColorStop(0, 'rgba(29,185,84,0.35)');
+            gradient.addColorStop(1, 'rgba(29,185,84,0.05)');
+            return gradient;
+        }
 
-                function renderChart() {
-                    if (chart) chart.destroy();
-                    chart = new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: trendLabels,
-                            datasets: [{
-                                label: 'Monthly Listeners',
-                                data: trendData,
+        document.addEventListener('DOMContentLoaded', function() {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            let chart;
+
+            function renderChart() {
+                if (chart) chart.destroy();
+                chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: trendLabels,
+                        datasets: [{
+                            label: 'Monthly Listeners',
+                            data: trendData,
+                            borderColor: '#1DB954',
+                            backgroundColor: (context) => {
+                                const chart = context.chart;
+                                const {ctx, chartArea} = chart;
+                                if (!chartArea) return null;
+                                return getGradient(ctx, chartArea);
+                            },
+                            tension: 0.4,
+                            pointRadius: 5,
+                            pointHoverRadius: 8,
+                            pointBackgroundColor: '#1DB954',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: '#222326',
+                                titleColor: '#1DB954',
+                                bodyColor: '#fff',
                                 borderColor: '#1DB954',
-                                backgroundColor: (context) => {
-                                    const chart = context.chart;
-                                    const {ctx, chartArea} = chart;
-                                    if (!chartArea) return null;
-                                    return getGradient(ctx, chartArea);
-                                },
-                                tension: 0.4,
-                                pointRadius: 5,
-                                pointHoverRadius: 8,
-                                pointBackgroundColor: '#1DB954',
-                                pointBorderColor: '#fff',
-                                pointBorderWidth: 2,
-                                fill: true
-                            }]
+                                borderWidth: 1,
+                                padding: 12
+                            }
                         },
-                        options: {
-                            responsive: true,
-                            plugins: {
-                                legend: { display: false },
-                                tooltip: {
-                                    backgroundColor: '#222326',
-                                    titleColor: '#1DB954',
-                                    bodyColor: '#fff',
-                                    borderColor: '#1DB954',
-                                    borderWidth: 1,
-                                    padding: 12
+                        scales: {
+                            x: {
+                                title: { display: true, text: 'Date', color: '#fff' },
+                                ticks: {
+                                    color: '#fff',
+                                    autoSkip: false,
+                                    maxTicksLimit: Math.min(trendLabels.length, 8),
+                                    callback: function(value, index, ticks) {
+                                        if (trendLabels.length <= 3) {
+                                            return trendLabels[index];
+                                        }
+                                        const step = Math.ceil(trendLabels.length / 8);
+                                        return index % step === 0 ? trendLabels[index] : '';
+                                    },
+                                    maxRotation: 45,
+                                    minRotation: 45,
+                                    font: { size: 13 }
+                                },
+                                grid: {
+                                    color: 'rgba(255,255,255,0.07)'
                                 }
                             },
-                            scales: {
-                                x: {
-                                    title: { display: true, text: 'Date', color: '#fff' },
-                                    ticks: {
-                                        color: '#fff',
-                                        maxRotation: 45,
-                                        minRotation: 45,
-                                        autoSkip: true,
-                                        maxTicksLimit: 8,
-                                        font: { size: 13 }
-                                    },
-                                    grid: {
-                                        color: 'rgba(255,255,255,0.07)'
+                            y: {
+                                title: { display: true, text: 'Listeners', color: '#fff' },
+                                ticks: {
+                                    color: '#fff',
+                                    maxTicksLimit: 6, // Limit number of y-axis ticks
+                                    callback: function(value) {
+                                        return value.toLocaleString();
                                     }
                                 },
-                                y: {
-                                    title: { display: true, text: 'Listeners', color: '#fff' },
-                                    ticks: {
-                                        color: '#fff',
-                                        callback: function(value) {
-                                            return value.toLocaleString();
-                                        }
-                                    },
-                                    grid: {
-                                        color: 'rgba(255,255,255,0.10)'
-                                    }
+                                grid: {
+                                    color: 'rgba(255,255,255,0.10)'
                                 }
                             }
                         }
-                    });
-                }
+                    }
+                });
+            }
 
-                setTimeout(renderChart, 100);
-            });
-        </script>
-        {% endif %}
-        <div id="artist-sections" style="display:flex;gap:32px;justify-content:center;align-items:flex-start;margin:32px auto 0 auto;max-width:1200px;">
-    <div style="flex:2;display:flex;justify-content:center;">
-        <div id="top-tracks" style="width:100%;max-width:700px;"></div>
-    </div>
-    <div style="flex:1;min-width:320px;max-width:400px;display:flex;flex-direction:column;align-items:center;">
-        <div id="artist-info" style="width:100%;"></div>
-        <div id="single-player" style="width:100%;margin-top:24px;"></div>
-    </div>
-</div>
-        <script>
-        // Automatically fetch top tracks for the first artist in results
-        const artistUrl = "{{ results[0].url }}";
-        const artistName = "{{ results[0].artist_name }}";
-        const artistId = artistUrl.split('/').pop();
-        fetch(`/top_tracks/${artistId}`)
-            .then(res => res.json())
-            .then(tracks => {
-                const div = document.getElementById('top-tracks');
-                if (!tracks.length) {
-                    div.innerHTML = `<h3 style="color:#1DB954;">No top tracks found for ${artistName}.</h3>`;
-                    return;
-                }
-                div.innerHTML = `<h3 style="color:#1DB954; text-align:center;">Top Tracks for ${artistName}</h3>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;justify-items:center;">` +
-                    tracks.map(t => {
-                        const match = t.url.match(/track\/([a-zA-Z0-9]+)/);
-                        const trackId = match ? match[1] : null;
-                        return `
-                        <div style="background:#191414;padding:12px 8px;border-radius:12px;width:95%;max-width:340px;box-shadow:0 2px 8px rgba(0,0,0,0.3);text-align:left;display:flex;align-items:center;gap:18px;margin:0 auto;">
-                            <img src="${t.album_image}" alt="${t.name}" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:2px solid #1DB954;cursor:pointer;" onclick="playTrack('${trackId}', '${t.name.replace(/'/g, "\\'")}')">
-                            <div>
-                                <a href="#" onclick="playTrack('${trackId}', '${t.name.replace(/'/g, "\\'")}'); return false;" style="text-decoration:none;color:#1DB954;font-weight:bold;font-size:1.08em;cursor:pointer;">${t.name}</a>
-                            </div>
-                        </div>
-                        `;
-                    }).join('') +
-                    `</div>`;
-            });
-        </script>
-        <script>
-        const artistUrl2 = "{{ results[0].url }}";
-        const artistId2 = artistUrl2.split('/').pop();
-        fetch(`/artist_info/${artistId2}`)
-            .then(res => res.json())
-            .then(info => {
-                if (!info.name) return;
-                let genres = info.genres.length ? info.genres.join(', ') : 'N/A';
-                document.getElementById('artist-info').innerHTML = `
-                    <div style="display:flex;align-items:center;gap:24px;background:#222326;padding:24px;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.4);">
-                        <img src="${info.image}" alt="${info.name}" style="width:120px;height:120px;object-fit:cover;border-radius:12px;border:3px solid #1DB954;">
+            setTimeout(renderChart, 100);
+        });
+    </script>
+    <script>
+    // Fetch top tracks for the first artist in results
+    const artistUrl = "{{ results[0].url }}";
+    const artistName = "{{ results[0].artist_name }}";
+    const artistId = artistUrl.split('/').pop();
+    fetch(`/top_tracks/${artistId}`)
+        .then(res => res.json())
+        .then(tracks => {
+            const div = document.getElementById('top-tracks');
+            if (!tracks.length) {
+                div.innerHTML = `<h3 style="color:#1DB954;">No top tracks found for ${artistName}.</h3>`;
+                return;
+            }
+            div.innerHTML = `<h3 style="color:#1DB954; text-align:center;">Top Tracks for ${artistName}</h3>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;justify-items:center;">` +
+                tracks.map(t => {
+                    const match = t.url.match(/track\/([a-zA-Z0-9]+)/);
+                    const trackId = match ? match[1] : null;
+                    return `
+                    <div style="background:#191414;padding:10px 6px;border-radius:10px;width:95%;max-width:260px;box-shadow:0 2px 8px rgba(0,0,0,0.3);text-align:left;display:flex;align-items:center;gap:14px;margin:0 auto;">
+                        <img src="${t.album_image}" alt="${t.name}" style="width:54px;height:54px;object-fit:cover;border-radius:8px;border:2px solid #1DB954;cursor:pointer;" onclick="playTrack('${trackId}', '${t.name.replace(/'/g, "\\'")}')">
                         <div>
-                            <h2 style="margin:0 0 8px 0;color:#1DB954;">${info.name}</h2>
-                            <p style="margin:4px 0;"><strong>Genres:</strong> ${genres}</p>
-                            <p style="margin:4px 0;"><strong>Followers:</strong> ${info.followers.toLocaleString()}</p>
-                            <a href="${info.url}" target="_blank" style="color:#1DB954;">View on Spotify</a>
+                            <a href="#" onclick="playTrack('${trackId}', '${t.name.replace(/'/g, "\\'")}'); return false;" style="text-decoration:none;color:#1DB954;font-weight:bold;font-size:1.02em;cursor:pointer;">${t.name}</a>
                         </div>
                     </div>
-                `;
-            });
-        </script>
+                    `;
+                }).join('') +
+                `</div>`;
+        });
+    </script>
+    {% endif %}
     {% else %}
         {% if query %}
         <p style="text-align:center; color:#fff;">No results found.</p>

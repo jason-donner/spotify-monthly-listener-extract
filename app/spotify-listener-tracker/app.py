@@ -3,8 +3,11 @@ import json
 import requests
 import os
 from get_token import get_token
+from datetime import datetime
 
 app = Flask(__name__)
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.jinja_env.auto_reload = True
 
 # Path to your master data file
 DATA_PATH = r"C:\Users\Jason\Spotify Monthly Listener Extract\src\results\spotify-monthly-listeners-master.json"
@@ -114,6 +117,18 @@ def artist_image():
         if items and items[0].get("images"):
             return jsonify({"image": items[0]["images"][0]["url"]})
     return jsonify({"image": "https://via.placeholder.com/64?text=No+Image"})
+
+@app.template_filter('datetimeformat')
+def datetimeformat(value):
+    try:
+        # Try parsing as ISO or yyyy-mm-dd
+        dt = datetime.strptime(value, "%Y-%m-%d")
+    except Exception:
+        try:
+            dt = datetime.strptime(value, "%Y/%m/%d")
+        except Exception:
+            return value  # fallback: return as-is
+    return dt.strftime("%m-%d-%Y")
 
 if __name__ == "__main__":
     app.run(debug=True)
