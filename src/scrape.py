@@ -90,10 +90,10 @@ def scrape_artist(driver, url, wait_time=7):
     driver.get(url['url'] if isinstance(url, dict) else url)  # Open the artist page
     try:
         # Wait for the artist name to be present
-        name_elem = WebDriverWait(driver, wait_time).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "h1[data-testid='entityTitle']"))
+        meta_title = WebDriverWait(driver, wait_time).until(
+            lambda d: d.find_element(By.XPATH, "//meta[@property='og:title']")
         )
-        name = name_elem.text.strip()
+        name = meta_title.get_attribute("content")
     except Exception as e:
         print(Fore.RED + f"Failed to get artist name for {url}: {e}")
         return None, None
@@ -212,6 +212,8 @@ def main():
     today = now()
     urls = load_urls(args.input)
     driver = setup_driver(headless=args.headless, chromedriver_path=args.chromedriver, user_data_dir=args.user_data_dir)
+    driver.get("https://open.spotify.com")
+    time.sleep(3)  # Wait for session/cookies to initialize
     bar_format = "{l_bar}{bar}| {n_fmt}/{total_fmt} artists | Elapsed: {elapsed} | ETA: {remaining}"
     try:
         results, failed_urls = scrape_all(driver, urls, today, bar_format)
