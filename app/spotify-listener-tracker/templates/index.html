@@ -167,8 +167,7 @@
                 <a href="{{ r.url }}" target="_blank">{{ r.artist_name }}</a>
             </td>
             <td>
-              RAW: {{ r.monthly_listeners }}<br>
-              FORMATTED: {{ "{:,}".format(r.monthly_listeners) }}
+                {{ "{:,}".format(r.monthly_listeners) }}
             </td>
             <td>
                 {% if r.listener_diff is not none %}
