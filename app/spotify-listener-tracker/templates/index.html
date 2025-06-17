@@ -5,14 +5,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body {
-            background: #191414;
+            min-height: 100vh;
+            background: 
+                radial-gradient(ellipse at 60% 40%, #ff5ecd 0%, transparent 60%),
+                radial-gradient(ellipse at 30% 70%, #7f5eff 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 80%, #191414 0%, #121212 80%),
+                linear-gradient(120deg, #2d0036 0%, #1a0036 100%);
+            background-blend-mode: lighten, lighten, normal, normal;
             color: #fff;
-            font-family: 'Segoe UI', Arial, sans-serif;
-            margin: 0;
-            padding: 0;
+            position: relative;
+            overflow-x: hidden;
+        }
+        /* Smokey SVG blobs overlay */
+        body::before {
+            content: "";
+            position: fixed;
+            z-index: 0;
+            top: -120px;
+            left: -120px;
+            width: 120vw;
+            height: 120vh;
+            pointer-events: none;
+            background: 
+                radial-gradient(circle at 20% 40%, rgba(29,185,84,0.18) 0, transparent 60%),
+                radial-gradient(circle at 80% 20%, rgba(30,215,96,0.14) 0, transparent 60%),
+                radial-gradient(circle at 60% 80%, rgba(40,40,40,0.22) 0, transparent 70%);
+            filter: blur(48px);
+            opacity: 0.85;
         }
         h1 {
-            color: #1DB954;
+            background: linear-gradient(90deg, #1DB954 60%, #1ed760 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-fill-color: transparent;
             text-align: center;
             margin-top: 32px;
             letter-spacing: 2px;
@@ -37,7 +63,7 @@
             padding: 12px 24px;
             border: none;
             border-radius: 0 24px 24px 0;
-            background: #1DB954;
+            background: linear-gradient(90deg, #1DB954 60%, #1ed760 100%);
             color: #fff;
             font-weight: bold;
             font-size: 1.1em;
@@ -45,7 +71,7 @@
             transition: background 0.2s;
         }
         button[type="submit"]:hover {
-            background: #1ed760;
+            background: linear-gradient(90deg, #1ed760 60%, #1DB954 100%);
         }
         #suggestion-box {
             position: absolute;
@@ -70,29 +96,34 @@
             color: #191414;
         }
         table {
-            margin: 0 auto;
-            border-collapse: collapse;
-            width: 90%;
-            background: #222326;
-            border-radius: 12px;
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: #232323;
+            border-radius: 16px;
             overflow: hidden;
-            box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+            margin: 0 auto 24px auto;
+            box-shadow: 0 4px 24px rgba(29,185,84,0.10);
         }
         th, td {
-            padding: 14px 18px;
+            padding: 12px 16px;
             text-align: left;
         }
         th {
-            background: #1DB954;
+            background: linear-gradient(90deg, #1DB954 60%, #1ed760 100%);
             color: #191414;
-            font-size: 1.05em;
-            letter-spacing: 1px;
+            font-weight: bold;
+            border-bottom: 2px solid #1DB954;
         }
         tr:nth-child(even) {
-            background: #191414;
+            background: #202020;
         }
         tr:nth-child(odd) {
-            background: #222326;
+            background: #232323;
+        }
+        tr:hover {
+            background: #282828;
+            transition: background 0.2s;
         }
         a {
             color: #1DB954;
@@ -103,6 +134,14 @@
         a:hover {
             color: #1ed760;
             text-decoration: underline;
+        }
+        #artist-info > div, #top-tracks > div {
+            transition: box-shadow 0.2s, transform 0.2s;
+            box-shadow: 0 8px 32px rgba(29,185,84,0.18);
+        }
+        #artist-info > div:hover, #top-tracks > div:hover {
+            box-shadow: 0 16px 48px rgba(29,185,84,0.32);
+            transform: translateY(-4px) scale(1.02);
         }
         @media (max-width: 600px) {
             input[type="text"] {
