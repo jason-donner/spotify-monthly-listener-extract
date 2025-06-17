@@ -12,29 +12,9 @@ app.jinja_env.auto_reload = True
 # Path to your master data file
 DATA_PATH = r"C:\Users\Jason\Spotify Monthly Listener Extract\src\results\spotify-monthly-listeners-master.json"
 
-def parse_listener_count(val):
-    if isinstance(val, str):
-        val = val.lower().replace(',', '').strip()
-        if 'k' in val:
-            return int(float(val.replace('k', '')) * 1000)
-        elif 'm' in val:
-            return int(float(val.replace('m', '')) * 1000000)
-        else:
-            try:
-                return int(val)
-            except ValueError:
-                return 0
-    elif isinstance(val, (int, float)):
-        return int(val)
-    return 0
-
 def load_data():
     with open(DATA_PATH, "r", encoding="utf-8") as f:
         data = json.load(f)
-        # Ensure monthly_listeners is always an integer
-        for entry in data:
-            if 'monthly_listeners' in entry:
-                entry['monthly_listeners'] = parse_listener_count(entry['monthly_listeners'])
         return data
 
 def get_artist_id_from_url(url):
@@ -52,10 +32,22 @@ def index():
         results = [a for a in artists if query_lower in a.get("artist_name", "").lower()]
         # Sort results by date (descending)
         results.sort(key=lambda x: x.get("date", ""), reverse=True)
+        # Calculate difference
+        for i, r in enumerate(results):
+            if i + 1 < len(results):
+                prev = results[i + 1]
+                r['listener_diff'] = r['monthly_listeners'] - prev['monthly_listeners']
+            else:
+                r['listener_diff'] = None  # No previous data
         # Reverse for chart (oldest to newest)
         results_for_chart = list(reversed(results))
     else:
         results_for_chart = []
+
+    # Debug print to check for rounding
+    for r in results:
+        print("DEBUG:", r['artist_name'], r['monthly_listeners'])
+
     return render_template("index.html", results=results, results_for_chart=results_for_chart, query=query)
 
 @app.route("/suggest", methods=["GET"])
