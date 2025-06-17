@@ -122,5 +122,50 @@ def datetimeformat(value):
             return value  # fallback: return as-is
     return dt.strftime("%m-%d-%Y")
 
+@app.route("/leaderboard")
+def leaderboard():
+    import json
+    from collections import defaultdict
+    from datetime import datetime, timedelta
+
+    artists = load_data()
+    # Group data by artist
+    artist_history = defaultdict(list)
+    for entry in artists:
+        artist_history[entry["artist_name"]].append(entry)
+
+    leaderboard = []
+    for artist, records in artist_history.items():
+        # Sort records by date descending
+        records.sort(key=lambda x: x["date"], reverse=True)
+        if len(records) < 2:
+            continue
+        # Get the most recent and the previous month's record
+        latest = records[0]
+        # Find the record closest to 30 days before latest
+        latest_date = datetime.strptime(latest["date"], "%Y-%m-%d")
+        prev = None
+        for r in records[1:]:
+            r_date = datetime.strptime(r["date"], "%Y-%m-%d")
+            if (latest_date - r_date).days >= 28:
+                prev = r
+                break
+        if prev:
+            change = latest["monthly_listeners"] - prev["monthly_listeners"]
+            leaderboard.append({
+                "artist_name": artist,
+                "latest": latest["monthly_listeners"],
+                "prev": prev["monthly_listeners"],
+                "change": change,
+                "url": latest.get("url", "#")
+            })
+
+    # Sort by biggest change (absolute value, descending)
+    leaderboard.sort(key=lambda x: abs(x["change"]), reverse=True)
+    # Top 20
+    leaderboard = leaderboard[:20]
+
+    return render_template("leaderboard.html", leaderboard=leaderboard)
+
 if __name__ == "__main__":
     app.run(debug=True)
