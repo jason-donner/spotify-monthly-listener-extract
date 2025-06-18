@@ -42,3 +42,9 @@ htmlcov/
 
 # ignore token cache
 app/spotify-listener-tracker/spotify_token_cache.json
+
+# Ignore migrations directory
+migrate-artist-follows/
+
+# Ignore specific Python scripts
+src/main_account_extract.py

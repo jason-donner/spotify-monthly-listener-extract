@@ -156,20 +156,26 @@ def retry_failed(driver, failed_urls, today):
 
 def save_results(results, today, output_path=None):
     """
-    Save the scraped results to a JSON file.
+    Save the scraped results to a JSON file in src/results.
     """
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    results_dir = os.path.join(script_dir, "results")
     if not output_path:
-        output_path = f"results/spotify-monthly-listeners-{today}.json"
+        output_path = os.path.join(results_dir, f"spotify-monthly-listeners-{today}.json")
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(results, f, ensure_ascii=False, indent=2)
     print(Fore.GREEN + f"Saved {len(results)} results to {output_path}")
 
 
-def append_to_master(results, master_path='results/spotify-monthly-listeners-master.json'):
+def append_to_master(results, master_path=None):
     """
-    Append new results to the master JSON file.
+    Append new results to the master JSON file in src/results.
     """
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    results_dir = os.path.join(script_dir, "results")
+    if not master_path:
+        master_path = os.path.join(results_dir, 'spotify-monthly-listeners-master.json')
     if os.path.exists(master_path):
         with open(master_path, 'r', encoding='utf-8') as f:
             master = json.load(f)
@@ -214,6 +220,11 @@ def main():
     driver = setup_driver(headless=args.headless, chromedriver_path=args.chromedriver, user_data_dir=args.user_data_dir)
     driver.get("https://open.spotify.com")
     time.sleep(3)  # Wait for session/cookies to initialize
+
+    # --- ADD THIS BLOCK ---
+    input("Please sign in to Spotify in the opened browser window, then press Enter here to continue...")
+    # ----------------------
+
     bar_format = "{l_bar}{bar}| {n_fmt}/{total_fmt} artists | Elapsed: {elapsed} | ETA: {remaining}"
     try:
         results, failed_urls = scrape_all(driver, urls, today, bar_format)
