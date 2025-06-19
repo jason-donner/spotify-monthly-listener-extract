@@ -42,3 +42,6 @@ htmlcov/
 
 # ignore token cache
 app/spotify-listener-tracker/spotify_token_cache.json
+
+# ignore followapp directory
+migrate-artist-follows/followapp.py
