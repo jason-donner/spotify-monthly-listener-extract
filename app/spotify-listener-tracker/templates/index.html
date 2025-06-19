@@ -260,13 +260,7 @@
         <script>
             // Prepare data for the chart
             const trendLabelsRaw = {{ results_for_chart | map(attribute='date') | list | tojson }};
-            const trendLabels = trendLabelsRaw.map(function(d) {
-                const parts = d.split("-");
-                if (parts.length === 3) {
-                    return parts[1] + "-" + parts[2] + "-" + parts[0];
-                }
-                return d;
-            });
+            const trendLabels = trendLabelsRaw; // Use ISO format directly
             const trendData = [
                 {% for r in results_for_chart %}{{ r.monthly_listeners }}{% if not loop.last %},{% endif %}{% endfor %}
             ];
@@ -328,14 +322,29 @@
                                         autoSkip: false,
                                         maxTicksLimit: Math.min(trendLabels.length, 8),
                                         callback: function(value, index, ticks) {
-                                            if (trendLabels.length <= 3) {
-                                                return trendLabels[index];
+                                            const label = trendLabels[index];
+                                            let date;
+                                            // Handle YYYY-MM-DD
+                                            if (/^\d{4}-\d{2}-\d{2}$/.test(label)) {
+                                                const [year, month, day] = label.split('-');
+                                                date = new Date(`${year}-${month}-${day}`);
                                             }
-                                            const step = Math.ceil(trendLabels.length / 8);
-                                            return index % step === 0 ? trendLabels[index] : '';
+                                            // Handle YYYYMMDD
+                                            else if (/^\d{8}$/.test(label)) {
+                                                date = new Date(label.slice(0,4) + '-' + label.slice(4,6) + '-' + label.slice(6,8));
+                                            }
+                                            if (date && !isNaN(date)) {
+                                                // First or last label: show with year
+                                                if (index === 0 || index === trendLabels.length - 1) {
+                                                    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                                                }
+                                                // All others: just month and day
+                                                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                                            }
+                                            return label;
                                         },
-                                        maxRotation: 45,
-                                        minRotation: 45,
+                                        maxRotation: 0, // <-- horizontal labels
+                                        minRotation: 0, // <-- horizontal labels
                                         font: { size: 13 }
                                     },
                                     grid: {

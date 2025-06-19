@@ -111,16 +111,35 @@ def artist_image():
     return jsonify({"image": "https://via.placeholder.com/64?text=No+Image"})
 
 @app.template_filter('datetimeformat')
-def datetimeformat(value):
-    try:
-        # Try parsing as ISO or yyyy-mm-dd
-        dt = datetime.strptime(value, "%Y-%m-%d")
-    except Exception:
+def datetimeformat(value, format='medium'):
+    from datetime import datetime
+    if not value:
+        return ''
+    if isinstance(value, str):
         try:
-            dt = datetime.strptime(value, "%Y/%m/%d")
+            # Handle YYYY-MM-DD
+            if len(value) == 10 and '-' in value:
+                dt = datetime.strptime(value, "%Y-%m-%d")
+            # Handle YYYY-MM
+            elif len(value) == 7 and '-' in value:
+                dt = datetime.strptime(value, "%Y-%m")
+            # Handle YYYYMMDD
+            elif len(value) == 8 and value.isdigit():
+                dt = datetime.strptime(value, "%Y%m%d")
+            else:
+                return value
         except Exception:
-            return value  # fallback: return as-is
-    return dt.strftime("%m-%d-%Y")
+            return value
+    else:
+        dt = value
+    if format == 'short':
+        # "Jun 18" or "Jun 2024"
+        if len(value) in (10, 8):  # YYYY-MM-DD or YYYYMMDD
+            return dt.strftime('%b %d')
+        elif len(value) == 7:      # YYYY-MM
+            return dt.strftime('%b %Y')
+    # Default: "2024-06-18" or "2024-06"
+    return dt.strftime('%Y-%m-%d') if len(value) in (10, 8) else dt.strftime('%Y-%m')
 
 @app.route("/leaderboard")
 def leaderboard():
