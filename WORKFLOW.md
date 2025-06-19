@@ -1,22 +1,14 @@
-# Spotify Monthly Listener Extract
+# Spotify Monthly Listener Extract – Workflow Documentation
 
-Automate the extraction of monthly listener counts for Spotify artists using Python and Selenium.
+## Overview
 
----
-
-## Features
-
-- Syncs followed artists from your main Spotify account to a dedicated scraping account (optional, for safety).
-- Fetches a complete list of artist URLs for scraping.
-- Uses Selenium to scrape monthly listener counts from Spotify artist pages.
-- Saves results to JSON files and appends to a master results file.
-- Logs all major steps and errors for troubleshooting.
+This workflow automates the extraction of monthly listener counts for Spotify artists using Python scripts and Selenium. It ensures your scraping account follows all artists your main account does, guaranteeing a complete and up-to-date artist list.
 
 ---
 
 ## Prerequisites
 
-- **Python** (3.8+) installed and available in your system PATH.
+- **Python** installed and available in your system PATH.
 - **Google Chrome** installed.
 - **ChromeDriver** compatible with your Chrome version, available in your project directory or PATH.
 - **Virtual environment** (`.venv`) created in the project root:
@@ -32,7 +24,7 @@ Automate the extraction of monthly listener counts for Spotify artists using Pyt
 
 ---
 
-## Workflow
+## Workflow Steps
 
 1. **Navigate to Project Directory**
    - The batch file changes the working directory to the project folder.
@@ -40,10 +32,11 @@ Automate the extraction of monthly listener counts for Spotify artists using Pyt
 2. **Activate Virtual Environment**
    - The batch file activates the `.venv` Python environment to ensure dependencies are available.
 
-3. **Synchronize Followed Artists** (Optional, but recommended)
+3. **Synchronize Followed Artists**
    - Runs `spotify_follow_sync.py` to ensure the scraping account follows all artists that the main account follows.
    - You will be prompted to log in to both accounts via browser.
-   - **Note:** This step is only necessary if you want to avoid using your main account for scraping, which can help reduce the risk of your main account being flagged or restricted by Spotify. If you are comfortable scraping with your main account, you may skip this step and use your main account credentials throughout.
+   - This guarantees the artist list fetched for scraping is complete and up-to-date.
+   - **Note:** This account sync step is only necessary if you want to avoid using your main account for scraping, which can help reduce the risk of your main account being flagged or restricted by Spotify. If you are comfortable scraping with your main account, you may skip this step and use your main account credentials throughout.
 
 4. **Run `get_artists.py`**
    - Fetches the list of artist URLs based on the scraping account’s followed artists.
@@ -86,8 +79,7 @@ Spotify Monthly Listener Extract/
 ├── run_monthly_listener.bat
 ├── requirements.txt
 ├── .env                        # Environment variables for Spotify accounts
-├── automation.log
-└── WORKFLOW.md                 # Detailed workflow documentation
+└── automation.log
 ```
 
 ---
@@ -107,7 +99,3 @@ Spotify Monthly Listener Extract/
   Ensure your `.env` file contains valid credentials for both accounts and that you complete the browser authorization steps.
 
 ---
-
-## License
-
-MIT

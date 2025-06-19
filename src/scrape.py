@@ -43,7 +43,7 @@ def parse_listener_count(val):
         return 0
 
 
-def setup_driver(headless=False, chromedriver_path=None):
+def setup_driver(chromedriver_path=None):
     """
     Set up and return a Selenium Chrome WebDriver with custom options.
     """
@@ -57,8 +57,7 @@ def setup_driver(headless=False, chromedriver_path=None):
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")
     chrome_options.add_argument("--log-level=3")
     chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
-    if headless:
-        chrome_options.add_argument("--headless=new")
+    # Headless mode removed
     return webdriver.Chrome(service=service, options=chrome_options)
 
 
@@ -207,7 +206,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Scrape Spotify artist monthly listeners.")
     parser.add_argument('--input', help="Input JSON file with artist URLs")
     parser.add_argument('--chromedriver', help="Path to chromedriver")
-    parser.add_argument('--headless', action='store_true', help="Run Chrome in headless mode")
+    # parser.add_argument('--headless', action='store_true', help="Run Chrome in headless mode")  # REMOVE THIS LINE
     parser.add_argument('--output', help="Output JSON file for results")
     parser.add_argument('--no-prompt', action='store_true', help="Skip login confirmation prompt")
     return parser.parse_args()
@@ -217,7 +216,7 @@ def main():
     args = parse_args()
     today = now()
     urls = load_urls(args.input)
-    driver = setup_driver(headless=args.headless, chromedriver_path=args.chromedriver)
+    driver = setup_driver(chromedriver_path=args.chromedriver)  # Remove headless param
     driver.get("https://open.spotify.com")
     time.sleep(3)  # Wait for session/cookies to initialize
 

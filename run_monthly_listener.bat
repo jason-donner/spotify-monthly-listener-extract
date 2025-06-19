@@ -4,8 +4,6 @@ REM Prerequisites:
 REM - Python installed and in PATH
 REM - Virtual environment created as '.venv'
 REM - Dependencies installed in the virtual environment
-REM
-REM Usage: Double-click or run from command line
 
 cd /d "%~dp0"
 
@@ -18,30 +16,40 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM Check if virtual environment exists
-if not exist ".venv\Scripts\activate" (
+if not exist ".venv\Scripts\activate.bat" (
     echo ERROR: Virtual environment not found. Please create it with 'python -m venv .venv'.
     exit /b 1
 )
 
-REM Activate virtual environment
-call .venv\Scripts\activate
+call "%~dp0.venv\Scripts\activate.bat"
 
-REM Log start
 echo %DATE% %TIME% - Starting monthly listener workflow >> %LOGFILE%
 
-REM Run get_artists.py in no-prompt mode (for automation)
-python src\get_artists.py --no-prompt --log get_artists.log
+REM Step 1: Synchronize followed artists
+echo Running spotify_follow_sync.py to sync followed artists...
+"%~dp0.venv\Scripts\python.exe" src\spotify_follow_sync.py
+if errorlevel 1 (
+    echo %DATE% %TIME% - ERROR: spotify_follow_sync.py failed with exit code %ERRORLEVEL% >> %LOGFILE%
+    pause
+    exit /b %ERRORLEVEL%
+)
+
+REM Step 2: Run get_artists.py
+"%~dp0.venv\Scripts\python.exe" src\get_artists.py --log get_artists.log
 if errorlevel 1 (
     echo %DATE% %TIME% - ERROR: get_artists.py failed with exit code %ERRORLEVEL% >> %LOGFILE%
     exit /b %ERRORLEVEL%
 )
 
-REM Run scrape.py in no-prompt mode (for automation) with persistent Chrome profile
-python src\scrape.py --no-prompt --user-data-dir "c:\Users\Jason\Spotify Monthly Listener Extract\chrome-profile"
+REM Step 3: Run scrape.py
+echo Running scrape.py...
+"%~dp0.venv\Scripts\python.exe" src\scrape.py
+echo scrape.py exited with %ERRORLEVEL%
 if errorlevel 1 (
     echo %DATE% %TIME% - ERROR: scrape.py failed with exit code %ERRORLEVEL% >> %LOGFILE%
+    pause
     exit /b %ERRORLEVEL%
 )
 
 echo %DATE% %TIME% - Monthly listener workflow completed >> %LOGFILE%
+pause
