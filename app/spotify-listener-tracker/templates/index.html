@@ -187,8 +187,21 @@
         {% if results %}
         <h2 style="text-align:center; color:#fff; font-weight:normal;">Results for "<span style="color:#1DB954;">{{ query }}</span>"</h2>
         <!-- Centered, expanded artist info section -->
-        <div style="display:flex;justify-content:center;margin:32px 0 24px 0;">
+        <div style="display:flex;justify-content:center;gap:32px;margin:32px 0 24px 0;">
             <div id="artist-info" style="width:100%;max-width:700px;"></div>
+            {% if total_change is not none %}
+            <div style="background:#222326;padding:32px 24px;border-radius:20px;box-shadow:0 4px 32px rgba(0,0,0,0.5);display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:180px;">
+                <div style="font-size:1.1em;color:#aaa;margin-bottom:8px;">Total Change</div>
+                {% if total_change > 0 %}
+                    <div style="font-size:2.2em;color:#1DB954;font-weight:bold;">+{{ "{:,}".format(total_change) }}</div>
+                {% elif total_change < 0 %}
+                    <div style="font-size:2.2em;color:#e74c3c;font-weight:bold;">{{ "{:,}".format(total_change) }}</div>
+                {% else %}
+                    <div style="font-size:2.2em;color:#aaa;font-weight:bold;">—</div>
+                {% endif %}
+                <div style="font-size:0.98em;color:#aaa;margin-top:8px;">since first record</div>
+            </div>
+            {% endif %}
         </div>
         <div id="single-player" style="width:100%;max-width:700px;margin:0 auto 24px auto;"></div>
         <script>
@@ -235,7 +248,7 @@
                         {% elif r.listener_diff < 0 %}
                             <span style="color:#e74c3c;">{{ "{:,}".format(r.listener_diff) }}</span>
                         {% else %}
-                            <span style="color:#fff;">0</span>
+                            <span style="color:#aaa;">—</span>
                         {% endif %}
                     {% else %}
                         <span style="color:#aaa;">—</span>

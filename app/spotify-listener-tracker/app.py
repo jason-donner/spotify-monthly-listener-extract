@@ -48,7 +48,17 @@ def index():
     for r in results:
         print("DEBUG:", r['artist_name'], r['monthly_listeners'])
 
-    return render_template("index.html", results=results, results_for_chart=results_for_chart, query=query)
+    if results:
+        total_change = results[-1]['monthly_listeners'] - results[0]['monthly_listeners']
+    else:
+        total_change = None
+    return render_template(
+        "index.html",
+        results=results,
+        results_for_chart=results_for_chart,
+        query=query,
+        total_change=total_change,
+    )
 
 @app.route("/suggest", methods=["GET"])
 def suggest():
