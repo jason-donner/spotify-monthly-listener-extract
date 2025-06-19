@@ -43,16 +43,15 @@ def parse_listener_count(val):
         return 0
 
 
-def setup_driver(headless=False, chromedriver_path=None, user_data_dir=None):
+def setup_driver(headless=False, chromedriver_path=None):
     """
     Set up and return a Selenium Chrome WebDriver with custom options.
     """
     if not chromedriver_path:
         chromedriver_path = os.environ.get("CHROMEDRIVER_PATH", "chromedriver")
+
     service = Service(chromedriver_path)
     chrome_options = Options()
-    if user_data_dir:
-        chrome_options.add_argument(f"--user-data-dir={user_data_dir}")
     chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
     chrome_options.add_experimental_option('useAutomationExtension', False)
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")
@@ -61,6 +60,7 @@ def setup_driver(headless=False, chromedriver_path=None, user_data_dir=None):
     if headless:
         chrome_options.add_argument("--headless=new")
     return webdriver.Chrome(service=service, options=chrome_options)
+
 
 
 def load_urls(input_path=None):
@@ -208,7 +208,6 @@ def parse_args():
     parser.add_argument('--input', help="Input JSON file with artist URLs")
     parser.add_argument('--chromedriver', help="Path to chromedriver")
     parser.add_argument('--headless', action='store_true', help="Run Chrome in headless mode")
-    parser.add_argument('--user-data-dir', help="Chrome user data directory")
     parser.add_argument('--output', help="Output JSON file for results")
     parser.add_argument('--no-prompt', action='store_true', help="Skip login confirmation prompt")
     return parser.parse_args()
@@ -218,7 +217,7 @@ def main():
     args = parse_args()
     today = now()
     urls = load_urls(args.input)
-    driver = setup_driver(headless=args.headless, chromedriver_path=args.chromedriver, user_data_dir=args.user_data_dir)
+    driver = setup_driver(headless=args.headless, chromedriver_path=args.chromedriver)
     driver.get("https://open.spotify.com")
     time.sleep(3)  # Wait for session/cookies to initialize
 

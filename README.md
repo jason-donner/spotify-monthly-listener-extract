@@ -16,8 +16,7 @@ This project allows you to export the list of artists you follow on Spotify and 
 - Results and logs are always saved in the `results/` folder inside the project.
 - Designed for both automation and interactive use.
 - Supports command-line arguments for output file, logging, and limits.
-- **No hardcoded file paths:** All paths (including ChromeDriver and user data directory) are configurable via command-line arguments or environment variables.
-- Easy automation with a batch file and Windows Task Scheduler.
+- **No hardcoded file paths:** All paths (including ChromeDriver) are configurable via command-line arguments or environment variables.
 - Clean project structure with all source code in `src/`.
 
 ---
@@ -103,12 +102,8 @@ python src/scrape.py --chromedriver "C:\path\to\chromedriver.exe"
 
 - By default, this uses the latest `results/spotify-artist-urls-YYYYMMDD.json` as input.
 - You **must** specify the path to your ChromeDriver executable using `--chromedriver` or by setting the `CHROMEDRIVER_PATH` environment variable.
-- You can also specify a Chrome user data directory with `--user-data-dir` or the `SELENIUM_PROFILE` environment variable (optional, but useful for keeping your Spotify login session).
-- Example with both options:
-  ```sh
-  python src/scrape.py --chromedriver "C:\path\to\chromedriver.exe" --user-data-dir "C:\path\to\SeleniumProfile"
-  ```
-- For automation (no prompts):
+- When running the script, you will be prompted to log in to Spotify in the opened browser window. This is required for scraping and cannot be automated.
+- For automation (no prompts except login):
   ```sh
   python src/scrape.py --chromedriver "C:\path\to\chromedriver.exe" --no-prompt
   ```
@@ -120,14 +115,12 @@ Instead of passing paths every time, you can set environment variables:
 On Windows (Command Prompt):
 ```bat
 set CHROMEDRIVER_PATH=C:\path\to\chromedriver.exe
-set SELENIUM_PROFILE=C:\path\to\SeleniumProfile
 python src\scrape.py
 ```
 
 On macOS/Linux:
 ```sh
 export CHROMEDRIVER_PATH=/path/to/chromedriver
-export SELENIUM_PROFILE=/path/to/SeleniumProfile
 python src/scrape.py
 ```
 
@@ -148,11 +141,11 @@ python src/scrape.py
 
 ---
 
-## Automation
+## Manual Workflow
 
 ### Batch File: `run_monthly_listener.bat`
 
-You can automate the entire workflow using the provided batch file.  
+You can use the provided batch file to run the workflow.  
 **Place this file in your project folder (where your scripts and `.venv` are located):**
 
 ```bat
@@ -165,7 +158,8 @@ echo %DATE% %TIME% - Monthly listener workflow completed >> automation.log
 ```
 
 - `%~dp0` ensures the batch file always runs from the project folder, no matter where it's launched from.
-- This batch file runs both scripts with no prompts and logs all output to `automation.log`.
+- This batch file runs both scripts with no prompts except for the Spotify login step.
+- **You will need to manually log in to Spotify in the browser window when prompted during the scraping step.**
 - **Do not hardcode your ChromeDriver path in the batch file. Instead, set it in your `.env` file as described below.**
 
 ---
@@ -187,55 +181,12 @@ If you do not have ChromeDriver, download it from [https://chromedriver.chromium
 
 ---
 
-### Scheduling with Windows Task Scheduler
-
-To run the workflow automatically (e.g., on the first of every month):
-
-1. **Open Task Scheduler** (search for it in the Start menu).
-2. Click **Create Basic Task...** and give it a name (e.g., "Monthly Spotify Listener Export").
-3. Set the trigger to **Monthly**, and choose the 1st day of each month.
-4. For the action, select **Start a program** and browse to your `run_monthly_listener.bat` file in your project folder.
-5. Finish the wizard.
-
-Your workflow will now run automatically on the schedule you set.  
-Check `automation.log` for output and errors after each run.
-
----
-
-## Testing
-
-To run the automated tests:
-
-1. Install the test dependencies (if not already done):
-   ```sh
-   pip install -r requirements.txt
-   ```
-
-2. From the project root, set your `PYTHONPATH` and run pytest:
-   - On Windows (PowerShell):
-     ```sh
-     $env:PYTHONPATH="$PWD"
-     pytest
-     ```
-   - On Windows (Command Prompt):
-     ```cmd
-     set PYTHONPATH=%CD%
-     pytest
-     ```
-   - On macOS/Linux:
-     ```sh
-     export PYTHONPATH=$PWD
-     pytest
-     ```
-
-This will discover and run all tests in the `tests/` folder.
-
----
-
 ## Notes
 
+- **Automation via Windows Task Scheduler is no longer supported.**  
+  Manual login to Spotify is required each time you run the scraping script or batch file.
 - Make sure your `.env` and `.cache` files are **not committed** to git (see `.gitignore`).
-- The scripts are designed to be robust for both interactive and automated workflows.
+- The scripts are designed to be robust for both interactive and manual workflows.
 - Progress bars use Spotify green and show elapsed/estimated time.
 - All source code is in the `src/` folder for clarity and maintainability.
 - **No hardcoded file paths:** All paths are configurable for portability.
