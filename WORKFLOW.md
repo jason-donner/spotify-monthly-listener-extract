@@ -50,6 +50,10 @@ This workflow automates the extraction of monthly listener counts for Spotify ar
    - All major steps and errors are logged to `automation.log`.
    - The batch file logs completion and pauses so you can review any messages.
 
+7. **Explore Results with the Web App**
+   - Use the included Flask web application to search, visualize, and analyze your collected data.
+   - See the [README.md](README.md) for setup and usage instructions.
+
 ---
 
 ## Usage

@@ -108,6 +108,51 @@ Spotify Monthly Listener Extract/
 
 ---
 
+## Web App: Explore Your Results
+
+This project includes a Flask web application for searching, visualizing, and exploring your collected Spotify monthly listener data.
+
+### Features
+
+- Search for artists and view their listener history.
+- See listener trends, changes, and top tracks.
+- Leaderboard of biggest monthly listener changes.
+- Modern, responsive UI.
+
+### How to Use
+
+1. **Install dependencies** for the web app:
+   ```sh
+   cd app/spotify-listener-tracker
+   pip install -r requirements.txt
+   ```
+2. **Start the Flask app:**
+   ```sh
+   python app.py
+   ```
+   The app will run on [http://127.0.0.1:5000](http://127.0.0.1:5000).
+
+3. **Browse your data:**
+   - Use the search bar to find artists.
+   - Visit `/leaderboard` for the top monthly changes.
+
+### File Structure
+
+```
+app/
+└── spotify-listener-tracker/
+    ├── app.py
+    ├── routes.py
+    ├── utils.py
+    ├── templates/
+    ├── static/
+    └── requirements.txt
+```
+
+**Note:** The web app reads from your master results JSON file. Make sure your scraping workflow has run at least once before using the app.
+
+---
+
 ## License
 
 MIT
