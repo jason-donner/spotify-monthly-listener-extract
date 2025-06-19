@@ -135,14 +135,6 @@
             color: #1ed760;
             text-decoration: underline;
         }
-        #artist-info > div, #top-tracks > div {
-            transition: box-shadow 0.2s, transform 0.2s;
-            box-shadow: 0 8px 32px rgba(29,185,84,0.18);
-        }
-        #artist-info > div:hover, #top-tracks > div:hover {
-            box-shadow: 0 16px 48px rgba(29,185,84,0.32);
-            transform: translateY(-4px) scale(1.02);
-        }
         .content-container {
             max-width: 1400px;
             margin: 40px auto 40px auto;
@@ -172,7 +164,6 @@
             }
         }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="content-container">
@@ -184,358 +175,210 @@
             <button type="submit">Search</button>
             <div id="suggestion-box"></div>
         </form>
-        {% if results %}
-        <h2 style="text-align:center; color:#fff; font-weight:normal;">Results for "<span style="color:#1DB954;">{{ query }}</span>"</h2>
-        <!-- Centered, expanded artist info section -->
-        <div style="display:flex;justify-content:center;gap:32px;margin:32px 0 24px 0;">
-            <div id="artist-info" style="width:100%;max-width:700px;"></div>
-            {% if total_change is not none %}
-            <div style="background:#222326;padding:32px 24px;border-radius:20px;box-shadow:0 4px 32px rgba(0,0,0,0.5);display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:180px;">
-                <div style="font-size:1.1em;color:#aaa;margin-bottom:8px;">Total Change</div>
-                {% if total_change > 0 %}
-                    <div style="font-size:2.2em;color:#1DB954;font-weight:bold;">+{{ "{:,}".format(total_change) }}</div>
-                {% elif total_change < 0 %}
-                    <div style="font-size:2.2em;color:#e74c3c;font-weight:bold;">{{ "{:,}".format(total_change) }}</div>
-                {% else %}
-                    <div style="font-size:2.2em;color:#aaa;font-weight:bold;">—</div>
-                {% endif %}
-                <div style="font-size:0.98em;color:#aaa;margin-top:8px;">since first record</div>
-            </div>
-            {% endif %}
-        </div>
-        <div id="single-player" style="width:100%;max-width:700px;margin:0 auto 24px auto;"></div>
-        <script>
-        // Fetch artist info for the first artist in results
-        const artistUrl2 = "{{ results[0].url }}";
-        const artistId2 = artistUrl2.split('/').pop();
-        fetch(`/artist_info/${artistId2}`)
-            .then(res => res.json())
-            .then(info => {
-                if (!info.name) return;
-                let genres = info.genres.length ? info.genres.join(', ') : 'N/A';
-                document.getElementById('artist-info').innerHTML = `
-                    <div style="display:flex;align-items:center;gap:32px;background:#222326;padding:32px;border-radius:20px;box-shadow:0 4px 32px rgba(0,0,0,0.5);margin:0 auto;">
-                        <img src="${info.image}" alt="${info.name}" style="width:140px;height:140px;object-fit:cover;border-radius:14px;border:4px solid #1DB954;">
-                        <div>
-                            <h2 style="margin:0 0 10px 0;color:#1DB954;font-size:2em;">${info.name}</h2>
-                            <p style="margin:6px 0;font-size:1.1em;"><strong>Genres:</strong> ${genres}</p>
-                            <p style="margin:6px 0;font-size:1.1em;"><strong>Followers:</strong> ${info.followers.toLocaleString()}</p>
-                            <a href="${info.url}" target="_blank" style="color:#1DB954;">View on Spotify</a>
-                        </div>
-                    </div>
-                `;
-            });
-        </script>
-        <table>
-            <tr>
-                <th>Artist Name</th>
-                <th>Monthly Listeners</th>
-                <th>Change</th>
-                <th>Date</th>
-            </tr>
-            {% for r in results %}
-            <tr>
-                <td>
-                    <a href="{{ r.url }}" target="_blank">{{ r.artist_name }}</a>
-                </td>
-                <td>
-                    {{ "{:,}".format(r.monthly_listeners) }}
-                </td>
-                <td>
-                    {% if r.listener_diff is not none %}
-                        {% if r.listener_diff > 0 %}
-                            <span style="color:#1DB954;">+{{ "{:,}".format(r.listener_diff) }}</span>
-                        {% elif r.listener_diff < 0 %}
-                            <span style="color:#e74c3c;">{{ "{:,}".format(r.listener_diff) }}</span>
+        {% if not results and not query and leaderboard %}
+        <div style="max-width:800px;margin:40px auto 0 auto;">
+            <h2 style="color:#1DB954;text-align:center;margin-bottom:16px;">Biggest Monthly Listener Changes (Last 30 Days)</h2>
+            <table style="width:100%;border-collapse:collapse;">
+                <tr style="background:#232323;">
+                    <th style="padding:10px 6px;text-align:left;">Artist</th>
+                    <th style="padding:10px 6px;text-align:left;">Change</th>
+                    <th style="padding:10px 6px;text-align:left;">Starting Listeners</th>
+                    <th style="padding:10px 6px;text-align:left;">Ending Listeners</th>
+                </tr>
+                {% for row in leaderboard %}
+                <tr style="background:{% if loop.index0 % 2 == 0 %}#191414{% else %}#232323{% endif %};">
+                    <td style="display:flex;align-items:center;gap:12px;">
+    {% if row.image_url %}
+    <img src="{{ row.image_url }}" alt="{{ row.artist }}" style="width:40px;height:40px;border-radius:50%;vertical-align:middle;">
+    {% else %}
+    <img src="{{ url_for('static', filename='placeholder.png') }}" alt="No image" style="width:40px;height:40px;border-radius:50%;vertical-align:middle;">
+    {% endif %}
+    <span style="color:#1DB954;font-weight:bold;">{{ row.artist }}</span>
+</td>
+                    <td>
+                        {% if row.change > 0 %}
+                            <span style="color:#1DB954;">+{{ "{:,}".format(row.change) }}</span>
+                        {% elif row.change < 0 %}
+                            <span style="color:#e74c3c;">{{ "{:,}".format(row.change) }}</span>
                         {% else %}
                             <span style="color:#aaa;">—</span>
                         {% endif %}
-                    {% else %}
-                        <span style="color:#aaa;">—</span>
+                    </td>
+                    <td>
+                        {% if row.change > 0 %}
+                            {{ "{:,}".format(row.start) }}
+                        {% elif row.change < 0 %}
+                            <span style="color:#e74c3c;font-weight:bold;">{{ "{:,}".format(row.start) }}</span>
+                        {% else %}
+                            {{ "{:,}".format(row.start) }}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if row.change > 0 %}
+                            <span style="color:#1DB954;font-weight:bold;">{{ "{:,}".format(row.end) }}</span>
+                        {% else %}
+                            {{ "{:,}".format(row.end) }}
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+        {% endif %}
+        {% if results %}
+    <div style="max-width:800px;margin:40px auto 0 auto;">
+        <h2 style="color:#1DB954;text-align:center;margin-bottom:16px;">Results for "{{ query }}"</h2>
+        <div style="display:flex;align-items:center;gap:28px;margin-bottom:28px;padding:20px 24px;background:#232323;border-radius:18px;box-shadow:0 2px 16px rgba(0,0,0,0.10);">
+            <!-- Artist image -->
+            {% if artist_image_url %}
+                <img src="{{ artist_image_url }}" alt="{{ query }}" style="width:96px;height:96px;border-radius:50%;box-shadow:0 2px 16px rgba(0,0,0,0.18);background:#232323;">
+            {% else %}
+                <img src="/artist_image?name={{ query|urlencode }}" alt="{{ query }}" style="width:96px;height:96px;border-radius:50%;box-shadow:0 2px 16px rgba(0,0,0,0.18);background:#232323;">
+            {% endif %}
+            <!-- Artist info -->
+            <div style="display:flex;flex-direction:column;justify-content:center;">
+                <div style="font-size:1.7em;font-weight:bold;color:#fff;line-height:1.1;">{{ query }}</div>
+                {% if artist_info %}
+                    {% if artist_info.get('genres') %}
+                        <div style="color:#1DB954;margin-top:8px;font-size:1.08em;">
+                            <span style="font-weight:600;">Genres:</span>
+                            <span style="color:#fff;">{{ artist_info.get('genres', [])|join(', ') }}</span>
+                        </div>
                     {% endif %}
-                </td>
-                <td>{{ r.date | datetimeformat }}</td>
+                    {% if artist_info.get('followers') %}
+                        <div style="color:#aaa;margin-top:6px;font-size:1.05em;">
+                            <span style="font-weight:600;color:#1DB954;">Followers:</span>
+                            <span style="color:#fff;">{{ "{:,}".format(artist_info['followers']) }}</span>
+                        </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+        <!-- Area Chart -->
+        <div style="background:#232323;padding:24px 18px 8px 18px;border-radius:18px;box-shadow:0 2px 16px rgba(0,0,0,0.10);margin-bottom:28px;">
+            <canvas id="listenersChart" height="120"></canvas>
+        </div>
+        <table style="width:100%;border-collapse:collapse;">
+            <tr style="background:#232323;">
+                <th style="padding:10px 6px;text-align:left;">Date</th>
+                <th style="padding:10px 6px;text-align:left;">Monthly Listeners</th>
+            </tr>
+            {% for row in results %}
+            <tr style="background:{% if loop.index0 % 2 == 0 %}#191414{% else %}#232323{% endif %};">
+                <td>{{ row.date | datetimeformat('%b %d, %Y') }}</td>
+                <td>{{ "{:,}".format(row.monthly_listeners) }}</td>
             </tr>
             {% endfor %}
         </table>
-        {% if results and results|length > 1 %}
-        <div style="display:flex;gap:32px;justify-content:center;align-items:flex-start;margin:32px auto 0 auto;max-width:1300px;">
-            <!-- Chart: bigger, on the left, takes half the space -->
-            <div style="flex:1 1 0;max-width:600px;min-width:320px;">
-                <canvas id="trendChart"></canvas>
-            </div>
-            <!-- Top tracks: right side, takes half the space -->
-            <div style="flex:1 1 0;max-width:600px;min-width:320px;">
-                <div id="top-tracks"></div>
-            </div>
-        </div>
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <script>
-            // Prepare data for the chart
-            const trendLabelsRaw = {{ results_for_chart | map(attribute='date') | list | tojson }};
-            const trendLabels = trendLabelsRaw; // Use ISO format directly
-            const trendData = [
-                {% for r in results_for_chart %}{{ r.monthly_listeners }}{% if not loop.last %},{% endif %}{% endfor %}
-            ];
+    </div>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+    // Prepare data for the chart
+    const chartLabels = [
+        {% for row in results|reverse %}
+            "{{ row.date | datetimeformat('short') }}",
+        {% endfor %}
+    ];
+    const chartData = [
+        {% for row in results|reverse %}
+            {{ row.monthly_listeners }},
+        {% endfor %}
+    ];
 
-            function getGradient(ctx, chartArea) {
-                const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-                gradient.addColorStop(0, 'rgba(29,185,84,0.7)');  // More opaque at the top
-                gradient.addColorStop(1, 'rgba(29,185,84,0.4)');  // More visible at the bottom
-                return gradient;
-            }
+    const ctx = document.getElementById('listenersChart').getContext('2d');
+    const gradient = ctx.createLinearGradient(0, 0, 0, 220);
+     gradient.addColorStop(0, 'rgba(30,215,96,0.97)');
+    gradient.addColorStop(1, 'rgba(25,21,20,0.18)');
 
-            document.addEventListener('DOMContentLoaded', function() {
-                const ctx = document.getElementById('trendChart').getContext('2d');
-                let chart;
-
-                function renderChart() {
-                    if (chart) chart.destroy();
-                    chart = new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: trendLabels,
-                            datasets: [{
-                                label: 'Monthly Listeners',
-                                data: trendData,
-                                borderColor: '#1DB954',
-                                backgroundColor: (context) => {
-                                    const chart = context.chart;
-                                    const {ctx, chartArea} = chart;
-                                    if (!chartArea) return null;
-                                    return getGradient(ctx, chartArea);
-                                },
-                                tension: 0.4,
-                                pointRadius: 5,
-                                pointHoverRadius: 8,
-                                pointBackgroundColor: '#1DB954',
-                                pointBorderColor: '#fff',
-                                pointBorderWidth: 2,
-                                fill: true
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            plugins: {
-                                legend: { display: false },
-                                tooltip: {
-                                    backgroundColor: '#222326',
-                                    titleColor: '#1DB954',
-                                    bodyColor: '#fff',
-                                    borderColor: '#1DB954',
-                                    borderWidth: 1,
-                                    padding: 12
-                                }
-                            },
-                            scales: {
-                                x: {
-                                    title: { 
-                                        display: true, 
-                                        text: 'Date', 
-                                        color: '#fff',
-                                        font: { size: 18, weight: 'bold' } // <-- Increase font size here
-                                    },
-                                    ticks: {
-                                        color: '#fff',
-                                        autoSkip: false,
-                                        maxTicksLimit: Math.min(trendLabels.length, 8),
-                                        callback: function(value, index, ticks) {
-                                            const label = trendLabels[index];
-                                            let date;
-                                            // Handle YYYY-MM-DD
-                                            if (/^\d{4}-\d{2}-\d{2}$/.test(label)) {
-                                                const [year, month, day] = label.split('-');
-                                                date = new Date(`${year}-${month}-${day}`);
-                                            }
-                                            // Handle YYYYMMDD
-                                            else if (/^\d{8}$/.test(label)) {
-                                                date = new Date(label.slice(0,4) + '-' + label.slice(4,6) + '-' + label.slice(6,8));
-                                            }
-                                            if (date && !isNaN(date)) {
-                                                // First or last label: show with year
-                                                if (index === 0 || index === trendLabels.length - 1) {
-                                                    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                                                }
-                                                // All others: just month and day
-                                                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                                            }
-                                            return label;
-                                        },
-                                        maxRotation: 0, // <-- horizontal labels
-                                        minRotation: 0, // <-- horizontal labels
-                                        font: { size: 13 }
-                                    },
-                                    grid: {
-                                        color: 'rgba(255,255,255,0.07)',
-                                        borderColor: '#fff',      // Axis line color
-                                        borderWidth: 2,           // Axis line thickness
-                                        drawBorder: true,         // Ensure axis line is drawn
-                                    }
-                                },
-                                y: {
-                                    title: { 
-                                        display: true, 
-                                        text: 'Listeners', 
-                                        color: '#fff',
-                                        font: { size: 18, weight: 'bold' } // <-- Increase font size here
-                                    },
-                                    ticks: {
-                                        color: '#fff',
-                                        maxTicksLimit: 6, // Limit number of y-axis ticks
-                                        callback: function(value) {
-                                            return value.toLocaleString();
-                                        }
-                                    },
-                                    grid: {
-                                        color: 'rgba(255,255,255,0.10)',
-                                        borderColor: '#fff',      // Axis line color
-                                        borderWidth: 2,           // Axis line thickness
-                                        drawBorder: true,         // Ensure axis line is drawn
-                                    }
-                                }
-                            }
-                        }
-                    });
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: chartLabels,
+            datasets: [{
+                label: 'Monthly Listeners',
+                data: chartData,
+                fill: true,
+                backgroundColor: gradient,
+                borderColor: '#1DB954',
+                borderWidth: 3,
+                pointRadius: 3,
+                pointBackgroundColor: '#1DB954',
+                pointBorderColor: '#fff',
+                tension: 0.35,
+            }]
+        },
+        options: {
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Date',
+                        color: '#fff',
+                        font: { weight: 'bold', size: 16 }
+                    },
+                    ticks: { color: '#aaa', font: { weight: 'bold' } },
+                    grid: { color: 'rgba(29,185,84,0.08)' }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Monthly Listeners',
+                        color: '#fff',
+                        font: { weight: 'bold', size: 16 }
+                    },
+                    ticks: { color: '#aaa', font: { weight: 'bold' } },
+                    grid: { color: 'rgba(29,185,84,0.08)' }
                 }
-
-                setTimeout(renderChart, 100);
-            });
-        </script>
+            }
+        }
+    });
+    </script>
+{% endif %}
         <script>
-        // Fetch top tracks for the first artist in results
-        const artistUrl = "{{ results[0].url }}";
-        const artistName = "{{ results[0].artist_name }}";
-        const artistId = artistUrl.split('/').pop();
-        fetch(`/top_tracks/${artistId}`)
-            .then(res => res.json())
-            .then(tracks => {
-                const div = document.getElementById('top-tracks');
-                if (!tracks.length) {
-                    div.innerHTML = `<h3 style="color:#1DB954;">No top tracks found for ${artistName}.</h3>`;
+        document.addEventListener('DOMContentLoaded', function() {
+            const input = document.querySelector('input[name="artist"]');
+            const suggestionBox = document.getElementById('suggestion-box');
+            const form = input.closest('form');
+
+            input.addEventListener('input', function() {
+                const val = this.value;
+                if (val.length < 2) {
+                    suggestionBox.style.display = 'none';
                     return;
                 }
-                div.innerHTML = `<h3 style="color:#1DB954; text-align:center;">Top Tracks for ${artistName}</h3>
-                    <div style="display:grid;grid-template-columns:repeat(2, 1fr);gap:16px;justify-items:center;">` +
-                    tracks.map(t => {
-                        const match = t.url.match(/track\/([a-zA-Z0-9]+)/);
-                        const trackId = match ? match[1] : null;
-                        return `
-    <div style="background:#191414;padding:10px 6px;border-radius:10px;width:100%;max-width:260px;box-shadow:0 2px 8px rgba(0,0,0,0.3);text-align:left;display:flex;align-items:center;gap:14px;margin:0 auto;">
-        <img src="${t.album_image}" alt="${t.name}" style="width:54px;height:54px;object-fit:cover;border-radius:8px;border:2px solid #1DB954;cursor:pointer;" onclick="playTrack('${trackId}', '${t.name.replace(/'/g, "\\'")}')">
-        <div>
-            <a href="#" onclick="playTrack('${trackId}', '${t.name.replace(/'/g, "\\'")}'); return false;" style="text-decoration:none;color:#1DB954;font-weight:bold;font-size:1.02em;cursor:pointer;">${t.name}</a>
-        </div>
-    </div>
-                        `;
-                    }).join('') +
-                    `</div>`;
-            });
-        </script>
-        {% endif %}
-        {% else %}
-            {% if query %}
-            <p style="text-align:center; color:#fff;">No results found.</p>
-            {% endif %}
-        {% endif %}
-        {% if not results and not query %}
-    <div style="max-width:600px;margin:48px auto 0 auto;text-align:center;">
-        <h2 style="color:#1DB954;">Welcome to the Spotify Monthly Listener Tracker</h2>
-        <p style="font-size:1.15em;">
-            Search for any artist to view their monthly listener trends, top tracks, and more Spotify stats.<br>
-            Start by typing an artist's name in the search box above! Results are based on my followed artists only.
-        </p>
-        <h3 style="color:#1DB954;margin-top:32px;">Try one of my top artists:</h3>
-        <div id="suggested-artists" style="display:flex;justify-content:center;gap:18px;flex-wrap:wrap;margin-bottom:24px;">
-        <!-- JS will fill this in -->
-        </div>
-        <script>
-        const topArtists = [
-            "see through person",
-            "red sun",
-            "Pomfret",
-            "no problemo!",
-            "Collars"
-        ];
-
-        const container = document.getElementById('suggested-artists');
-        topArtists.forEach(name => {
-            // You need a backend endpoint like /artist_image?name=...
-            fetch(`/artist_image?name=${encodeURIComponent(name)}`)
-                .then(res => res.json())
-                .then(data => {
-                    const div = document.createElement('div');
-                    div.style.display = "flex";
-                    div.style.flexDirection = "column";
-                    div.style.alignItems = "center";
-                    div.innerHTML = `
-                        <a href="?artist=${encodeURIComponent(name)}">${name}</a>
-                        <img src="${data.image}" alt="${name}" style="width:64px;height:64px;border-radius:50%;margin-top:6px;">
-                    `;
-                    container.appendChild(div);
-                });
-        });
-        </script>
-        <ul style="max-width:500px;margin:32px auto 0 auto;color:#ccc;font-size:1.08em;text-align:center;display:block;">
-            <li style="margin-bottom:8px;">Track monthly Spotify listeners over time</li>
-            <li style="margin-bottom:8px;">See top tracks and play previews</li>
-            <li style="margin-bottom:8px;">View genres and follower counts</li>
-            <li>Direct links to Spotify artist pages</li>
-        </ul>
-        <div style="text-align:center;margin-top:32px;">
-            <img src="https://storage.googleapis.com/pr-newsroom-wp/1/2018/11/Spotify_Logo_CMYK_Green.png" alt="Spotify Logo" style="height:48px;">
-        </div>
-    </div>
-        {% endif %}
-        <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const input = document.querySelector('input[name="artist"]');
-        const suggestionBox = document.getElementById('suggestion-box');
-        const form = input.closest('form');
-
-        input.addEventListener('input', function() {
-            const val = this.value;
-            if (val.length < 2) {
-                suggestionBox.style.display = 'none';
-                return;
-            }
-            fetch(`/suggest?term=${encodeURIComponent(val)}`)
-                .then(res => res.json())
-                .then(data => {
-                    suggestionBox.innerHTML = '';
-                    if (data.length === 0) {
-                        suggestionBox.style.display = 'none';
-                        return;
-                    }
-                    data.forEach(item => {
-                        const div = document.createElement('div');
-                        div.textContent = item;
-                        div.addEventListener('mousedown', function() {
-                            input.value = item;
+                fetch(`/suggest?term=${encodeURIComponent(val)}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        suggestionBox.innerHTML = '';
+                        if (data.length === 0) {
                             suggestionBox.style.display = 'none';
-                            form.submit();
+                            return;
+                        }
+                        data.forEach(item => {
+                            const div = document.createElement('div');
+                            div.textContent = item;
+                            div.addEventListener('mousedown', function() {
+                                input.value = item;
+                                suggestionBox.style.display = 'none';
+                                form.submit();
+                            });
+                            suggestionBox.appendChild(div);
                         });
-                        suggestionBox.appendChild(div);
+                        suggestionBox.style.display = 'block';
                     });
-                    suggestionBox.style.display = 'block';
-                });
-        });
+            });
 
-        document.addEventListener('click', function(e) {
-            if (!suggestionBox.contains(e.target) && e.target !== input) {
-                suggestionBox.style.display = 'none';
-            }
+            document.addEventListener('click', function(e) {
+                if (!suggestionBox.contains(e.target) && e.target !== input) {
+                    suggestionBox.style.display = 'none';
+                }
+            });
         });
-    });
         </script>
-        <script>
-    function playTrack(trackId, trackName) {
-        if (!trackId) return;
-        document.getElementById('single-player').innerHTML = `
-            <h4 style="color:#1DB954;text-align:center;margin-bottom:8px;">Now Playing: ${trackName}</h4>
-            <iframe src="https://open.spotify.com/embed/track/${trackId}" width="100%" height="80" frameborder="0" allowtransparency="true" allow="encrypted-media" style="border-radius:8px;"></iframe>
-        `;
-    }
-    </script>
     </div>
 </body>
 </html>

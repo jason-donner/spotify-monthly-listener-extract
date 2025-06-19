@@ -108,6 +108,18 @@ Spotify Monthly Listener Extract/
 
 ---
 
+## Data Cleanup
+
+- Data cleanup steps are documented in detail in [WORKFLOW.md](WORKFLOW.md).
+- Briefly, we have:
+  - Ensured all records in the master results file have valid `artist_id` fields (extracted from the URL if missing).
+  - Removed any records with `monthly_listeners` equal to 0, as these represent scraping errors.
+  - Updated the scraping script to prevent such records from being created in the future.
+
+See the workflow documentation for scripts and commands used.
+
+---
+
 ## Web App: Explore Your Results
 
 This project includes a Flask web application for searching, visualizing, and exploring your collected Spotify monthly listener data.

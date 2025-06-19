@@ -19,6 +19,7 @@ from tqdm import tqdm
 from colorama import Fore, Style, init
 from dotenv import load_dotenv
 import time
+import re
 
 # Initialize colorama for colored console output
 init(autoreset=True)
@@ -108,6 +109,14 @@ def scrape_artist(driver, url, wait_time=7):
     return name, monthly
 
 
+def extract_artist_id(url):
+    """
+    Extract the artist ID from a Spotify artist URL.
+    """
+    match = re.search(r"artist/([a-zA-Z0-9]+)", url)
+    return match.group(1) if match else None
+
+
 def scrape_all(driver, urls, today, bar_format, wait_time=0.2):
     """
     Scrape all artist URLs, returning a list of results and a list of failed URLs.
@@ -119,12 +128,16 @@ def scrape_all(driver, urls, today, bar_format, wait_time=0.2):
               colour="#1DB954" if is_tty else None, disable=not is_tty, dynamic_ncols=is_tty, file=sys.stdout) as pbar:
         for url in urls:
             name, monthly = scrape_artist(driver, url)
-            if name:
+            artist_url = url['url'] if isinstance(url, dict) else url
+            artist_id = url.get('artist_id') if isinstance(url, dict) and url.get('artist_id') else extract_artist_id(artist_url)
+            monthly_listeners = parse_listener_count(monthly)
+            if name and monthly_listeners != 0:
                 results.append({
-                    'url': url['url'] if isinstance(url, dict) else url,
+                    'url': artist_url,
                     'artist_name': name,
-                    'monthly_listeners': parse_listener_count(monthly),
-                    'date': today
+                    'monthly_listeners': monthly_listeners,
+                    'date': today,
+                    'artist_id': artist_id
                 })
             else:
                 failed_urls.append(url)
@@ -141,12 +154,16 @@ def retry_failed(driver, failed_urls, today):
     still_failed = []
     for url in failed_urls:
         name, monthly = scrape_artist(driver, url, wait_time=15)
-        if name:
+        artist_url = url['url'] if isinstance(url, dict) else url
+        artist_id = url.get('artist_id') if isinstance(url, dict) and url.get('artist_id') else extract_artist_id(artist_url)
+        monthly_listeners = parse_listener_count(monthly)
+        if name and monthly_listeners != 0:
             results.append({
-                'url': url['url'] if isinstance(url, dict) else url,
+                'url': artist_url,
                 'artist_name': name,
-                'monthly_listeners': parse_listener_count(monthly),
-                'date': today
+                'monthly_listeners': monthly_listeners,
+                'date': today,
+                'artist_id': artist_id
             })
         else:
             still_failed.append(url)

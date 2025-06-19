@@ -81,7 +81,8 @@ def get_followed_artists(sp, limit=None):
             for artist in artists:
                 artist_list.append({
                     "artist_name": artist['name'],
-                    "url": f"https://open.spotify.com/artist/{artist['id']}"
+                    "url": f"https://open.spotify.com/artist/{artist['id']}",
+                    "artist_id": artist['id']
                 })
                 total_fetched += 1
                 pbar.update(1)

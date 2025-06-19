@@ -103,3 +103,23 @@ Spotify Monthly Listener Extract/
   Ensure your `.env` file contains valid credentials for both accounts and that you complete the browser authorization steps.
 
 ---
+
+## Data Cleanup and Validation
+
+### June 2025 Data Cleanup
+
+- Identified and fixed records in `spotify-monthly-listeners-master.json` with missing or null `artist_id` fields by extracting the ID from the Spotify artist URL.
+- Removed all records with `monthly_listeners` equal to 0, as these indicate scraping errors or failed fetches.
+- Used the script `src/fix_artist_ids.py` to automate this process:
+
+  ```sh
+  python src/fix_artist_ids.py
+  ```
+
+- Updated `src/scrape.py` to prevent future inclusion of zero-listener records.
+
+### Ongoing Best Practices
+
+- Always validate new data for missing IDs and zero-listener values.
+- Run the cleanup script as needed to maintain data quality.
+- Document any future data corrections in this section.

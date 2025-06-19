@@ -1,9 +1,10 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, redirect, url_for
 import json
 import requests
 import os
 from get_token import get_token
-from datetime import datetime
+from datetime import datetime, timedelta
+import time
 
 app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
@@ -21,11 +22,93 @@ def get_artist_id_from_url(url):
     # Extract the artist ID from the Spotify URL
     return url.rstrip('/').split('/')[-1]
 
+artist_image_cache = {}
+
+def fetch_spotify_artist_image(artist_id):
+    print(f"Fetching image for artist_id: {artist_id}")
+    if not artist_id:
+        print("No artist_id provided.")
+        return None
+    if artist_id in artist_image_cache:
+        print(f"Cache hit for {artist_id}: {artist_image_cache[artist_id]}")
+        return artist_image_cache[artist_id]
+    headers = {"Authorization": f"Bearer {get_token()}"}
+    resp = requests.get(f"https://api.spotify.com/v1/artists/{artist_id}", headers=headers)
+    print(f"Spotify API status for {artist_id}: {resp.status_code}")
+    if resp.status_code == 200:
+        artist = resp.json()
+        if artist.get("images"):
+            image_url = artist["images"][0]["url"]
+            print(f"Image found for {artist_id}: {image_url}")
+            artist_image_cache[artist_id] = image_url
+            return image_url
+        else:
+            print(f"No images found for {artist_id}")
+    else:
+        print(f"Spotify API error for {artist_id}: {resp.text}")
+    return None  # Only return None if no image found
+
 @app.route("/", methods=["GET"])
 def index():
     query = request.args.get("artist", "").strip()
     artists = load_data()
+    all_artist_names = sorted({a['artist_name'] for a in artists})
+
+    # Leaderboard logic (last 30 days)
+    cutoff = datetime.now() - timedelta(days=30)
+    artist_changes = {}
+    for entry in artists:
+        artist = entry["artist_name"]
+        date_str = entry["date"]
+        # Handle both 'YYYY-MM-DD' and 'YYYYMMDD'
+        try:
+            if '-' in date_str:
+                date = datetime.strptime(date_str, "%Y-%m-%d")
+            else:
+                date = datetime.strptime(date_str, "%Y%m%d")
+        except Exception:
+            continue  # skip malformed dates
+        listeners = entry["monthly_listeners"]
+        if artist not in artist_changes:
+            artist_changes[artist] = []
+        artist_changes[artist].append({
+            "date": date,
+            "listeners": listeners,
+            "artist_url": entry.get("artist_url", ""),
+            "artist_id": entry.get("artist_id")
+        })
+    leaderboard_data = []
+    for artist, records in artist_changes.items():
+        recent = [r for r in records if r["date"] >= cutoff]
+        if len(recent) < 2:
+            continue
+        recent.sort(key=lambda x: x["date"])
+        change = recent[-1]["listeners"] - recent[0]["listeners"]
+        artist_id = None
+        artist_url = None
+        for r in reversed(recent):
+            if r and r.get("artist_id"):
+                artist_id = r["artist_id"]
+                artist_url = r.get("artist_url")
+                break
+        print(f"DEBUG: {artist} | artist_id: {artist_id}")
+        image_url = fetch_spotify_artist_image(artist_id) if artist_id else None
+        print(f"DEBUG: {artist} | image_url: {image_url}")
+        leaderboard_data.append({
+            "artist": artist,
+            "artist_id": artist_id,
+            "image_url": image_url,
+            "change": change,
+            "start": recent[0]["listeners"],
+            "end": recent[-1]["listeners"],
+            "artist_url": artist_url
+        })
+    leaderboard_data.sort(key=lambda x: abs(x["change"]), reverse=True)
+    leaderboard_data = leaderboard_data[:10]  # Show top 10
+
     results = []
+    artist_info = None
+    artist_image_url = None
     if query:
         query_lower = query.lower()
         # Find all records matching the artist name
@@ -41,6 +124,37 @@ def index():
                 r['listener_diff'] = None  # No previous data
         # Reverse for chart (oldest to newest)
         results_for_chart = list(reversed(results))
+
+        # Fetch artist info and image for the card
+        artist_url = results[0].get("artist_url") or results[0].get("url") if results else None
+        if artist_url:
+            artist_id = get_artist_id_from_url(artist_url)
+            try:
+                # Fetch directly from Spotify API for consistency
+                artist_image_url = fetch_spotify_artist_image(artist_id)
+                # Also get artist info
+                headers = {"Authorization": f"Bearer {get_token()}"}
+                resp = requests.get(f"https://api.spotify.com/v1/artists/{artist_id}", headers=headers)
+                if resp.status_code == 200:
+                    artist = resp.json()
+                    artist_info = {
+                        "name": artist["name"],
+                        "image": artist["images"][0]["url"] if artist.get("images") else "",
+                        "genres": artist.get("genres", []),
+                        "followers": artist.get("followers", {}).get("total", 0),
+                        "url": artist["external_urls"]["spotify"]
+                    }
+            except Exception:
+                artist_info = None
+                artist_image_url = None
+        else:
+            # fallback: try to get image by name
+            try:
+                resp = requests.get(f"http://localhost:5000/artist_image?name={query}")
+                if resp.status_code == 200:
+                    artist_image_url = resp.json().get("image")
+            except Exception:
+                artist_image_url = None
     else:
         results_for_chart = []
 
@@ -58,6 +172,10 @@ def index():
         results_for_chart=results_for_chart,
         query=query,
         total_change=total_change,
+        all_artist_names=all_artist_names,
+        leaderboard=leaderboard_data,
+        artist_info=artist_info,
+        artist_image_url=artist_image_url,
     )
 
 @app.route("/suggest", methods=["GET"])
@@ -119,6 +237,25 @@ def artist_image():
         if items and items[0].get("images"):
             return jsonify({"image": items[0]["images"][0]["url"]})
     return jsonify({"image": "https://via.placeholder.com/64?text=No+Image"})
+
+@app.route('/artist_image/<artist_id>')
+def artist_image_redirect(artist_id):
+    # Fetch the image URL for the artist
+    image_url = get_artist_image_url(artist_id)  # Implement this function
+    if image_url:
+        return redirect(image_url)
+    else:
+        # Return a placeholder image or 404
+        return redirect(url_for('static', filename='placeholder.png'))
+
+def get_artist_image_url(artist_id):
+    headers = {"Authorization": f"Bearer {get_token()}"}
+    resp = requests.get(f"https://api.spotify.com/v1/artists/{artist_id}", headers=headers)
+    if resp.status_code == 200:
+        artist = resp.json()
+        if artist.get("images"):
+            return artist["images"][0]["url"]
+    return url_for('static', filename='placeholder.png')
 
 @app.template_filter('datetimeformat')
 def datetimeformat(value, format='medium'):
