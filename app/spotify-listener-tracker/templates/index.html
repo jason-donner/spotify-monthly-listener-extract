@@ -267,8 +267,8 @@
 
             function getGradient(ctx, chartArea) {
                 const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-                gradient.addColorStop(0, 'rgba(29,185,84,0.35)');
-                gradient.addColorStop(1, 'rgba(29,185,84,0.05)');
+                gradient.addColorStop(0, 'rgba(29,185,84,0.7)');  // More opaque at the top
+                gradient.addColorStop(1, 'rgba(29,185,84,0.4)');  // More visible at the bottom
                 return gradient;
             }
 
@@ -353,7 +353,10 @@
                                         font: { size: 13 }
                                     },
                                     grid: {
-                                        color: 'rgba(255,255,255,0.07)'
+                                        color: 'rgba(255,255,255,0.07)',
+                                        borderColor: '#fff',      // Axis line color
+                                        borderWidth: 2,           // Axis line thickness
+                                        drawBorder: true,         // Ensure axis line is drawn
                                     }
                                 },
                                 y: {
@@ -371,7 +374,10 @@
                                         }
                                     },
                                     grid: {
-                                        color: 'rgba(255,255,255,0.10)'
+                                        color: 'rgba(255,255,255,0.10)',
+                                        borderColor: '#fff',      // Axis line color
+                                        borderWidth: 2,           // Axis line thickness
+                                        drawBorder: true,         // Ensure axis line is drawn
                                     }
                                 }
                             }
