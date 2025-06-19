@@ -210,6 +210,7 @@ def parse_args():
     parser.add_argument('--headless', action='store_true', help="Run Chrome in headless mode")
     parser.add_argument('--user-data-dir', help="Chrome user data directory")
     parser.add_argument('--output', help="Output JSON file for results")
+    parser.add_argument('--no-prompt', action='store_true', help="Skip login confirmation prompt")
     return parser.parse_args()
 
 
@@ -221,9 +222,9 @@ def main():
     driver.get("https://open.spotify.com")
     time.sleep(3)  # Wait for session/cookies to initialize
 
-    # --- ADD THIS BLOCK ---
-    input("Please sign in to Spotify in the opened browser window, then press Enter here to continue...")
-    # ----------------------
+    # Only prompt if --no-prompt is NOT set
+    if not args.no_prompt:
+        input("Please sign in to Spotify in the opened browser window, then press Enter here to continue...")
 
     bar_format = "{l_bar}{bar}| {n_fmt}/{total_fmt} artists | Elapsed: {elapsed} | ETA: {remaining}"
     try:

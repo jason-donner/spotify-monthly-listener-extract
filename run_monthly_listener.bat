@@ -30,17 +30,15 @@ call .venv\Scripts\activate
 REM Log start
 echo %DATE% %TIME% - Starting monthly listener workflow >> %LOGFILE%
 
-REM Run get_artists.py (logging handled by script)
-echo %DATE% %TIME% - Running get_artists.py >> %LOGFILE%
+REM Run get_artists.py in no-prompt mode (for automation)
 python src\get_artists.py --no-prompt --log get_artists.log
 if errorlevel 1 (
     echo %DATE% %TIME% - ERROR: get_artists.py failed with exit code %ERRORLEVEL% >> %LOGFILE%
     exit /b %ERRORLEVEL%
 )
 
-REM Run scrape.py (logging handled by script)
-echo %DATE% %TIME% - Running scrape.py >> %LOGFILE%
-python src\scrape.py --no-prompt --log scrape.log
+REM Run scrape.py in no-prompt mode (for automation) with persistent Chrome profile
+python src\scrape.py --no-prompt --user-data-dir "c:\Users\Jason\Spotify Monthly Listener Extract\chrome-profile"
 if errorlevel 1 (
     echo %DATE% %TIME% - ERROR: scrape.py failed with exit code %ERRORLEVEL% >> %LOGFILE%
     exit /b %ERRORLEVEL%
