@@ -99,34 +99,34 @@
                     </tr>
                     {% for row in results %}
                     <tr>
-                        <td>{{ row.date | datetimeformat('%b %d, %Y') }}</td>
+                        <td>{{ row.date | datetimeformat('%B %d, %Y') }}</td>
                         <td>
                             {% if not loop.first %}
                                 {% set prev = results[loop.index0 - 1] %}
                                 {% set diff = row.monthly_listeners - prev.monthly_listeners %}
                                 {% if diff > 0 %}
-                                    <span style="color:transparent;font-weight:bold;background:linear-gradient(90deg,#7f5eff 0%,#ff5ecd 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-fill-color:transparent;font-weight:bold;text-shadow:0 0 8px #7f5eff55,0 0 16px #ff5ecd55;">+{{ "{:,}".format(diff) }}</span>
+                                    <span class="positive-change">+{{ "{:,}".format(diff) }}</span>
                                 {% elif diff < 0 %}
-                                    <span style="color:#e74c3c;font-weight:bold;">{{ "{:,}".format(diff) }}</span>
+                                    <span class="negative-change">{{ "{:,}".format(diff) }}</span>
                                 {% else %}
-                                    <span style="color:#aaa;">—</span>
+                                    <span class="neutral-change">—</span>
                                 {% endif %}
                             {% else %}
-                                <span style="color:#aaa;">—</span>
+                                <span class="neutral-change">—</span>
                             {% endif %}
                         </td>
                         <td>
                             {% if not loop.first and prev.monthly_listeners != 0 %}
                                 {% set pct = ((row.monthly_listeners - prev.monthly_listeners) / prev.monthly_listeners) * 100 %}
                                 {% if pct > 0 %}
-                                    <span style="color:transparent;font-weight:bold;background:linear-gradient(90deg,#7f5eff 0%,#ff5ecd 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-fill-color:transparent;font-weight:bold;text-shadow:0 0 8px #7f5eff55,0 0 16px #ff5ecd55;">+{{ '%.2f'|format(pct) }}%</span>
+                                    <span class="positive-change">+{{ '%.2f'|format(pct) }}%</span>
                                 {% elif pct < 0 %}
-                                    <span style="color:#e74c3c;font-weight:bold;">{{ '%.2f'|format(pct) }}%</span>
+                                    <span class="negative-change">{{ '%.2f'|format(pct) }}%</span>
                                 {% else %}
-                                    <span style="color:#aaa;">—</span>
+                                    <span class="neutral-change">—</span>
                                 {% endif %}
                             {% else %}
-                                <span style="color:#aaa;">—</span>
+                                <span class="neutral-change">—</span>
                             {% endif %}
                         </td>
                         <td>{{ "{:,}".format(row.monthly_listeners) }}</td>
@@ -136,7 +136,7 @@
             </div>
             {% if artist_info %}
             <div style="flex:0 0 340px;max-width:340px;min-width:260px;background:rgba(30,30,40,0.85);padding:28px 32px 18px 32px;border-radius:18px;box-shadow:0 2px 16px rgba(0,0,0,0.10);margin-bottom:32px;position:sticky;top:32px;height:fit-content;align-self:flex-start;order:2;">
-                <h2 style="color:transparent;font-size:1.18em;margin-bottom:18px;text-align:center;background:linear-gradient(90deg,#7f5eff 0%,#ff5ecd 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-fill-color:transparent;text-shadow:0 0 8px #7f5eff55,0 0 16px #ff5ecd55;">Top 5 Songs</h2>
+                <h2 style="color:transparent;font-size:1.7em;margin-bottom:18px;text-align:center;background:linear-gradient(90deg,#7f5eff 0%,#ff5ecd 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-fill-color:transparent;text-shadow:0 0 8px #7f5eff55,0 0 16px #ff5ecd55;">Top 5 Songs</h2>
                 <div id="top-tracks-embeds" style="display:flex;flex-direction:column;gap:18px;"></div>
             </div>
             <script>
@@ -329,8 +329,8 @@ new Chart(ctx, {
         width: 70%;
         height: 5px;
         border-radius: 3px;
-        background: linear-gradient(90deg, #fff 0%, #ffe066 100%);
-        box-shadow: 0 0 18px 6px #ffe06655, 0 0 32px 10px #fff3;
+        background: linear-gradient(90deg, #7f5eff 0%, #ff5ecd 100%);
+        box-shadow: 0 0 18px 6px #7f5eff55, 0 0 32px 10px #ff5ecd33;
     }
     .artist-header-name {
         text-shadow: 0 0 18px #7f5eff55, 0 0 32px #ff5ecd55;
@@ -347,14 +347,9 @@ new Chart(ctx, {
         border-radius: 14px;
         overflow: hidden;
     }
-    .artist-history-table th, .artist-history-table td {
+    .artist-history-table th {
         padding: 14px 10px;
         text-align: left;
-    }
-    .artist-history-table th {
-        /* Remove background gradient */
-        /* background: linear-gradient(90deg, #7f5eff 0%, #ff5ecd 100%); */
-        /* Apply gradient to text */
         background: linear-gradient(90deg, #7f5eff 0%, #ff5ecd 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
@@ -365,6 +360,23 @@ new Chart(ctx, {
         border-bottom: 3px solid;
         border-image: linear-gradient(90deg, #7f5eff 0%, #ff5ecd 100%) 1;
         text-shadow: 0 2px 8px #000a;
+    }
+    .artist-history-table td {
+        padding: 14px 10px;
+        text-align: left;
+        /* No background/text-clip styles here, so inline color works */
+        color: #fff;
+    }
+    .positive-change {
+        color: #1DB954 !important;
+        font-weight: bold;
+    }
+    .negative-change {
+        color: #e74c3c !important;
+        font-weight: bold;
+    }
+    .neutral-change {
+        color: #aaa !important;
     }
     .artist-history-table tr {
         background: #191414;

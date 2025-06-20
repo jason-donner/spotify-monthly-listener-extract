@@ -249,12 +249,12 @@ def datetimeformat(value, format='medium'):
         dt = value
     if format == 'short':
         # "Jun 18" or "Jun 2024"
-        if len(value) in (10, 8):  # YYYY-MM-DD or YYYYMMDD
+        if isinstance(value, str) and len(value) in (10, 8):  # YYYY-MM-DD or YYYYMMDD
             return dt.strftime('%b %d')
-        elif len(value) == 7:      # YYYY-MM
+        elif isinstance(value, str) and len(value) == 7:      # YYYY-MM
             return dt.strftime('%b %Y')
-    # Default: "2024-06-18" or "2024-06"
-    return dt.strftime('%Y-%m-%d') if len(value) in (10, 8) else dt.strftime('%Y-%m')
+    # Use the provided format string for all other cases
+    return dt.strftime(format)
 
 @app.route("/leaderboard")
 def leaderboard():
@@ -366,6 +366,19 @@ def artist_detail(artist_name_slug, artist_id):
     artists = load_data()
     results = [a for a in artists if a.get("artist_id") == artist_id]
     results.sort(key=lambda x: x.get("date", ""), reverse=True)
+    # Convert date strings to datetime objects for template formatting
+    def parse_date(val):
+        if isinstance(val, datetime):
+            return val
+        if isinstance(val, str):
+            for fmt in ("%Y-%m-%d", "%Y-%m-%dT%H:%M:%S"):
+                try:
+                    return datetime.strptime(val, fmt)
+                except Exception:
+                    continue
+        return val
+    for row in results:
+        row["date"] = parse_date(row.get("date"))
     artist_info = None
     artist_image_url = None
     all_time_high = None
@@ -374,7 +387,7 @@ def artist_detail(artist_name_slug, artist_id):
         max_entry = max(results, key=lambda x: x.get("monthly_listeners", 0))
         all_time_high = {
             "value": max_entry.get("monthly_listeners", 0),
-            "date": max_entry.get("date", "")
+            "date": parse_date(max_entry.get("date", ""))
         }
         artist_url = results[0].get("artist_url") or results[0].get("url")
         try:
