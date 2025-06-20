@@ -14,7 +14,7 @@
                 {% if artist_info.genres or artist_info.followers %}
                 <div style="display:flex;flex-direction:column;justify-content:center;gap:10px;flex:1;min-width:200px;">
                     {% if artist_info.genres %}
-                        <div style="color:transparent;font-size:1.13em;display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:linear-gradient(90deg,#7f5eff 0%,#ff5ecd 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-fill-color:transparent;text-shadow:0 0 8px #7f5eff55,0 0 16px #ff5ecd55;">
+                        <div style="font-size:1.13em;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
                             <div class="genre-badges">
                                 {% for genre in artist_info.genres %}
                                     <span class="genre-pill">{{ genre }}</span>
@@ -293,7 +293,7 @@ new Chart(ctx, {
         font-size: 0.98em;
         font-weight: 600;
         background: linear-gradient(90deg, #7f5eff 0%, #ff5ecd 100%);
-        color: #fff;
+        color: #fff !important;
         box-shadow: 0 2px 8px rgba(127,95,255,0.10);
         border: none;
         letter-spacing: 0.5px;
