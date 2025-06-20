@@ -14,7 +14,7 @@
                 {% if artist_info.genres or artist_info.followers %}
                 <div style="display:flex;flex-direction:column;justify-content:center;gap:10px;flex:1;min-width:200px;">
                     {% if artist_info.genres %}
-                        <div style="color:#1DB954;font-size:1.13em;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+                        <div style="color:transparent;font-size:1.13em;display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:linear-gradient(90deg,#7f5eff 0%,#ff5ecd 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-fill-color:transparent;text-shadow:0 0 8px #7f5eff55,0 0 16px #ff5ecd55;">
                             <div class="genre-badges">
                                 {% for genre in artist_info.genres %}
                                     <span class="genre-pill">{{ genre }}</span>
@@ -105,7 +105,7 @@
                                 {% set prev = results[loop.index0 - 1] %}
                                 {% set diff = row.monthly_listeners - prev.monthly_listeners %}
                                 {% if diff > 0 %}
-                                    <span style="color:#1DB954;font-weight:bold;">+{{ "{:,}".format(diff) }}</span>
+                                    <span style="color:transparent;font-weight:bold;background:linear-gradient(90deg,#7f5eff 0%,#ff5ecd 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-fill-color:transparent;font-weight:bold;text-shadow:0 0 8px #7f5eff55,0 0 16px #ff5ecd55;">+{{ "{:,}".format(diff) }}</span>
                                 {% elif diff < 0 %}
                                     <span style="color:#e74c3c;font-weight:bold;">{{ "{:,}".format(diff) }}</span>
                                 {% else %}
@@ -119,7 +119,7 @@
                             {% if not loop.first and prev.monthly_listeners != 0 %}
                                 {% set pct = ((row.monthly_listeners - prev.monthly_listeners) / prev.monthly_listeners) * 100 %}
                                 {% if pct > 0 %}
-                                    <span style="color:#1DB954;font-weight:bold;">+{{ '%.2f'|format(pct) }}%</span>
+                                    <span style="color:transparent;font-weight:bold;background:linear-gradient(90deg,#7f5eff 0%,#ff5ecd 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-fill-color:transparent;font-weight:bold;text-shadow:0 0 8px #7f5eff55,0 0 16px #ff5ecd55;">+{{ '%.2f'|format(pct) }}%</span>
                                 {% elif pct < 0 %}
                                     <span style="color:#e74c3c;font-weight:bold;">{{ '%.2f'|format(pct) }}%</span>
                                 {% else %}
@@ -136,7 +136,7 @@
             </div>
             {% if artist_info %}
             <div style="flex:0 0 340px;max-width:340px;min-width:260px;background:rgba(30,30,40,0.85);padding:28px 32px 18px 32px;border-radius:18px;box-shadow:0 2px 16px rgba(0,0,0,0.10);margin-bottom:32px;position:sticky;top:32px;height:fit-content;align-self:flex-start;order:2;">
-                <h2 style="color:#1DB954;font-size:1.18em;margin-bottom:18px;text-align:center;">Top 5 Songs</h2>
+                <h2 style="color:transparent;font-size:1.18em;margin-bottom:18px;text-align:center;background:linear-gradient(90deg,#7f5eff 0%,#ff5ecd 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-fill-color:transparent;text-shadow:0 0 8px #7f5eff55,0 0 16px #ff5ecd55;">Top 5 Songs</h2>
                 <div id="top-tracks-embeds" style="display:flex;flex-direction:column;gap:18px;"></div>
             </div>
             <script>
@@ -352,11 +352,19 @@ new Chart(ctx, {
         text-align: left;
     }
     .artist-history-table th {
-        background:rgba(30,30,40,0.85);
-        color: #1DB954;
+        /* Remove background gradient */
+        /* background: linear-gradient(90deg, #7f5eff 0%, #ff5ecd 100%); */
+        /* Apply gradient to text */
+        background: linear-gradient(90deg, #7f5eff 0%, #ff5ecd 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        color: transparent;
         font-size: 1.08em;
         letter-spacing: 1px;
-        border-bottom: 2px solid #1DB954;
+        border-bottom: 3px solid;
+        border-image: linear-gradient(90deg, #7f5eff 0%, #ff5ecd 100%) 1;
+        text-shadow: 0 2px 8px #000a;
     }
     .artist-history-table tr {
         background: #191414;

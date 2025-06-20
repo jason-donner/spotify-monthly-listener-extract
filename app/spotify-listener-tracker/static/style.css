@@ -276,6 +276,18 @@ button[type="submit"]:hover {
     border-bottom: 2px solid #1DB954;
     text-align: center;
 }
+.artist-history-table th {
+    background: rgba(30,30,40,0.85);
+    background-image: linear-gradient(90deg, #7f5eff 0%, #ff5ecd 100%);
+    color: transparent;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-size: 1.08em;
+    letter-spacing: 1px;
+    border-bottom: 2px solid #7f5eff;
+    text-shadow: none;
+}
 .artist-history-table tr, .leaderboard-table tr {
     background: #191414;
     transition: background 0.2s;
@@ -440,6 +452,59 @@ table.leaderboard-table {
 .artist-image-animate:hover {
     box-shadow: 0 8px 48px #ff5ecd55, 0 4px 24px #7f5eff55;
     transform: scale(1.04) rotate(-2deg);
+}
+.genre-pill {
+    display: inline-block;
+    padding: 5px 16px;
+    border-radius: 999px;
+    font-size: 0.98em;
+    font-weight: 600;
+    background: linear-gradient(90deg, #7f5eff 0%, #ff5ecd 100%);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(127,95,255,0.10);
+    border: none;
+    letter-spacing: 0.5px;
+    transition: transform 0.15s, box-shadow 0.15s;
+    /* Add border for extra pop */
+    border: 2px solid #7f5eff;
+}
+.genre-pill:hover {
+    transform: scale(1.07);
+    box-shadow: 0 4px 16px rgba(127,95,255,0.18);
+    border: 2px solid #ff5ecd;
+}
+.artist-history-table th {
+    background: rgba(30,30,40,0.85);
+    background-image: linear-gradient(90deg, #7f5eff 0%, #ff5ecd 100%);
+    color: transparent;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-size: 1.08em;
+    letter-spacing: 1px;
+    border-bottom: 2px solid #7f5eff;
+    text-shadow: none;
+}
+.artist-history-table tr td span[style*='color:#1DB954'],
+.artist-history-table tr td span[style*='color: #1DB954'] {
+    color: #7f5eff !important;
+    font-weight: bold;
+    background: linear-gradient(90deg, #7f5eff 0%, #ff5ecd 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-fill-color: transparent;
+    text-shadow: 0 0 8px #7f5eff55, 0 0 16px #ff5ecd55;
+}
+/* Top 5 Songs heading */
+h2[style*='color:#1DB954'] {
+    color: transparent !important;
+    background: linear-gradient(90deg, #7f5eff 0%, #ff5ecd 100%) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+    text-fill-color: transparent !important;
+    text-shadow: 0 0 8px #7f5eff55, 0 0 16px #ff5ecd55;
 }
 @media (max-width: 700px) {
     .content-container {
