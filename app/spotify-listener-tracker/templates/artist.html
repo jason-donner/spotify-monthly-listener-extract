@@ -4,7 +4,7 @@
     {% if artist_info %}
     <div style="margin:40px auto 0 auto;max-width:1200px;">
         <div style="display:flex;flex-direction:column;align-items:stretch;gap:0;margin-bottom:12px;padding:24px 32px;background:rgba(30,30,40,0.85);border-radius:18px;box-shadow:0 2px 16px rgba(0,0,0,0.10);">
-            <div class="artist-header-name" style="margin-bottom:18px;text-align:center;font-size:2.7em;font-family:'Montserrat', 'Segoe UI', 'Arial', sans-serif;background:linear-gradient(90deg,#ff5ecd 0%,#7f5eff 40%,#1DB954 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-fill-color:transparent;">{{ artist_info.name }}</div>
+            <div class="artist-header-name" style="margin-bottom:28px;text-align:center;font-size:3.5em;font-family:'Montserrat', 'Segoe UI', 'Arial', sans-serif;background:linear-gradient(90deg,#7f5eff 0%,#ff5ecd 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-fill-color:transparent;text-shadow:0 0 18px #7f5eff55,0 0 32px #ff5ecd55;font-weight:800;padding-bottom:16px;">{{ artist_info.name }}</div>
             <div style="display:flex;flex-direction:row;gap:32px;align-items:stretch;justify-content:center;">
                 {% if artist_image_url %}
                     <div class="artist-image-border">
@@ -316,6 +316,24 @@ new Chart(ctx, {
         color: #fff;
         line-height: 1.1;
         font-family: 'Montserrat', 'Segoe UI', 'Arial', sans-serif;
+        position: relative;
+        display: inline-block;
+        margin: 0 auto 18px auto;
+        padding-bottom: 10px;
+    }
+    .artist-header-name::after {
+        content: '';
+        display: block;
+        margin: 0 auto;
+        margin-top: 8px;
+        width: 70%;
+        height: 5px;
+        border-radius: 3px;
+        background: linear-gradient(90deg, #fff 0%, #ffe066 100%);
+        box-shadow: 0 0 18px 6px #ffe06655, 0 0 32px 10px #fff3;
+    }
+    .artist-header-name {
+        text-shadow: 0 0 18px #7f5eff55, 0 0 32px #ff5ecd55;
     }
     .artist-history-table {
         width: 100%;
