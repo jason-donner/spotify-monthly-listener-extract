@@ -11,12 +11,23 @@
         <div class="leaderboard-tier-group">
             <div class="leaderboard-tier-label">Monthly Listener Tiers</div>
             <div class="leaderboard-tier-row">
-                <a href="?mode={{ leaderboard_mode }}&tier=all" class="leaderboard-tier tier-all {% if leaderboard_tier == 'all' %}active-tier{% endif %}">All</a>
-                <a href="?mode={{ leaderboard_mode }}&tier=micro" class="leaderboard-tier tier-micro {% if leaderboard_tier == 'micro' %}active-tier{% endif %}">0–1,000</a>
-                <a href="?mode={{ leaderboard_mode }}&tier=small" class="leaderboard-tier tier-small {% if leaderboard_tier == 'small' %}active-tier{% endif %}">1,001–3,000</a>
-                <a href="?mode={{ leaderboard_mode }}&tier=medium" class="leaderboard-tier tier-medium {% if leaderboard_tier == 'medium' %}active-tier{% endif %}">3,001–15,000</a>
-                <a href="?mode={{ leaderboard_mode }}&tier=large" class="leaderboard-tier tier-large {% if leaderboard_tier == 'large' %}active-tier{% endif %}">15,001–50,000</a>
-                <a href="?mode={{ leaderboard_mode }}&tier=major" class="leaderboard-tier tier-major {% if leaderboard_tier == 'major' %}active-tier{% endif %}">&gt;50,000</a>
+                {% set tiers = [
+                    ('all', 'All'),
+                    ('micro', '0–1,000'),
+                    ('small', '1,001–3,000'),
+                    ('medium', '3,001–15,000'),
+                    ('large', '15,001–50,000'),
+                    ('major', '>50,000')
+                ] %}
+                {% set total = tiers|length %}
+                {% for tier in tiers %}
+                {% set idx = loop.index0 %}
+                <a href="?mode={{ leaderboard_mode }}&tier={{ tier[0] }}"
+                   class="leaderboard-tier tier-{{ tier[0] }} {% if leaderboard_tier == tier[0] %}active-tier{% endif %}"
+                   style="--tier-idx:{{ idx }};--tier-count:{{ total }};">
+                    {{ tier[1] }}
+                </a>
+                {% endfor %}
             </div>
         </div>
         <table class="leaderboard-table">
@@ -43,7 +54,7 @@
                     <span style="color:#1DB954;font-weight:bold;font-size:1.13em;">{{ row.artist }}</span>
                 {% endif %}
                 </td>
-                <td>
+                <td class="change-col">
                     {% if row.change > 0 %}
                         <span style="color:#1DB954;">+{{ "{:,}".format(row.change) }}</span>
                     {% elif row.change < 0 %}
@@ -66,6 +77,12 @@
             </tr>
             {% endfor %}
         </table>
+        <div style="text-align:right;margin-top:12px;">
+            <a href="https://open.spotify.com/" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;color:#1DB954;font-weight:700;font-size:1.08em;text-decoration:none;">
+                <svg width="22" height="22" viewBox="0 0 168 168" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle;"><circle cx="84" cy="84" r="84" fill="#1DB954"/><path d="M120.1 116.2c-2.1 3.5-6.6 4.6-10.1 2.5-27.7-16.9-62.6-20.7-103.7-11.2-4 0.9-8.1-1.6-9-5.6-0.9-4 1.6-8.1 5.6-9 44.7-10.1 82.2-6 112.1 12.5 3.5 2.1 4.6 6.6 2.5 10.1zm14.3-28.6c-2.6 4.2-8.1 5.6-12.3 3-31.8-19.4-80.2-25-117.7-13.5-4.7 1.4-9.7-1.2-11.1-5.9-1.4-4.7 1.2-9.7 5.9-11.1 41.8-12.3 94.1-6.2 129.7 15.1 4.2 2.6 5.6 8.1 3 12.4zm15.1-30.2C128.7 44.7 70.2 42.5 32.2 53.7c-5.3 1.5-10.8-1.5-12.3-6.8-1.5-5.3 1.5-10.8 6.8-12.3 42.7-12.2 107.7-9.7 146.2 15.7 4.7 2.9 6.2 9.1 3.3 13.8-2.9 4.7-9.1 6.2-13.8 3.3z" fill="#fff"/></svg>
+                Listen on Spotify
+            </a>
+        </div>
     </div>
 </div>
 <style>

@@ -2,142 +2,203 @@
 {% block content %}
 <div class="content-container">
     {% if artist_info %}
-    <div style="max-width:900px;margin:40px auto 0 auto;">
-        <div style="display:flex;align-items:center;gap:36px;margin-bottom:32px;padding:24px 32px;background:#232323;border-radius:18px;box-shadow:0 2px 16px rgba(0,0,0,0.10);">
+    <div style="max-width:1200px;margin:40px auto 0 auto;">
+        <div style="display:flex;align-items:center;gap:36px;margin-bottom:32px;padding:24px 32px;background:#232323;border-radius:18px;box-shadow:0 2px 16px rgba(0,0,0,0.10);width:100%;">
             {% if artist_image_url %}
-                <img src="{{ artist_image_url }}" alt="{{ artist_info.name }}" style="width:180px;height:180px;border-radius:50%;box-shadow:0 2px 32px rgba(0,0,0,0.18);background:#232323;object-fit:cover;">
+                <img src="{{ artist_image_url }}" alt="{{ artist_info.name }}" class="artist-image-animate" style="width:180px;height:180px;border-radius:50%;background:#232323;object-fit:cover;">
             {% endif %}
-            <div style="display:flex;flex-direction:column;justify-content:center;gap:10px;">
-                <div style="font-size:2.1em;font-weight:bold;color:#fff;line-height:1.1;">{{ artist_info.name }}</div>
-                {% if artist_info.genres %}
-                    <div style="color:#1DB954;font-size:1.13em;">
-                        <span style="font-weight:600;">Genres:</span>
-                        <span style="color:#fff;">{{ artist_info.genres|join(', ') }}</span>
+            <div style="display:flex;flex-direction:row;gap:32px;width:100%;align-items:center;">
+                <div style="display:flex;flex-direction:column;justify-content:center;gap:10px;flex:1;">
+                    <div class="artist-header-name">{{ artist_info.name }}</div>
+                    {% if artist_info.genres %}
+                        <div style="color:#1DB954;font-size:1.13em;">
+                            <span style="font-weight:600;">Genres:</span>
+                            <span style="color:#fff;">{{ artist_info.genres|join(', ') }}</span>
+                        </div>
+                    {% endif %}
+                    {% if artist_info.followers %}
+                        <div style="color:#aaa;font-size:1.08em;">
+                            <span style="font-weight:600;color:#1DB954;">Followers:</span>
+                            <span style="color:#fff;">{{ "{:,}".format(artist_info.followers) }}</span>
+                        </div>
+                    {% endif %}
+                </div>
+                {% if results and results|length > 0 %}
+                <div style="flex:0 0 160px;display:flex;justify-content:center;align-items:center;">
+                    <div class="all-time-high-card">
+                        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="16" fill="url(#ath-gradient2)"/><path d="M16 8v16" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        <svg width="0" height="0">
+                            <defs>
+                                <linearGradient id="ath-gradient2" x1="0" y1="0" x2="1" y2="1">
+                                    <stop offset="0%" stop-color="#7f5eff"/>
+                                    <stop offset="100%" stop-color="#ff5ecd"/>
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        <div style="display:flex;flex-direction:column;align-items:center;">
+                            <span style="background:linear-gradient(90deg,#7f5eff 0%,#ff5ecd 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-fill-color:transparent;font-size:1.13em;font-weight:700;">Current</span>
+                            <span style="color:#fff;font-size:1.35em;font-weight:700;line-height:1.1;">{{ "{:,}".format(results[-1].monthly_listeners) }}</span>
+                            <span style="color:#aaa;font-size:1em;margin-top:2px;">as of {{ results[-1].date | datetimeformat('%b %d, %Y') }}</span>
+                        </div>
                     </div>
-                {% endif %}
-                {% if artist_info.followers %}
-                    <div style="color:#aaa;font-size:1.08em;">
-                        <span style="font-weight:600;color:#1DB954;">Followers:</span>
-                        <span style="color:#fff;">{{ "{:,}".format(artist_info.followers) }}</span>
-                    </div>
+                </div>
                 {% endif %}
                 {% if all_time_high %}
-                    <div style="color:#ff5ecd;font-size:1.13em;font-weight:600;">
-                        <span>All-Time High:</span>
-                        <span style="color:#fff;">{{ "{:,}".format(all_time_high.value) }}</span>
-                        <span style="color:#aaa;font-size:0.98em;">on {{ all_time_high.date | datetimeformat('%b %d, %Y') }}</span>
+                <div style="flex:0 0 160px;display:flex;justify-content:flex-end;align-items:center;">
+                    <div class="all-time-high-card">
+                        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="16" fill="url(#ath-gradient)"/><path d="M10 21l6-10 6 10" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        <svg width="0" height="0">
+                            <defs>
+                                <linearGradient id="ath-gradient" x1="0" y1="0" x2="1" y2="1">
+                                    <stop offset="0%" stop-color="#ff5ecd"/>
+                                    <stop offset="100%" stop-color="#7f5eff"/>
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        <div style="display:flex;flex-direction:column;align-items:center;">
+                            <span style="background:linear-gradient(90deg,#ff5ecd 0%,#7f5eff 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-fill-color:transparent;font-size:1.13em;font-weight:700;">All-Time High</span>
+                            <span style="color:#fff;font-size:1.35em;font-weight:700;line-height:1.1;">{{ "{:,}".format(all_time_high.value) }}</span>
+                            <span style="color:#aaa;font-size:1em;margin-top:2px;">{{ all_time_high.date | datetimeformat('%b %d, %Y') }}</span>
+                        </div>
                     </div>
+                </div>
                 {% endif %}
             </div>
         </div>
-        <div style="background:#232323;padding:32px 18px 16px 18px;border-radius:18px;box-shadow:0 2px 16px rgba(0,0,0,0.10);margin-bottom:32px;">
-            <canvas id="listenersChart" height="140"></canvas>
+        <div style="display:flex;gap:36px;align-items:flex-start;width:100%;">
+            <div style="flex:2 1 0;min-width:0;order:1;">
+                <div style="background:#232323;padding:32px 18px 16px 18px;border-radius:18px;box-shadow:0 2px 16px rgba(0,0,0,0.10);margin-bottom:32px;">
+                    <canvas id="listenersChart" height="140"></canvas>
+                </div>
+                <table class="artist-history-table">
+                    <tr>
+                        <th>Date</th>
+                        <th>Change</th>
+                        <th>% Change</th>
+                        <th>Monthly Listeners</th>
+                    </tr>
+                    {% for row in results %}
+                    <tr>
+                        <td>{{ row.date | datetimeformat('%b %d, %Y') }}</td>
+                        <td>
+                            {% if not loop.first %}
+                                {% set prev = results[loop.index0 - 1] %}
+                                {% set diff = row.monthly_listeners - prev.monthly_listeners %}
+                                {% if diff > 0 %}
+                                    <span style="color:#1DB954;font-weight:bold;">+{{ "{:,}".format(diff) }}</span>
+                                {% elif diff < 0 %}
+                                    <span style="color:#e74c3c;font-weight:bold;">{{ "{:,}".format(diff) }}</span>
+                                {% else %}
+                                    <span style="color:#aaa;">—</span>
+                                {% endif %}
+                            {% else %}
+                                <span style="color:#aaa;">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if not loop.first and prev.monthly_listeners != 0 %}
+                                {% set pct = ((row.monthly_listeners - prev.monthly_listeners) / prev.monthly_listeners) * 100 %}
+                                {% if pct > 0 %}
+                                    <span style="color:#1DB954;font-weight:bold;">+{{ '%.2f'|format(pct) }}%</span>
+                                {% elif pct < 0 %}
+                                    <span style="color:#e74c3c;font-weight:bold;">{{ '%.2f'|format(pct) }}%</span>
+                                {% else %}
+                                    <span style="color:#aaa;">—</span>
+                                {% endif %}
+                            {% else %}
+                                <span style="color:#aaa;">—</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ "{:,}".format(row.monthly_listeners) }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+            {% if artist_info %}
+            <div style="flex:0 0 340px;max-width:340px;min-width:260px;background:#232323;padding:28px 12px 18px 12px;border-radius:18px;box-shadow:0 2px 16px rgba(0,0,0,0.10);margin-bottom:32px;position:sticky;top:32px;height:fit-content;align-self:flex-start;order:2;">
+                <h2 style="color:#1DB954;font-size:1.18em;margin-bottom:18px;text-align:center;">Top 5 Songs</h2>
+                <div id="top-tracks-embeds" style="display:flex;flex-direction:column;gap:14px;"></div>
+            </div>
+            <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                fetch('/top_tracks/{{ artist_id }}')
+                    .then(res => res.json())
+                    .then(tracks => {
+                        const container = document.getElementById('top-tracks-embeds');
+                        if (!container) return;
+                        tracks.slice(0, 5).forEach(track => {
+                            const trackId = track.url.split('/').pop();
+                            const iframe = document.createElement('iframe');
+                            iframe.src = `https://open.spotify.com/embed/track/${trackId}`;
+                            iframe.width = '100%';
+                            iframe.height = '80';
+                            iframe.frameBorder = '0';
+                            iframe.allow = 'encrypted-media';
+                            iframe.style.borderRadius = '12px';
+                            iframe.style.background = '#191414';
+                            iframe.style.boxShadow = '0 2px 12px #0005';
+                            iframe.style.marginBottom = '0';
+                            container.appendChild(iframe);
+                        });
+                    });
+            });
+            </script>
+            {% endif %}
         </div>
-        <table class="artist-history-table">
-            <tr>
-                <th>Date</th>
-                <th>Change</th>
-                <th>% Change</th>
-                <th>Monthly Listeners</th>
-            </tr>
-            {% for row in results %}
-            <tr>
-                <td>{{ row.date | datetimeformat('%b %d, %Y') }}</td>
-                <td>
-                    {% if not loop.first %}
-                        {% set prev = results[loop.index0 - 1] %}
-                        {% set diff = row.monthly_listeners - prev.monthly_listeners %}
-                        {% if diff > 0 %}
-                            <span style="color:#1DB954;font-weight:bold;">+{{ "{:,}".format(diff) }}</span>
-                        {% elif diff < 0 %}
-                            <span style="color:#e74c3c;font-weight:bold;">{{ "{:,}".format(diff) }}</span>
-                        {% else %}
-                            <span style="color:#aaa;">—</span>
-                        {% endif %}
-                    {% else %}
-                        <span style="color:#aaa;">—</span>
-                    {% endif %}
-                </td>
-                <td>
-                    {% if not loop.first and prev.monthly_listeners != 0 %}
-                        {% set pct = ((row.monthly_listeners - prev.monthly_listeners) / prev.monthly_listeners) * 100 %}
-                        {% if pct > 0 %}
-                            <span style="color:#1DB954;font-weight:bold;">+{{ '%.2f'|format(pct) }}%</span>
-                        {% elif pct < 0 %}
-                            <span style="color:#e74c3c;font-weight:bold;">{{ '%.2f'|format(pct) }}%</span>
-                        {% else %}
-                            <span style="color:#aaa;">—</span>
-                        {% endif %}
-                    {% else %}
-                        <span style="color:#aaa;">—</span>
-                    {% endif %}
-                </td>
-                <td>{{ "{:,}".format(row.monthly_listeners) }}</td>
-            </tr>
-            {% endfor %}
-        </table>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-    const chartLabels = [
-        {% for row in results|reverse %}
-            "{{ row.date | datetimeformat('short') }}",
-        {% endfor %}
-    ];
-    const chartData = [
-        {% for row in results|reverse %}
-            {{ row.monthly_listeners }},
-        {% endfor %}
-    ];
-    const ctx = document.getElementById('listenersChart').getContext('2d');
-    const gradient = ctx.createLinearGradient(0, 0, 0, 220);
-    gradient.addColorStop(0, 'rgba(30,215,96,0.97)');
-    gradient.addColorStop(1, 'rgba(25,21,20,0.18)');
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: chartLabels,
-            datasets: [{
-                label: 'Monthly Listeners',
-                data: chartData,
-                fill: true,
-                backgroundColor: gradient,
-                borderColor: '#1DB954',
-                borderWidth: 3,
-                pointRadius: 3,
-                pointBackgroundColor: '#1DB954',
-                pointBorderColor: '#fff',
-                tension: 0.35,
-            }]
+const chartLabels = [{% for row in results|reverse %}"{{ row.date | datetimeformat('short') }}"{% if not loop.last %},{% endif %}{% endfor %}];
+const chartData = [{% for row in results|reverse %}{{ row.monthly_listeners }}{% if not loop.last %},{% endif %}{% endfor %}];
+const ctx = document.getElementById('listenersChart').getContext('2d');
+const gradient = ctx.createLinearGradient(0, 0, 0, 220);
+gradient.addColorStop(0, 'rgba(30,215,96,0.97)');
+gradient.addColorStop(1, 'rgba(25,21,20,0.18)');
+new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: chartLabels,
+        datasets: [{
+            label: 'Monthly Listeners',
+            data: chartData,
+            fill: true,
+            backgroundColor: gradient,
+            borderColor: '#1DB954',
+            borderWidth: 3,
+            pointRadius: 3,
+            pointBackgroundColor: '#1DB954',
+            pointBorderColor: '#fff',
+            tension: 0.35,
+        }]
+    },
+    options: {
+        plugins: {
+            legend: { display: false }
         },
-        options: {
-            plugins: {
-                legend: { display: false }
-            },
-            scales: {
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Date',
-                        color: '#fff',
-                        font: { weight: 'bold', size: 16 }
-                    },
-                    ticks: { color: '#aaa', font: { weight: 'bold' } },
-                    grid: { color: 'rgba(29,185,84,0.08)' }
+        scales: {
+            x: {
+                title: {
+                    display: true,
+                    text: 'Date',
+                    color: '#fff',
+                    font: { weight: 'bold', size: 16 }
                 },
-                y: {
-                    title: {
-                        display: true,
-                        text: 'Monthly Listeners',
-                        color: '#fff',
-                        font: { weight: 'bold', size: 16 }
-                    },
-                    ticks: { color: '#aaa', font: { weight: 'bold' } },
-                    grid: { color: 'rgba(29,185,84,0.08)' }
-                }
+                ticks: { color: '#aaa', font: { weight: 'bold' } },
+                grid: { color: 'rgba(29,185,84,0.08)' }
+            },
+            y: {
+                title: {
+                    display: true,
+                    text: 'Monthly Listeners',
+                    color: '#fff',
+                    font: { weight: 'bold', size: 16 }
+                },
+                ticks: { color: '#aaa', font: { weight: 'bold' } },
+                grid: { color: 'rgba(29,185,84,0.08)' }
             }
         }
-    });
+    }
+});
     </script>
     <style>
     .artist-history-table {
@@ -173,7 +234,44 @@
     .artist-history-table tr:hover {
         background: #282828;
     }
-    </style>
+    .all-time-high-card {
+        background: linear-gradient(120deg, #232323 60%, #191414 100%);
+        padding: 18px 10px 14px 10px;
+        border-radius: 18px;
+        box-shadow: 0 2px 12px rgba(127,95,255,0.13), 0 2px 12px rgba(255,94,205,0.10);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-width: 120px;
+        max-width: 160px;
+        min-height: 120px;
+        aspect-ratio: 1/1;
+        gap: 8px;
+        border: 2px solid transparent;
+        background-clip: padding-box;
+        position: relative;
+    }
+    .all-time-high-card svg:first-child {
+        margin-bottom: 2px;
+    }
+    .artist-header-name {
+        font-size: 2.1em;
+        font-weight: bold;
+        color: #fff;
+        line-height: 1.1;
+    }
+    .artist-image-animate {
+        width: 180px;
+        height: 180px;
+        border-radius: 50%;
+        background: #232323;
+        object-fit: cover;
+        transition: transform 0.3s;
+    }
+    .artist-image-animate:hover {
+        transform: scale(1.05);
+    }
     {% else %}
     <div style="max-width:700px;margin:60px auto 0 auto;text-align:center;padding:40px 24px;background:#232323;border-radius:18px;box-shadow:0 2px 16px rgba(0,0,0,0.10);color:#fff;">
         <h2>Artist not found or no data available.</h2>

@@ -55,7 +55,7 @@ def home():
 
 @app.route("/home")
 def home_page():
-    # Redirect /home to the leaderboard (which is also the homepage)
+    # Redirect /home to the leaderboard (which is also thehomepage)
     return redirect(url_for("leaderboard"))
 
 @app.route("/search", methods=["GET"])
@@ -399,6 +399,7 @@ def artist_detail(artist_name_slug, artist_id):
         artist_info=artist_info,
         artist_image_url=artist_image_url,
         all_time_high=all_time_high,
+        artist_id=artist_id,
     )
 
 if __name__ == "__main__":
