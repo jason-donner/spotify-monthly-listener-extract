@@ -115,6 +115,17 @@ Spotify Monthly Listener Extract/
   - Ensured all records in the master results file have valid `artist_id` fields (extracted from the URL if missing).
   - Removed any records with `monthly_listeners` equal to 0, as these represent scraping errors.
   - Updated the scraping script to prevent such records from being created in the future.
+  - **Deduplicated data:** As of June 2025, we use `dedupe_daily_last.py` to ensure only the latest value per artist per day is kept in all results files. This script overwrites the originals in-place.
+
+### Deduplicate Data by Day
+
+To ensure only one data point per artist per day (the latest scraped value), run:
+
+```sh
+& ".venv/Scripts/python.exe" dedupe_daily_last.py
+```
+
+This will overwrite all `spotify-monthly-listeners-*.json` files in `src/results/` with deduplicated data.
 
 See the workflow documentation for scripts and commands used.
 

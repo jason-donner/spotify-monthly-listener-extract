@@ -117,9 +117,20 @@ Spotify Monthly Listener Extract/
   ```
 
 - Updated `src/scrape.py` to prevent future inclusion of zero-listener records.
+- **Deduplicated daily data:** Used `dedupe_daily_last.py` to ensure only the latest value per artist per day is kept in all results files. This script overwrites the originals in-place.
+
+### Deduplicate Data by Day
+
+To deduplicate your data so that only the latest value per artist per day is kept, run:
+
+```sh
+& ".venv/Scripts/python.exe" dedupe_daily_last.py
+```
+
+This will overwrite all `spotify-monthly-listeners-*.json` files in `src/results/` with deduplicated data.
 
 ### Ongoing Best Practices
 
 - Always validate new data for missing IDs and zero-listener values.
-- Run the cleanup script as needed to maintain data quality.
+- Run the cleanup and deduplication scripts as needed to maintain data quality.
 - Document any future data corrections in this section.
