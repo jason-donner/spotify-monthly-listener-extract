@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="content-container{% if leaderboard_mode == 'growth' %} aura-growth{% elif leaderboard_mode == 'loss' %} aura-loss{% endif %}">
+    <div style="max-width:900px;margin:40px auto 0 auto;">
+        <div class="leaderboard-controls">
+            <div class="leaderboard-toggle-group">
+                <a href="?mode=growth&tier={{ leaderboard_tier }}" class="leaderboard-toggle {% if leaderboard_mode == 'growth' %}active-growth{% endif %}">Upstrokes</a>
+                <a href="?mode=loss&tier={{ leaderboard_tier }}" class="leaderboard-toggle {% if leaderboard_mode == 'loss' %}active-loss{% endif %}">Downstrokes</a>
+            </div>
+        </div>
+        <div class="leaderboard-tier-group">
+            <div class="leaderboard-tier-label">Monthly Listener Tiers</div>
+            <div class="leaderboard-tier-row">
+                <a href="?mode={{ leaderboard_mode }}&tier=all" class="leaderboard-tier tier-all {% if leaderboard_tier == 'all' %}active-tier{% endif %}">All</a>
+                <a href="?mode={{ leaderboard_mode }}&tier=micro" class="leaderboard-tier tier-micro {% if leaderboard_tier == 'micro' %}active-tier{% endif %}">0–1,000</a>
+                <a href="?mode={{ leaderboard_mode }}&tier=small" class="leaderboard-tier tier-small {% if leaderboard_tier == 'small' %}active-tier{% endif %}">1,001–3,000</a>
+                <a href="?mode={{ leaderboard_mode }}&tier=medium" class="leaderboard-tier tier-medium {% if leaderboard_tier == 'medium' %}active-tier{% endif %}">3,001–15,000</a>
+                <a href="?mode={{ leaderboard_mode }}&tier=large" class="leaderboard-tier tier-large {% if leaderboard_tier == 'large' %}active-tier{% endif %}">15,001–50,000</a>
+                <a href="?mode={{ leaderboard_mode }}&tier=major" class="leaderboard-tier tier-major {% if leaderboard_tier == 'major' %}active-tier{% endif %}">&gt;50,000</a>
+            </div>
+        </div>
+        <table class="leaderboard-table">
+            <tr>
+                <th>Artist</th>
+                <th>Change</th>
+                <th>% Change</th>
+                <th>Starting Listeners</th>
+                <th>Ending Listeners</th>
+            </tr>
+            {% for row in leaderboard %}
+            <tr>
+                <td style="display:flex;align-items:center;gap:16px;">
+                {% if row.artist_id %}
+                <a href="/artist/{{ row.slug }}/{{ row.artist_id }}" style="display:flex;align-items:center;gap:16px;text-decoration:none;" class="artist-link-table">
+                    {% if row.image_url %}
+                    <img src="{{ row.image_url }}" alt="{{ row.artist }}" style="width:60px;height:60px;border-radius:50%;vertical-align:middle;">
+                    {% else %}
+                    <img src="{{ url_for('static', filename='placeholder.png') }}" alt="No image" style="width:60px;height:60px;border-radius:50%;vertical-align:middle;">
+                    {% endif %}
+                    <span style="color:#1DB954;font-weight:bold;font-size:1.13em;">{{ row.artist }}</span>
+                </a>
+                {% else %}
+                    <span style="color:#1DB954;font-weight:bold;font-size:1.13em;">{{ row.artist }}</span>
+                {% endif %}
+                </td>
+                <td>
+                    {% if row.change > 0 %}
+                        <span style="color:#1DB954;">+{{ "{:,}".format(row.change) }}</span>
+                    {% elif row.change < 0 %}
+                        <span style="color:#e74c3c;">{{ "{:,}".format(row.change) }}</span>
+                    {% else %}
+                        <span style="color:#aaa;">—</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if row.percent_change > 0 %}
+                        <span style="color:#1DB954;font-weight:bold;">+{{ '%.2f'|format(row.percent_change) }}%</span>
+                    {% elif row.percent_change < 0 %}
+                        <span style="color:#e74c3c;font-weight:bold;">{{ '%.2f'|format(row.percent_change) }}%</span>
+                    {% else %}
+                        <span style="color:#aaa;">—</span>
+                    {% endif %}
+                </td>
+                <td>{{ "{:,}".format(row.start) }}</td>
+                <td>{{ "{:,}".format(row.end) }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+<style>
+.aura-growth {
+    box-shadow: 0 0 48px 8px #1DB95444, 0 0 0 0 #e74c3c00;
+    transition: box-shadow 0.4s;
+}
+.aura-loss {
+    box-shadow: 0 0 48px 8px #e74c3c44, 0 0 0 0 #1DB95400;
+    transition: box-shadow 0.4s;
+}
+</style>
+{% endblock %}

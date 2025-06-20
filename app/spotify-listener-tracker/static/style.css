@@ -1,0 +1,328 @@
+/* Extracted from index.html for global use */
+
+body {
+    min-height: 100vh;
+    background: 
+        radial-gradient(ellipse at 60% 40%, #ff5ecd 0%, transparent 60%),
+        radial-gradient(ellipse at 30% 70%, #7f5eff 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 80%, #191414 0%, #121212 80%),
+        linear-gradient(120deg, #2d0036 0%, #1a0036 100%);
+    background-blend-mode: lighten, lighten, normal, normal;
+    color: #fff;
+    position: relative;
+    overflow-x: hidden;
+}
+body::before {
+    content: "";
+    position: fixed;
+    z-index: 0;
+    top: -120px;
+    left: -120px;
+    width: 120vw;
+    height: 120vh;
+    pointer-events: none;
+    background: 
+        radial-gradient(circle at 20% 40%, rgba(29,185,84,0.18) 0, transparent 60%),
+        radial-gradient(circle at 80% 20%, rgba(30,215,96,0.14) 0, transparent 60%),
+        radial-gradient(circle at 60% 80%, rgba(40,40,40,0.22) 0, transparent 70%);
+    filter: blur(48px);
+    opacity: 0.85;
+}
+h1 {
+    background: linear-gradient(90deg, #1DB954 60%, #1ed760 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-fill-color: transparent;
+    text-align: center;
+    margin-top: 32px;
+    letter-spacing: 2px;
+}
+form {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    margin: 32px 0 24px 0;
+}
+input[type="text"] {
+    padding: 12px 16px;
+    border: none;
+    border-radius: 24px 0 0 24px;
+    outline: none;
+    width: 320px;
+    font-size: 1.1em;
+    background: #222326;
+    color: #fff;
+}
+button[type="submit"] {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 0 24px 24px 0;
+    background: linear-gradient(90deg, #1DB954 60%, #1ed760 100%);
+    color: #fff;
+    font-weight: bold;
+    font-size: 1.1em;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+button[type="submit"]:hover {
+    background: linear-gradient(90deg, #1ed760 60%, #1DB954 100%);
+}
+#suggestion-box {
+    position: absolute;
+    left: 0;
+    top: 100%;
+    background: #222326;
+    border: 1px solid #1DB954;
+    z-index: 1000;
+    width: 100%;
+    display: none;
+    border-radius: 0 0 12px 12px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+#suggestion-box div {
+    padding: 10px 16px;
+    cursor: pointer;
+    color: #fff;
+    transition: background 0.15s;
+}
+#suggestion-box div:hover {
+    background: #1DB954;
+    color: #191414;
+}
+.content-container {
+    max-width: 1400px;
+    margin: 40px auto 40px auto;
+    background: rgba(30, 30, 40, 0.55);
+    border-radius: 24px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    padding: 36px 24px 32px 24px;
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    border: 1.5px solid rgba(255,255,255,0.18);
+    position: relative;
+    z-index: 1;
+}
+.leaderboard-controls {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    background: #181818;
+    border-radius: 32px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+    padding: 12px 24px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+}
+.leaderboard-toggle-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    width: 100%;
+}
+.leaderboard-toggle {
+    padding: 10px 20px;
+    border: none;
+    color: #fff !important;
+    font-weight: bold;
+    font-size: 1.02em;
+    text-decoration: none;
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+    outline: none;
+    border-radius: 20px;
+    border: 1.5px solid transparent;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    background: linear-gradient(90deg, #ff5ecd 0%, #7f5eff 100%) !important;
+    margin-bottom: 0;
+}
+.leaderboard-toggle.active-growth, .leaderboard-toggle.active-loss {
+    background: inherit !important;
+    color: #fff !important;
+    text-decoration: none;
+    box-shadow: 0 0 0 4px rgba(255,94,205,0.25), 0 2px 8px rgba(127,95,255,0.10);
+    border: 2.5px solid #fff;
+    position: relative;
+    z-index: 1;
+}
+.leaderboard-toggle:not(.active-growth):not(.active-loss):hover {
+    filter: brightness(1.15);
+    border: 1.5px solid #1DB954;
+}
+.leaderboard-tier-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    background: #181818;
+    border-radius: 32px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+    padding: 10px 24px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+.leaderboard-tier-label {
+    color: #aaa;
+    font-size: 1.08em;
+    font-weight: 600;
+    margin-bottom: 10px;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    text-align: center;
+    width: 100%;
+    display: block;
+}
+.leaderboard-tier-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: stretch;
+    width: 100%;
+    text-align: center;
+    margin-top: 8px;
+}
+.leaderboard-tier {
+    flex: 1 1 0;
+    min-width: 90px;
+    text-align: center;
+    padding: 10px 0;
+    background: linear-gradient(90deg, #1DB954 60%, #1ed760 100%);
+    color: #fff;
+    border-radius: 24px;
+    font-weight: 600;
+    font-size: 1.08em;
+    text-decoration: none;
+    transition: background 0.18s, color 0.18s, box-shadow 0.18s;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.10);
+    border: 2px solid #1DB954;
+    outline: none;
+    margin: 0;
+    letter-spacing: 0.5px;
+    position: relative;
+    overflow: hidden;
+}
+.leaderboard-tier.active-tier {
+    background: linear-gradient(90deg, #ff5ecd 0%, #1DB954 100%);
+    color: #fff;
+    box-shadow: 0 2px 12px #1DB95433;
+    border-color: #1DB954;
+}
+.leaderboard-tier.tier-loss.active-tier {
+    background: linear-gradient(90deg, #e74c3c 0%, #ff5ecd 100%);
+    color: #fff;
+    border-color: #e74c3c;
+}
+.leaderboard-tier:hover, .leaderboard-tier:focus {
+    background: linear-gradient(90deg, #1ed760 0%, #1DB954 100%);
+    color: #fff;
+    border-color: #1ed760;
+}
+.artist-history-table, .leaderboard-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 1.13em;
+    background: transparent;
+    margin-top: 32px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.10);
+    border-radius: 14px;
+    overflow: hidden;
+    table-layout: fixed;
+}
+.artist-history-table th, .artist-history-table td,
+.leaderboard-table th, .leaderboard-table td {
+    padding: 18px 14px;
+    text-align: left;
+    vertical-align: middle;
+    word-break: break-word;
+}
+.leaderboard-table th:first-child, .leaderboard-table td:first-child {
+    width: 32%;
+    min-width: 220px;
+    max-width: 340px;
+    text-align: center;
+}
+.artist-history-table th:first-child, .artist-history-table td:first-child {
+    width: 24%;
+    min-width: 140px;
+    max-width: 220px;
+    text-align: center;
+}
+.artist-history-table th, .leaderboard-table th {
+    background: #232323;
+    color: #1DB954;
+    font-size: 1.08em;
+    letter-spacing: 1px;
+    border-bottom: 2px solid #1DB954;
+    text-align: center;
+}
+.artist-history-table tr, .leaderboard-table tr {
+    background: #191414;
+    transition: background 0.2s;
+}
+.artist-history-table tr:nth-child(even), .leaderboard-table tr:nth-child(even) {
+    background: #232323;
+}
+.artist-history-table tr:hover, .leaderboard-table tr:hover {
+    background: #282828;
+}
+table.leaderboard-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: #232323;
+    border-radius: 18px;
+    overflow: hidden;
+    margin: 0 auto 24px auto;
+    box-shadow: 0 4px 24px rgba(29,185,84,0.10);
+}
+.leaderboard-table th, .leaderboard-table td {
+    padding: 16px 20px;
+    text-align: left;
+}
+.leaderboard-table th {
+    background: linear-gradient(90deg, #1DB954 60%, #1ed760 100%);
+    color: #191414;
+    font-weight: bold;
+    border-bottom: 2px solid #1DB954;
+    font-size: 1.08em;
+}
+.leaderboard-table tr {
+    border-bottom: 1.5px solid #232323;
+}
+.leaderboard-table tr:last-child {
+    border-bottom: none;
+}
+.leaderboard-table tr:nth-child(even) {
+    background: #202020;
+}
+.leaderboard-table tr:hover {
+    background: #282828;
+    transition: background 0.2s;
+}
+.leaderboard-table td {
+    font-size: 1.05em;
+    vertical-align: middle;
+}
+.leaderboard-table img {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+.artist-history-table td:last-child {
+    text-align: center;
+}
+@media (max-width: 700px) {
+    .content-container {
+        padding: 16px 4vw 18px 4vw;
+        border-radius: 12px;
+    }
+}
+@media (max-width: 600px) {
+    input[type="text"] {
+        width: 140px;
+        font-size: 1em;
+    }
+    table, th, td {
+        font-size: 0.95em;
+    }
+}

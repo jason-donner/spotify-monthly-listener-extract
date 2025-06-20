@@ -5,6 +5,9 @@ import os
 from get_token import get_token
 from datetime import datetime, timedelta
 import time
+import sys
+from werkzeug.utils import redirect
+import re
 
 app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
@@ -25,21 +28,18 @@ def get_artist_id_from_url(url):
 artist_image_cache = {}
 
 def fetch_spotify_artist_image(artist_id):
-    print(f"Fetching image for artist_id: {artist_id}")
+    # Only print critical errors
     if not artist_id:
         print("No artist_id provided.")
         return None
     if artist_id in artist_image_cache:
-        print(f"Cache hit for {artist_id}: {artist_image_cache[artist_id]}")
         return artist_image_cache[artist_id]
     headers = {"Authorization": f"Bearer {get_token()}"}
     resp = requests.get(f"https://api.spotify.com/v1/artists/{artist_id}", headers=headers)
-    print(f"Spotify API status for {artist_id}: {resp.status_code}")
     if resp.status_code == 200:
         artist = resp.json()
         if artist.get("images"):
             image_url = artist["images"][0]["url"]
-            print(f"Image found for {artist_id}: {image_url}")
             artist_image_cache[artist_id] = image_url
             return image_url
         else:
@@ -48,91 +48,63 @@ def fetch_spotify_artist_image(artist_id):
         print(f"Spotify API error for {artist_id}: {resp.text}")
     return None  # Only return None if no image found
 
-@app.route("/", methods=["GET"])
-def index():
+@app.route("/")
+def home():
+    # Show leaderboard as home page
+    return leaderboard()
+
+@app.route("/home")
+def home_page():
+    # Redirect /home to the leaderboard (which is also the homepage)
+    return redirect(url_for("leaderboard"))
+
+@app.route("/search", methods=["GET"])
+def search():
     query = request.args.get("artist", "").strip()
     artists = load_data()
-    all_artist_names = sorted({a['artist_name'] for a in artists})
-
-    # Leaderboard logic (last 30 days)
-    cutoff = datetime.now() - timedelta(days=30)
-    artist_changes = {}
-    for entry in artists:
-        artist = entry["artist_name"]
-        date_str = entry["date"]
-        # Handle both 'YYYY-MM-DD' and 'YYYYMMDD'
-        try:
-            if '-' in date_str:
-                date = datetime.strptime(date_str, "%Y-%m-%d")
-            else:
-                date = datetime.strptime(date_str, "%Y%m%d")
-        except Exception:
-            continue  # skip malformed dates
-        listeners = entry["monthly_listeners"]
-        if artist not in artist_changes:
-            artist_changes[artist] = []
-        artist_changes[artist].append({
-            "date": date,
-            "listeners": listeners,
-            "artist_url": entry.get("artist_url", ""),
-            "artist_id": entry.get("artist_id")
-        })
-    leaderboard_data = []
-    for artist, records in artist_changes.items():
-        recent = [r for r in records if r["date"] >= cutoff]
-        if len(recent) < 2:
-            continue
-        recent.sort(key=lambda x: x["date"])
-        change = recent[-1]["listeners"] - recent[0]["listeners"]
-        artist_id = None
-        artist_url = None
-        for r in reversed(recent):
-            if r and r.get("artist_id"):
-                artist_id = r["artist_id"]
-                artist_url = r.get("artist_url")
-                break
-        print(f"DEBUG: {artist} | artist_id: {artist_id}")
-        image_url = fetch_spotify_artist_image(artist_id) if artist_id else None
-        print(f"DEBUG: {artist} | image_url: {image_url}")
-        leaderboard_data.append({
-            "artist": artist,
-            "artist_id": artist_id,
-            "image_url": image_url,
-            "change": change,
-            "start": recent[0]["listeners"],
-            "end": recent[-1]["listeners"],
-            "artist_url": artist_url
-        })
-    leaderboard_data.sort(key=lambda x: abs(x["change"]), reverse=True)
-    leaderboard_data = leaderboard_data[:10]  # Show top 10
-
-    results = []
-    artist_info = None
-    artist_image_url = None
     if query:
         query_lower = query.lower()
-        # Find all records matching the artist name
-        results = [a for a in artists if query_lower in a.get("artist_name", "").lower()]
-        # Sort results by date (descending)
-        results.sort(key=lambda x: x.get("date", ""), reverse=True)
-        # Calculate difference
+        # Find the best match (first match by name, case-insensitive)
+        for a in artists:
+            if query_lower == a.get("artist_name", "").lower():
+                artist_id = a.get("artist_id")
+                if not artist_id and a.get("artist_url"):
+                    artist_id = get_artist_id_from_url(a["artist_url"])
+                if artist_id:
+                    slug = slugify(a.get("artist_name", "artist"))
+                    return redirect(url_for("artist_detail", artist_name_slug=slug, artist_id=artist_id))
+        # Group results by artist_id, keep only the most recent entry for each
+        filtered = [a.copy() for a in artists if query_lower in a.get("artist_name", "").lower()]
+        grouped = {}
+        for entry in filtered:
+            artist_id = entry.get("artist_id")
+            if not artist_id and entry.get("artist_url"):
+                artist_id = get_artist_id_from_url(entry["artist_url"])
+                entry["artist_id"] = artist_id
+            entry["slug"] = slugify(entry.get("artist_name", "artist"))
+            # Only keep the most recent entry for each artist_id
+            if artist_id not in grouped or entry.get("date","") > grouped[artist_id].get("date",""):
+                grouped[artist_id] = entry
+        results = list(grouped.values())
+        results.sort(key=lambda x: x.get("artist_name", "").lower())
         for i, r in enumerate(results):
             if i + 1 < len(results):
                 prev = results[i + 1]
                 r['listener_diff'] = r['monthly_listeners'] - prev['monthly_listeners']
             else:
-                r['listener_diff'] = None  # No previous data
-        # Reverse for chart (oldest to newest)
+                r['listener_diff'] = None
+        # Add image_url for each result (fix for search page images)
+        for r in results:
+            if r.get("artist_id"):
+                r["image_url"] = fetch_spotify_artist_image(r["artist_id"])
+            else:
+                r["image_url"] = None
         results_for_chart = list(reversed(results))
-
-        # Fetch artist info and image for the card
         artist_url = results[0].get("artist_url") or results[0].get("url") if results else None
         if artist_url:
             artist_id = get_artist_id_from_url(artist_url)
             try:
-                # Fetch directly from Spotify API for consistency
                 artist_image_url = fetch_spotify_artist_image(artist_id)
-                # Also get artist info
                 headers = {"Authorization": f"Bearer {get_token()}"}
                 resp = requests.get(f"https://api.spotify.com/v1/artists/{artist_id}", headers=headers)
                 if resp.status_code == 200:
@@ -148,7 +120,6 @@ def index():
                 artist_info = None
                 artist_image_url = None
         else:
-            # fallback: try to get image by name
             try:
                 resp = requests.get(f"http://localhost:5000/artist_image?name={query}")
                 if resp.status_code == 200:
@@ -156,26 +127,23 @@ def index():
             except Exception:
                 artist_image_url = None
     else:
+        results = []
         results_for_chart = []
-
-    # Debug print to check for rounding
-    for r in results:
-        print("DEBUG:", r['artist_name'], r['monthly_listeners'])
-
+        artist_info = None
+        artist_image_url = None
     if results:
         total_change = results[-1]['monthly_listeners'] - results[0]['monthly_listeners']
     else:
         total_change = None
     return render_template(
-        "index.html",
+        "search.html",
         results=results,
         results_for_chart=results_for_chart,
         query=query,
         total_change=total_change,
-        all_artist_names=all_artist_names,
-        leaderboard=leaderboard_data,
         artist_info=artist_info,
         artist_image_url=artist_image_url,
+        grow_results=True if results else False,  # Add grow_results flag
     )
 
 @app.route("/suggest", methods=["GET"])
@@ -290,48 +258,148 @@ def datetimeformat(value, format='medium'):
 
 @app.route("/leaderboard")
 def leaderboard():
-    import json
-    from collections import defaultdict
     from datetime import datetime, timedelta
-
     artists = load_data()
     # Group data by artist
-    artist_history = defaultdict(list)
+    artist_changes = {}
+    cutoff = datetime.now() - timedelta(days=30)
     for entry in artists:
-        artist_history[entry["artist_name"]].append(entry)
-
-    leaderboard = []
-    for artist, records in artist_history.items():
-        # Sort records by date descending
-        records.sort(key=lambda x: x["date"], reverse=True)
-        if len(records) < 2:
+        artist = entry["artist_name"]
+        date_str = entry["date"]
+        try:
+            if '-' in date_str:
+                date = datetime.strptime(date_str, "%Y-%m-%d")
+            else:
+                date = datetime.strptime(date_str, "%Y%m%d")
+        except Exception:
             continue
-        # Get the most recent and the previous month's record
-        latest = records[0]
-        # Find the record closest to 30 days before latest
-        latest_date = datetime.strptime(latest["date"], "%Y-%m-%d")
-        prev = None
-        for r in records[1:]:
-            r_date = datetime.strptime(r["date"], "%Y-%m-%d")
-            if (latest_date - r_date).days >= 28:
-                prev = r
+        listeners = entry["monthly_listeners"]
+        if artist not in artist_changes:
+            artist_changes[artist] = []
+        artist_changes[artist].append({
+            "date": date,
+            "listeners": listeners,
+            "artist_url": entry.get("artist_url", ""),
+            "artist_id": entry.get("artist_id"),
+            "slug": slugify(artist)
+        })
+    leaderboard_data = []
+    for artist, records in artist_changes.items():
+        recent = [r for r in records if r["date"] >= cutoff]
+        if len(recent) < 2:
+            continue
+        recent.sort(key=lambda x: x["date"])
+        start = recent[0]["listeners"]
+        end = recent[-1]["listeners"]
+        if start == 0:
+            continue
+        if start < 50 and end < 50:
+            continue
+        change = end - start
+        percent_change = ((end - start) / start) * 100
+        artist_id = None
+        artist_url = None
+        slug = None
+        for r in reversed(recent):
+            if r and r.get("artist_id"):
+                artist_id = r["artist_id"]
+                artist_url = r.get("artist_url")
+                slug = r.get("slug")
                 break
-        if prev:
-            change = latest["monthly_listeners"] - prev["monthly_listeners"]
-            leaderboard.append({
-                "artist_name": artist,
-                "latest": latest["monthly_listeners"],
-                "prev": prev["monthly_listeners"],
-                "change": change,
-                "url": latest.get("url", "#")
-            })
+        leaderboard_data.append({
+            "artist": artist,
+            "artist_id": artist_id,
+            "slug": slug,
+            "change": change,
+            "percent_change": percent_change,
+            "start": start,
+            "end": end,
+            "artist_url": artist_url
+        })
+    mode = request.args.get('mode', 'growth')
+    tier = request.args.get('tier', 'all')
+    def in_tier(start, end, tier):
+        if tier == 'micro':
+            return start <= 1000 and end <= 1000
+        elif tier == 'small':
+            return 1001 <= start <= 3000 and 1001 <= end <= 3000
+        elif tier == 'medium':
+            return 3001 <= start <= 15000 and 3001 <= end <= 15000
+        elif tier == 'large':
+            return 15001 <= start <= 50000 and 15001 <= end <= 50000
+        elif tier == 'major':
+            return start > 50000 and end > 50000
+        return True
+    leaderboard_data = [row for row in leaderboard_data if in_tier(row['start'], row['end'], tier)]
+    if mode == 'loss':
+        leaderboard_data.sort(key=lambda x: x['percent_change'])
+    else:
+        leaderboard_data.sort(key=lambda x: x['percent_change'], reverse=True)
+    leaderboard_data = leaderboard_data[:10]
+    for entry in leaderboard_data:
+        entry["image_url"] = fetch_spotify_artist_image(entry["artist_id"]) if entry["artist_id"] else None
+    return render_template(
+        "leaderboard.html",
+        leaderboard=leaderboard_data,
+        leaderboard_mode=mode,
+        leaderboard_tier=tier,
+    )
 
-    # Sort by biggest change (absolute value, descending)
-    leaderboard.sort(key=lambda x: abs(x["change"]), reverse=True)
-    # Top 20
-    leaderboard = leaderboard[:20]
+# Helper to slugify artist names for URLs
+def slugify(value):
+    value = re.sub(r'[^\w\s-]', '', value).strip().lower()
+    return re.sub(r'[-\s]+', '-', value)
 
-    return render_template("leaderboard.html", leaderboard=leaderboard)
+@app.route("/artist/<artist_id>")
+def artist_detail_redirect(artist_id):
+    # Find artist name for slug
+    artists = load_data()
+    for a in artists:
+        if a.get("artist_id") == artist_id:
+            artist_name = a.get("artist_name", "artist")
+            slug = slugify(artist_name)
+            return redirect(url_for('artist_detail', artist_name_slug=slug, artist_id=artist_id))
+    return redirect(url_for('home'))
+
+@app.route("/artist/<artist_name_slug>/<artist_id>")
+def artist_detail(artist_name_slug, artist_id):
+    artists = load_data()
+    results = [a for a in artists if a.get("artist_id") == artist_id]
+    results.sort(key=lambda x: x.get("date", ""), reverse=True)
+    artist_info = None
+    artist_image_url = None
+    all_time_high = None
+    if results:
+        # Find all-time high monthly listeners and its date
+        max_entry = max(results, key=lambda x: x.get("monthly_listeners", 0))
+        all_time_high = {
+            "value": max_entry.get("monthly_listeners", 0),
+            "date": max_entry.get("date", "")
+        }
+        artist_url = results[0].get("artist_url") or results[0].get("url")
+        try:
+            artist_image_url = fetch_spotify_artist_image(artist_id)
+            headers = {"Authorization": f"Bearer {get_token()}"}
+            resp = requests.get(f"https://api.spotify.com/v1/artists/{artist_id}", headers=headers)
+            if resp.status_code == 200:
+                artist = resp.json()
+                artist_info = {
+                    "name": artist["name"],
+                    "image": artist["images"][0]["url"] if artist.get("images") else "",
+                    "genres": artist.get("genres", []),
+                    "followers": artist.get("followers", {}).get("total", 0),
+                    "url": artist["external_urls"]["spotify"]
+                }
+        except Exception:
+            artist_info = None
+            artist_image_url = None
+    return render_template(
+        "artist.html",
+        results=results,
+        artist_info=artist_info,
+        artist_image_url=artist_image_url,
+        all_time_high=all_time_high,
+    )
 
 if __name__ == "__main__":
     app.run(debug=True)

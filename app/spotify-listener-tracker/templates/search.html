@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="content-container{% if grow_results %} grow-results{% endif %}">
+    {% if results %}
+    <div class="results-table-container">
+        <h2 style="color:#1DB954;text-align:center;margin-bottom:16px;">Results for "{{ query }}"</h2>
+        <div style="color:#aaa;font-size:0.98em;margin-bottom:10px;">Click an artist name below to view their detail page.</div>
+        <table class="results-table">
+            <tr>
+                <th>Artist</th>
+                <th>Date</th>
+                <th>Monthly Listeners</th>
+            </tr>
+            {% for row in results %}
+            <tr>
+                <td>
+                    {% if row.image_url %}
+                        <img src="{{ row.image_url }}" alt="{{ row.artist_name }}" class="artist-img">
+                    {% else %}
+                        <img src="{{ url_for('static', filename='placeholder.png') }}" alt="No image" class="artist-img">
+                    {% endif %}
+                    {% if row.artist_id %}
+                        <a href="/artist/{{ row.slug }}/{{ row.artist_id }}" class="artist-link-table">{{ row.artist_name }}</a>
+                    {% else %}
+                        {{ row.artist_name }}
+                    {% endif %}
+                </td>
+                <td>{{ row.date | datetimeformat('%b %d, %Y') }}</td>
+                <td>{{ "{:,}".format(row.monthly_listeners) }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% endif %}
+</div>
+<style>
+.results-table-container {
+    max-width: 1100px;
+    margin: 40px auto 0 auto;
+    background: rgba(30, 30, 40, 0.65);
+    border-radius: 18px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    padding: 32px 32px 24px 32px;
+    backdrop-filter: blur(10px) saturate(140%);
+}
+.results-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 1.18em;
+    background: transparent;
+}
+.results-table th, .results-table td {
+    padding: 16px 10px;
+    text-align: left;
+}
+.results-table th {
+    background: #232323;
+    color: #1DB954;
+    font-size: 1.08em;
+    letter-spacing: 1px;
+    border-bottom: 2px solid #1DB954;
+}
+.results-table tr {
+    background: #191414;
+    transition: background 0.2s;
+}
+.results-table tr:nth-child(even) {
+    background: #232323;
+}
+.results-table tr:hover {
+    background: #282828;
+}
+.artist-img {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+    vertical-align: middle;
+    margin-right: 16px;
+    box-shadow: 0 2px 8px #0006;
+}
+.artist-link-table {
+    color: #1DB954;
+    font-weight: bold;
+    text-decoration: underline;
+    cursor: pointer;
+    font-size: 1.08em;
+}
+.artist-link-table:hover {
+    color: #ff5ecd;
+}
+.grow-results {
+    animation: growResults 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    transform: scale(1.04);
+    box-shadow: 0 0 32px 0 #1DB95444;
+}
+@keyframes growResults {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 #1DB95400;
+    }
+    80% {
+        transform: scale(1.06);
+        box-shadow: 0 0 40px 0 #1DB95466;
+    }
+    100% {
+        transform: scale(1.04);
+        box-shadow: 0 0 32px 0 #1DB95444;
+    }
+}
+</style>
+{% endblock %}
