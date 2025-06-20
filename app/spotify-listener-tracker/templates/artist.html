@@ -137,7 +137,7 @@
             {% if artist_info %}
             <div style="flex:0 0 340px;max-width:340px;min-width:260px;background:#232323;padding:28px 32px 18px 32px;border-radius:18px;box-shadow:0 2px 16px rgba(0,0,0,0.10);margin-bottom:32px;position:sticky;top:32px;height:fit-content;align-self:flex-start;order:2;">
                 <h2 style="color:#1DB954;font-size:1.18em;margin-bottom:18px;text-align:center;">Top 5 Songs</h2>
-                <div id="top-tracks-embeds" style="display:flex;flex-direction:column;gap:14px;"></div>
+                <div id="top-tracks-embeds" style="display:flex;flex-direction:column;gap:18px;"></div>
             </div>
             <script>
             document.addEventListener('DOMContentLoaded', function() {
@@ -146,19 +146,71 @@
                     .then(tracks => {
                         const container = document.getElementById('top-tracks-embeds');
                         if (!container) return;
+                        container.innerHTML = '';
+                        if (!tracks || tracks.length === 0) {
+                            container.innerHTML = '<div style="color:#aaa;text-align:center;padding:18px 0;">No top tracks found.</div>';
+                            return;
+                        }
                         tracks.slice(0, 5).forEach(track => {
                             const trackId = track.url.split('/').pop();
+                            const card = document.createElement('div');
+                            card.style.background = '#19181f';
+                            card.style.borderRadius = '14px';
+                            card.style.boxShadow = '0 2px 12px #0004';
+                            card.style.padding = '12px 12px 8px 12px';
+                            card.style.display = 'flex';
+                            card.style.flexDirection = 'column';
+                            card.style.alignItems = 'center';
+                            card.style.gap = '7px';
+                            card.style.transition = 'box-shadow 0.18s';
+                            card.onmouseover = () => card.style.boxShadow = '0 4px 18px #7f5eff44';
+                            card.onmouseout = () => card.style.boxShadow = '0 2px 12px #0004';
+
                             const iframe = document.createElement('iframe');
                             iframe.src = `https://open.spotify.com/embed/track/${trackId}`;
                             iframe.width = '100%';
                             iframe.height = '80';
                             iframe.frameBorder = '0';
                             iframe.allow = 'encrypted-media';
-                            iframe.style.borderRadius = '12px';
+                            iframe.style.borderRadius = '10px';
                             iframe.style.background = '#191414';
                             iframe.style.boxShadow = '0 2px 12px #0005';
                             iframe.style.marginBottom = '0';
-                            container.appendChild(iframe);
+                            card.appendChild(iframe);
+
+                            // Song title and play count
+                            const infoDiv = document.createElement('div');
+                            infoDiv.style.display = 'flex';
+                            infoDiv.style.flexDirection = 'row';
+                            infoDiv.style.justifyContent = 'space-between';
+                            infoDiv.style.alignItems = 'center';
+                            infoDiv.style.width = '100%';
+                            infoDiv.style.marginTop = '4px';
+
+                            const title = document.createElement('span');
+                            title.textContent = track.name || 'Unknown Title';
+                            title.style.color = '#fff';
+                            title.style.fontWeight = '600';
+                            title.style.fontSize = '1.05em';
+                            title.style.overflow = 'hidden';
+                            title.style.textOverflow = 'ellipsis';
+                            title.style.whiteSpace = 'nowrap';
+                            title.style.flex = '1 1 auto';
+                            infoDiv.appendChild(title);
+
+                            if (track.play_count) {
+                                const playCount = document.createElement('span');
+                                playCount.textContent = `${track.play_count.toLocaleString()} plays`;
+                                playCount.style.color = '#1DB954';
+                                playCount.style.fontWeight = '500';
+                                playCount.style.fontSize = '0.98em';
+                                playCount.style.marginLeft = '12px';
+                                playCount.style.flex = '0 0 auto';
+                                infoDiv.appendChild(playCount);
+                            }
+
+                            card.appendChild(infoDiv);
+                            container.appendChild(card);
                         });
                     });
             });
