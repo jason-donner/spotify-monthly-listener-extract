@@ -25,7 +25,15 @@ call "%~dp0.venv\Scripts\activate.bat"
 
 echo %DATE% %TIME% - Starting monthly listener workflow >> %LOGFILE%
 
-REM Step 1: Synchronize followed artists
+REM Step 1: Process artist suggestions from web app
+echo Processing artist suggestions...
+"%~dp0.venv\Scripts\python.exe" src\process_suggestions.py
+if errorlevel 1 (
+    echo %DATE% %TIME% - ERROR: process_suggestions.py failed with exit code %ERRORLEVEL% >> %LOGFILE%
+    echo Warning: Suggestion processing failed, continuing with main workflow...
+)
+
+REM Step 2: Synchronize followed artists
 echo Running spotify_follow_sync.py to sync followed artists...
 "%~dp0.venv\Scripts\python.exe" src\spotify_follow_sync.py
 if errorlevel 1 (
@@ -34,14 +42,14 @@ if errorlevel 1 (
     exit /b %ERRORLEVEL%
 )
 
-REM Step 2: Run get_artists.py
+REM Step 3: Run get_artists.py
 "%~dp0.venv\Scripts\python.exe" src\get_artists.py --log get_artists.log
 if errorlevel 1 (
     echo %DATE% %TIME% - ERROR: get_artists.py failed with exit code %ERRORLEVEL% >> %LOGFILE%
     exit /b %ERRORLEVEL%
 )
 
-REM Step 3: Run scrape.py
+REM Step 4: Run scrape.py
 echo Running scrape.py...
 "%~dp0.venv\Scripts\python.exe" src\scrape.py
 echo scrape.py exited with %ERRORLEVEL%

@@ -579,5 +579,149 @@ def suggest_artist():
         print(f"Error handling artist suggestion: {e}")
         return jsonify({"success": False, "message": "Server error occurred"})
 
+@app.route("/admin")
+def admin():
+    """Admin page to review and manage artist suggestions."""
+    return render_template("admin.html")
+
+@app.route("/admin/suggestions")
+def admin_suggestions():
+    """API endpoint to get all suggestions for admin review."""
+    suggestions_file = os.path.join(os.path.dirname(__file__), "artist_suggestions.json")
+    
+    if not os.path.exists(suggestions_file):
+        return jsonify({"suggestions": []})
+    
+    try:
+        with open(suggestions_file, "r", encoding="utf-8") as f:
+            suggestions = json.load(f)
+        
+        # Add additional info for each suggestion
+        for suggestion in suggestions:
+            # Check if already followed
+            followed_file = os.path.join(os.path.dirname(__file__), "..", "..", "src", "results", "spotify-followed-artists-master.json")
+            if os.path.exists(followed_file):
+                try:
+                    with open(followed_file, "r", encoding="utf-8") as f:
+                        followed_artists = json.load(f)
+                    
+                    suggestion["already_followed"] = any(
+                        (suggestion.get("artist_name", "").lower() == followed.get("artist_name", "").lower() or
+                         suggestion.get("spotify_id") == followed.get("artist_id"))
+                        for followed in followed_artists
+                    )
+                except:
+                    suggestion["already_followed"] = False
+            else:
+                suggestion["already_followed"] = False
+        
+        return jsonify({"suggestions": suggestions})
+    except Exception as e:
+        return jsonify({"error": str(e), "suggestions": []})
+
+@app.route("/admin/approve_suggestion", methods=["POST"])
+def admin_approve_suggestion():
+    """Admin endpoint to approve a suggestion for auto-following."""
+    try:
+        data = request.get_json()
+        suggestion_id = data.get("suggestion_id")  # Using timestamp as ID
+        action = data.get("action")  # "approve_follow", "approve_track", "reject"
+        
+        suggestions_file = os.path.join(os.path.dirname(__file__), "artist_suggestions.json")
+        
+        if not os.path.exists(suggestions_file):
+            return jsonify({"success": False, "message": "No suggestions file found"})
+        
+        # Load suggestions
+        with open(suggestions_file, "r", encoding="utf-8") as f:
+            suggestions = json.load(f)
+        
+        # Find the suggestion to update
+        suggestion_found = False
+        for suggestion in suggestions:
+            if suggestion.get("timestamp") == suggestion_id:
+                suggestion_found = True
+                
+                if action == "approve_follow":
+                    suggestion["status"] = "approved_for_follow"
+                    suggestion["admin_approved"] = True
+                    suggestion["admin_action_date"] = datetime.now().isoformat()
+                elif action == "approve_track":
+                    suggestion["status"] = "approved_for_tracking"
+                    suggestion["admin_approved"] = True
+                    suggestion["admin_action_date"] = datetime.now().isoformat()
+                elif action == "reject":
+                    suggestion["status"] = "rejected"
+                    suggestion["admin_approved"] = False
+                    suggestion["admin_action_date"] = datetime.now().isoformat()
+                
+                break
+        
+        if not suggestion_found:
+            return jsonify({"success": False, "message": "Suggestion not found"})
+        
+        # Save updated suggestions
+        with open(suggestions_file, "w", encoding="utf-8") as f:
+            json.dump(suggestions, f, indent=2, ensure_ascii=False)
+        
+        return jsonify({"success": True, "message": f"Suggestion {action.replace('_', ' ')}d successfully"})
+        
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Error: {str(e)}"})
+
+@app.route("/admin/follow_artist", methods=["POST"])
+def admin_follow_artist():
+    """Admin endpoint to immediately follow an artist on Spotify."""
+    try:
+        data = request.get_json()
+        artist_id = data.get("artist_id")
+        artist_name = data.get("artist_name", "Unknown Artist")
+        
+        if not artist_id:
+            return jsonify({"success": False, "message": "Artist ID is required"})
+        
+        # Initialize Spotify client
+        headers = {"Authorization": f"Bearer {get_token()}"}
+        resp = requests.put(f"https://api.spotify.com/v1/me/following?type=artist&ids={artist_id}", headers=headers)
+        
+        if resp.status_code == 204:  # Success - no content returned
+            # Also add to followed artists file
+            followed_file = os.path.join(os.path.dirname(__file__), "..", "..", "src", "results", "spotify-followed-artists-master.json")
+            try:
+                if os.path.exists(followed_file):
+                    with open(followed_file, "r", encoding="utf-8") as f:
+                        followed_artists = json.load(f)
+                else:
+                    followed_artists = []
+                
+                # Check if already in list
+                already_exists = any(
+                    followed.get("artist_id") == artist_id 
+                    for followed in followed_artists
+                )
+                
+                if not already_exists:
+                    new_artist = {
+                        "artist_name": artist_name,
+                        "artist_id": artist_id,
+                        "url": f"https://open.spotify.com/artist/{artist_id}",
+                        "source": "admin_follow",
+                        "date_added": datetime.now().strftime("%Y-%m-%d"),
+                        "removed": False
+                    }
+                    followed_artists.append(new_artist)
+                    
+                    with open(followed_file, "w", encoding="utf-8") as f:
+                        json.dump(followed_artists, f, indent=2, ensure_ascii=False)
+            except Exception as e:
+                print(f"Error updating followed artists file: {e}")
+            
+            return jsonify({"success": True, "message": f"Successfully followed {artist_name} on Spotify!"})
+        else:
+            return jsonify({"success": False, "message": f"Failed to follow artist: {resp.text}"})
+            
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Error: {str(e)}"})
+
 if __name__ == "__main__":
     app.run(debug=True)

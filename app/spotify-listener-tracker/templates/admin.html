@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+
+{% block title %}Admin - Artist Suggestions{% endblock %}
+
+{% block content %}
+<!-- Bootstrap CSS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<div class="container mt-4" style="background: rgba(20, 20, 30, 0.95); border-radius: 12px; padding: 2rem; margin-top: 2rem;">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4" style="color: #00ff7f; text-align: center;">🛠️ Admin Panel - Artist Suggestions</h1>
+            
+            <div class="alert alert-info" style="background: rgba(0, 123, 255, 0.15); border: 1px solid rgba(0, 123, 255, 0.3); color: #87ceeb;">
+                <strong>Admin Controls:</strong> Review user-submitted artist suggestions and decide whether to follow them on Spotify or just add them to tracking.
+            </div>
+            
+            <!-- Filter tabs -->
+            <ul class="nav nav-tabs mb-3" id="suggestionTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending" type="button" role="tab">
+                        Pending Review <span class="badge bg-warning" id="pending-count">0</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="approved-tab" data-bs-toggle="tab" data-bs-target="#approved" type="button" role="tab">
+                        Approved <span class="badge bg-success" id="approved-count">0</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="rejected-tab" data-bs-toggle="tab" data-bs-target="#rejected" type="button" role="tab">
+                        Rejected <span class="badge bg-danger" id="rejected-count">0</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="processed-tab" data-bs-toggle="tab" data-bs-target="#processed" type="button" role="tab">
+                        Processed <span class="badge bg-secondary" id="processed-count">0</span>
+                    </button>
+                </li>
+            </ul>
+            
+            <!-- Tab content -->
+            <div class="tab-content" id="suggestionTabContent">
+                <div class="tab-pane fade show active" id="pending" role="tabpanel">
+                    <div id="pending-suggestions"></div>
+                </div>
+                <div class="tab-pane fade" id="approved" role="tabpanel">
+                    <div id="approved-suggestions"></div>
+                </div>
+                <div class="tab-pane fade" id="rejected" role="tabpanel">
+                    <div id="rejected-suggestions"></div>
+                </div>
+                <div class="tab-pane fade" id="processed" role="tabpanel">
+                    <div id="processed-suggestions"></div>
+                </div>
+            </div>
+            
+            <!-- Loading spinner -->
+            <div id="loading" class="text-center py-4" style="display: none;">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading suggestions...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Success/Error Messages -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <strong class="me-auto" id="toast-title">Notification</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body" id="toast-message">
+            Message here
+        </div>
+    </div>
+</div>
+
+<script>
+let suggestions = [];
+
+// Load suggestions on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadSuggestions();
+});
+
+function loadSuggestions() {
+    document.getElementById('loading').style.display = 'block';
+    
+    fetch('/admin/suggestions')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('loading').style.display = 'none';
+            suggestions = data.suggestions || [];
+            renderSuggestions();
+            updateCounts();
+        })
+        .catch(error => {
+            document.getElementById('loading').style.display = 'none';
+            showToast('Error', 'Failed to load suggestions: ' + error.message, 'danger');
+        });
+}
+
+function renderSuggestions() {
+    const pending = suggestions.filter(s => s.status === 'approved' && !s.admin_approved);
+    const approved = suggestions.filter(s => s.admin_approved === true && s.status !== 'processed');
+    const rejected = suggestions.filter(s => s.status === 'rejected');
+    const processed = suggestions.filter(s => s.status === 'processed');
+    
+    document.getElementById('pending-suggestions').innerHTML = renderSuggestionList(pending, 'pending');
+    document.getElementById('approved-suggestions').innerHTML = renderSuggestionList(approved, 'approved');
+    document.getElementById('rejected-suggestions').innerHTML = renderSuggestionList(rejected, 'rejected');
+    document.getElementById('processed-suggestions').innerHTML = renderSuggestionList(processed, 'processed');
+}
+
+function renderSuggestionList(suggestionList, type) {
+    if (suggestionList.length === 0) {
+        return `<div class="alert alert-info">No ${type} suggestions found.</div>`;
+    }
+    
+    return suggestionList.map(suggestion => {
+        const date = new Date(suggestion.timestamp).toLocaleDateString();
+        const adminDate = suggestion.admin_action_date ? new Date(suggestion.admin_action_date).toLocaleDateString() : '';
+        
+        let statusBadge = '';
+        if (suggestion.already_followed) {
+            statusBadge = '<span class="badge bg-info ms-2">Already Followed</span>';
+        }
+        
+        let actionButtons = '';
+        if (type === 'pending') {
+            actionButtons = `
+                <div class="btn-group" role="group">
+                    <button class="btn btn-success btn-sm" onclick="approveForFollow('${suggestion.timestamp}', '${suggestion.artist_name}')">
+                        ✓ Follow on Spotify
+                    </button>
+                    <button class="btn btn-warning btn-sm" onclick="approveForTracking('${suggestion.timestamp}', '${suggestion.artist_name}')">
+                        👁️ Track Only
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="rejectSuggestion('${suggestion.timestamp}', '${suggestion.artist_name}')">
+                        ✗ Reject
+                    </button>
+                </div>
+            `;
+        } else if (type === 'approved' && suggestion.status === 'approved_for_follow') {
+            actionButtons = `
+                <button class="btn btn-primary btn-sm" onclick="followArtistNow('${suggestion.spotify_id}', '${suggestion.artist_name}')">
+                    🎵 Follow Now
+                </button>
+            `;
+        }
+        
+        return `
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <h5 class="card-title mb-1">
+                                ${suggestion.artist_name}
+                                ${statusBadge}
+                            </h5>
+                            <p class="card-text small text-muted mb-1">
+                                Suggested: ${date}
+                                ${adminDate ? ` | Admin Action: ${adminDate}` : ''}
+                            </p>
+                            ${suggestion.spotify_url ? `
+                                <a href="${suggestion.spotify_url}" target="_blank" class="btn btn-link btn-sm p-0">
+                                    🎵 View on Spotify
+                                </a>
+                            ` : ''}
+                        </div>
+                        <div class="col-md-6 text-end">
+                            ${actionButtons}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function updateCounts() {
+    const pending = suggestions.filter(s => s.status === 'approved' && !s.admin_approved).length;
+    const approved = suggestions.filter(s => s.admin_approved === true && s.status !== 'processed').length;
+    const rejected = suggestions.filter(s => s.status === 'rejected').length;
+    const processed = suggestions.filter(s => s.status === 'processed').length;
+    
+    document.getElementById('pending-count').textContent = pending;
+    document.getElementById('approved-count').textContent = approved;
+    document.getElementById('rejected-count').textContent = rejected;
+    document.getElementById('processed-count').textContent = processed;
+}
+
+function approveForFollow(suggestionId, artistName) {
+    adminAction(suggestionId, 'approve_follow', `Approved ${artistName} for following`);
+}
+
+function approveForTracking(suggestionId, artistName) {
+    adminAction(suggestionId, 'approve_track', `Approved ${artistName} for tracking only`);
+}
+
+function rejectSuggestion(suggestionId, artistName) {
+    if (confirm(`Are you sure you want to reject the suggestion for "${artistName}"?`)) {
+        adminAction(suggestionId, 'reject', `Rejected ${artistName}`);
+    }
+}
+
+function adminAction(suggestionId, action, successMessage) {
+    fetch('/admin/approve_suggestion', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            suggestion_id: suggestionId,
+            action: action
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Success', successMessage, 'success');
+            loadSuggestions(); // Reload to update UI
+        } else {
+            showToast('Error', data.message, 'danger');
+        }
+    })
+    .catch(error => {
+        showToast('Error', 'Failed to process action: ' + error.message, 'danger');
+    });
+}
+
+function followArtistNow(artistId, artistName) {
+    if (confirm(`Follow "${artistName}" on Spotify right now?`)) {
+        fetch('/admin/follow_artist', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                artist_id: artistId,
+                artist_name: artistName
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Success', data.message, 'success');
+                loadSuggestions(); // Reload to update UI
+            } else {
+                showToast('Error', data.message, 'danger');
+            }
+        })
+        .catch(error => {
+            showToast('Error', 'Failed to follow artist: ' + error.message, 'danger');
+        });
+    }
+}
+
+function showToast(title, message, type) {
+    const toast = document.getElementById('toast');
+    const toastTitle = document.getElementById('toast-title');
+    const toastMessage = document.getElementById('toast-message');
+    
+    toastTitle.textContent = title;
+    toastMessage.textContent = message;
+    
+    // Remove existing classes and add new one
+    toast.className = `toast ${type === 'success' ? 'bg-success text-white' : type === 'danger' ? 'bg-danger text-white' : ''}`;
+    
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+}
+</script>
+{% endblock %}
