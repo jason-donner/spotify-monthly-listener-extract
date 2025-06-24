@@ -10,7 +10,7 @@ import json
 import logging
 import argparse
 from datetime import datetime
-from typing import List, Dict, Set
+from typing import List, Dict, Set, Tuple
 
 
 def setup_logging(log_file: str):
@@ -78,11 +78,12 @@ def normalize_artist_for_comparison(artist_data: Dict) -> Dict:
     }
 
 
-def merge_artists(followed_artists: List[Dict], approved_suggestions: List[Dict]) -> List[Dict]:
+def merge_artists(followed_artists: List[Dict], approved_suggestions: List[Dict]) -> Tuple[List[Dict], List[Dict]]:
     """Merge followed artists with approved suggestions, avoiding duplicates."""
     merged_artists = []
     seen_ids: Set[str] = set()
     seen_names: Set[str] = set()
+    processed_suggestions = []  # Track which suggestions were successfully added
     
     current_date = datetime.now().strftime('%Y-%m-%d')
     
@@ -144,6 +145,7 @@ def merge_artists(followed_artists: List[Dict], approved_suggestions: List[Dict]
             }
             
             merged_artists.append(unified_artist)
+            processed_suggestions.append(suggestion)  # Track for cleanup
             suggestions_added += 1
             print(f"   ✅ Added: {suggestion.get('artist_name')}")
             
@@ -161,7 +163,7 @@ def merge_artists(followed_artists: List[Dict], approved_suggestions: List[Dict]
     logging.info(f"Merge complete: {len(followed_artists)} followed + {suggestions_added} suggestions = {len(merged_artists)} total")
     logging.info(f"Skipped {suggestions_skipped} duplicate suggestions")
     
-    return merged_artists
+    return merged_artists, processed_suggestions
 
 
 def save_merged_artists(artists: List[Dict], output_path: str, backup: bool = True):
@@ -184,6 +186,57 @@ def save_merged_artists(artists: List[Dict], output_path: str, backup: bool = Tr
     except Exception as e:
         logging.error(f"Error saving merged artists: {e}")
         raise
+
+
+def cleanup_processed_suggestions(suggestions_path: str, processed_suggestions: List[Dict]):
+    """Remove approved suggestions that were successfully added to the master list."""
+    try:
+        # Load current suggestions
+        with open(suggestions_path, 'r', encoding='utf-8') as f:
+            all_suggestions = json.load(f)
+        
+        original_count = len(all_suggestions)
+        
+        # Create set of processed suggestion IDs for fast lookup
+        processed_ids = set()
+        processed_names = set()
+        
+        for suggestion in processed_suggestions:
+            if suggestion.get('spotify_id'):
+                processed_ids.add(suggestion['spotify_id'])
+            if suggestion.get('artist_name'):
+                processed_names.add(suggestion['artist_name'].lower().strip())
+        
+        # Filter out processed suggestions
+        remaining_suggestions = []
+        removed_count = 0
+        
+        for suggestion in all_suggestions:
+            suggestion_id = suggestion.get('spotify_id')
+            suggestion_name = suggestion.get('artist_name', '').lower().strip()
+            
+            # Keep if not processed or not approved
+            if (suggestion.get('status') != 'approved' or 
+                (suggestion_id not in processed_ids and suggestion_name not in processed_names)):
+                remaining_suggestions.append(suggestion)
+            else:
+                removed_count += 1
+                logging.info(f"Removed processed suggestion: {suggestion.get('artist_name')}")
+        
+        # Save cleaned up suggestions
+        with open(suggestions_path, 'w', encoding='utf-8') as f:
+            json.dump(remaining_suggestions, f, indent=2, ensure_ascii=False)
+        
+        logging.info(f"Cleaned up suggestions: removed {removed_count}, kept {len(remaining_suggestions)}")
+        
+        return removed_count, len(remaining_suggestions)
+        
+    except FileNotFoundError:
+        logging.warning(f"Suggestions file not found for cleanup: {suggestions_path}")
+        return 0, 0
+    except Exception as e:
+        logging.error(f"Error cleaning up suggestions: {e}")
+        return 0, 0
 
 
 def main():
@@ -230,7 +283,7 @@ def main():
     
     # Merge data
     print("Merging artists...")
-    merged_artists = merge_artists(followed_artists, approved_suggestions)
+    merged_artists, processed_suggestions = merge_artists(followed_artists, approved_suggestions)
     
     # Show summary
     followed_count = len([a for a in merged_artists if a['source'] == 'followed'])
@@ -252,9 +305,17 @@ def main():
     # Save or dry run
     if args.dry_run:
         print("🔍 DRY RUN: Would save merged data (use without --dry-run to actually save)")
+        print(f"🔍 DRY RUN: Would clean up {len(processed_suggestions)} processed suggestions")
     else:
         print("Saving merged artist list...")
         save_merged_artists(merged_artists, output_path, backup=not args.no_backup)
+        
+        # Clean up processed suggestions
+        if processed_suggestions:
+            print("Cleaning up processed suggestions...")
+            removed_count, remaining_count = cleanup_processed_suggestions(suggestions_path, processed_suggestions)
+            print(f"🧹 Cleaned up {removed_count} processed suggestions, {remaining_count} remaining")
+        
         print("✅ Merge complete!")
     
     logging.info("Artist merge process completed")
