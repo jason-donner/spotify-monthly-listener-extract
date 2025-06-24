@@ -52,11 +52,12 @@
             Can't find an artist? Suggest them to be added to our database!
         </p>
         <form id="suggestionForm" style="max-width:580px;margin:0 auto;">
-            <div style="margin-bottom:18px;">
-                <input type="text" id="artistName" name="artistName" placeholder="Artist name..." required class="suggestion-input">
+            <div style="margin-bottom:18px;position:relative;">
+                <input type="text" id="artistName" name="artistName" placeholder="Search for an artist on Spotify..." required class="suggestion-input" autocomplete="off">
+                <div id="artistSuggestions" class="artist-suggestions"></div>
             </div>
             <div style="margin-bottom:18px;">
-                <input type="url" id="spotifyUrl" name="spotifyUrl" placeholder="Spotify URL (optional)" class="suggestion-input" style="min-width:0;">
+                <input type="url" id="spotifyUrl" name="spotifyUrl" placeholder="Spotify URL (auto-filled when you select an artist)" class="suggestion-input" style="min-width:0;" readonly>
             </div>
             <div style="text-align:center;">
                 <button type="submit" style="padding:14px 36px;border:none;border-radius:8px;background:linear-gradient(90deg,#00ff7f 0%,#1ed760 100%);color:#191414;font-weight:bold;font-size:1.1em;cursor:pointer;transition:transform 0.2s,box-shadow 0.2s;height:auto;line-height:1.1;">
@@ -194,6 +195,55 @@
     transform: translateY(-2px);
     box-shadow: 0 4px 16px rgba(0,255,127,0.3);
 }
+.artist-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+.artist-suggestion-item {
+    padding: 12px 16px;
+    cursor: pointer;
+    border-bottom: 1px solid #333;
+    display: flex;
+    align-items: center;
+    transition: background 0.2s;
+}
+.artist-suggestion-item:hover {
+    background: #2a2a2a;
+}
+.artist-suggestion-item:last-child {
+    border-bottom: none;
+}
+.artist-suggestion-image {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 12px;
+    background: #333;
+}
+.artist-suggestion-info {
+    flex-grow: 1;
+}
+.artist-suggestion-name {
+    font-weight: bold;
+    color: #fff;
+    font-size: 1em;
+    margin-bottom: 2px;
+}
+.artist-suggestion-followers {
+    font-size: 0.85em;
+    color: #aaa;
+}
 .grow-results {
     animation: growResults 0.7s cubic-bezier(0.22, 1, 0.36, 1);
     transform: scale(1.04);
@@ -215,6 +265,95 @@
 }
 </style>
 <script>
+let searchTimeout;
+let selectedArtist = null;
+
+// Artist search functionality
+document.getElementById('artistName').addEventListener('input', function(e) {
+    const query = e.target.value.trim();
+    const suggestionsDiv = document.getElementById('artistSuggestions');
+    
+    // Clear previous timeout
+    clearTimeout(searchTimeout);
+    
+    if (query.length < 2) {
+        suggestionsDiv.style.display = 'none';
+        selectedArtist = null;
+        document.getElementById('spotifyUrl').value = '';
+        return;
+    }
+    
+    // Debounce the search
+    searchTimeout = setTimeout(() => {
+        fetch(`/search_spotify_artists?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                displayArtistSuggestions(data.artists);
+            })
+            .catch(error => {
+                console.error('Error searching artists:', error);
+                suggestionsDiv.style.display = 'none';
+            });
+    }, 300);
+});
+
+function displayArtistSuggestions(artists) {
+    const suggestionsDiv = document.getElementById('artistSuggestions');
+    
+    if (artists.length === 0) {
+        suggestionsDiv.style.display = 'none';
+        return;
+    }
+    
+    suggestionsDiv.innerHTML = '';
+    
+    artists.forEach(artist => {
+        const item = document.createElement('div');
+        item.className = 'artist-suggestion-item';
+        item.innerHTML = `
+            <img src="${artist.image || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiMzMzMiLz48cGF0aCBkPSJNMjAgMTBjMi4yIDAgNCAzIDQgNiAwIDItMSA0LTIuNSA1djJjMCAxLTEgMi0yIDJzLTItMS0yLTJ2LTJjLTEuNS0xLTIuNS0zLTIuNS01IDAtMyAxLjgtNiA0LTZ6IiBmaWxsPSIjNTU1Ii8+PC9zdmc+'}" 
+                 alt="${artist.name}" 
+                 class="artist-suggestion-image">
+            <div class="artist-suggestion-info">
+                <div class="artist-suggestion-name">${artist.name}</div>
+                <div class="artist-suggestion-followers">${formatFollowers(artist.followers)} followers</div>
+            </div>
+        `;
+        
+        item.addEventListener('click', () => {
+            selectArtist(artist);
+        });
+        
+        suggestionsDiv.appendChild(item);
+    });
+    
+    suggestionsDiv.style.display = 'block';
+}
+
+function selectArtist(artist) {
+    selectedArtist = artist;
+    document.getElementById('artistName').value = artist.name;
+    document.getElementById('spotifyUrl').value = artist.url;
+    document.getElementById('artistSuggestions').style.display = 'none';
+}
+
+function formatFollowers(count) {
+    if (count >= 1000000) {
+        return (count / 1000000).toFixed(1) + 'M';
+    } else if (count >= 1000) {
+        return (count / 1000).toFixed(1) + 'K';
+    }
+    return count.toString();
+}
+
+// Hide suggestions when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.suggestion-form-container')) {
+        document.getElementById('artistSuggestions').style.display = 'none';
+    }
+});
+
+// Form submission
 document.getElementById('suggestionForm').addEventListener('submit', function(e) {
     e.preventDefault();
     
@@ -224,6 +363,11 @@ document.getElementById('suggestionForm').addEventListener('submit', function(e)
     
     if (!artistName) {
         messageDiv.innerHTML = '<span style="color:#e74c3c;">Please enter an artist name.</span>';
+        return;
+    }
+    
+    if (!selectedArtist && !spotifyUrl) {
+        messageDiv.innerHTML = '<span style="color:#e74c3c;">Please select an artist from the suggestions or provide a Spotify URL.</span>';
         return;
     }
     
@@ -238,7 +382,8 @@ document.getElementById('suggestionForm').addEventListener('submit', function(e)
         },
         body: JSON.stringify({
             artist_name: artistName,
-            spotify_url: spotifyUrl
+            spotify_url: spotifyUrl,
+            spotify_id: selectedArtist ? selectedArtist.id : null
         })
     })
     .then(response => response.json())
@@ -246,6 +391,7 @@ document.getElementById('suggestionForm').addEventListener('submit', function(e)
         if (data.success) {
             messageDiv.innerHTML = '<span style="color:#00ff7f;">✓ Thank you! Your suggestion has been submitted.</span>';
             document.getElementById('suggestionForm').reset();
+            selectedArtist = null;
         } else {
             messageDiv.innerHTML = '<span style="color:#e74c3c;">❌ ' + (data.message || 'Error submitting suggestion.') + '</span>';
         }

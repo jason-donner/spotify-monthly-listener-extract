@@ -432,6 +432,49 @@ def artist_detail(artist_name_slug, artist_id):
         artist_id=artist_id,
     )
 
+@app.route("/search_spotify_artists")
+def search_spotify_artists():
+    """Search for artists on Spotify API for autocomplete suggestions"""
+    query = request.args.get("q", "").strip()
+    
+    print(f"Artist search query: '{query}'")  # Debug log
+    
+    if not query or len(query) < 2:
+        return jsonify({"artists": []})
+    
+    try:
+        headers = {"Authorization": f"Bearer {get_token()}"}
+        params = {
+            "q": query,
+            "type": "artist",
+            "limit": 10
+        }
+        
+        resp = requests.get("https://api.spotify.com/v1/search", headers=headers, params=params)
+        
+        if resp.status_code == 200:
+            data = resp.json()
+            artists = []
+            
+            for artist in data.get("artists", {}).get("items", []):
+                artists.append({
+                    "id": artist["id"],
+                    "name": artist["name"],
+                    "url": artist["external_urls"]["spotify"],
+                    "image": artist["images"][0]["url"] if artist.get("images") else "",
+                    "followers": artist.get("followers", {}).get("total", 0)
+                })
+            
+            print(f"Found {len(artists)} artists")  # Debug log
+            return jsonify({"artists": artists})
+        else:
+            print(f"Spotify API search error: {resp.status_code} - {resp.text}")
+            return jsonify({"artists": []})
+            
+    except Exception as e:
+        print(f"Error searching Spotify artists: {e}")
+        return jsonify({"artists": []})
+
 @app.route("/suggest_artist", methods=["POST"])
 def suggest_artist():
     import json
@@ -442,6 +485,7 @@ def suggest_artist():
         data = request.get_json()
         artist_name = data.get("artist_name", "").strip()
         spotify_url = data.get("spotify_url", "").strip()
+        spotify_id = data.get("spotify_id", "").strip()
         
         if not artist_name:
             return jsonify({"success": False, "message": "Artist name is required"})
@@ -458,15 +502,17 @@ def suggest_artist():
             except:
                 suggestions = []
         
-        # Check if artist already suggested
+        # Check if artist already suggested (by name or Spotify ID)
         for suggestion in suggestions:
-            if suggestion.get("artist_name", "").lower() == artist_name.lower():
+            if (suggestion.get("artist_name", "").lower() == artist_name.lower() or 
+                (spotify_id and suggestion.get("spotify_id") == spotify_id)):
                 return jsonify({"success": False, "message": "This artist has already been suggested"})
         
         # Add new suggestion
         new_suggestion = {
             "artist_name": artist_name,
             "spotify_url": spotify_url if spotify_url else None,
+            "spotify_id": spotify_id if spotify_id else None,
             "timestamp": datetime.now().isoformat(),
             "status": "pending"
         }
