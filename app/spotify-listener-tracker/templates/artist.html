@@ -103,9 +103,10 @@
                     <tr>
                         <td>{{ row.date | datetimeformat('%B %d, %Y') }}</td>
                         <td>
-                            {% if not loop.first %}
-                                {% set prev = results[loop.index0 - 1] %}
-                                {% set diff = row.monthly_listeners - prev.monthly_listeners %}
+                            {% if not loop.last %}
+                                {% set next_idx = loop.index0 + 1 %}
+                                {% set next = results[next_idx] %}
+                                {% set diff = next.monthly_listeners - row.monthly_listeners %}
                                 {% if diff > 0 %}
                                     <span class="positive-change">+{{ "{:,}".format(diff) }}</span>
                                 {% elif diff < 0 %}
@@ -118,8 +119,10 @@
                             {% endif %}
                         </td>
                         <td>
-                            {% if not loop.first and prev.monthly_listeners != 0 %}
-                                {% set pct = ((row.monthly_listeners - prev.monthly_listeners) / prev.monthly_listeners) * 100 %}
+                            {% if not loop.last and row.monthly_listeners != 0 %}
+                                {% set next_idx = loop.index0 + 1 %}
+                                {% set next = results[next_idx] %}
+                                {% set pct = ((next.monthly_listeners - row.monthly_listeners) / row.monthly_listeners) * 100 %}
                                 {% if pct > 0 %}
                                     <span class="positive-change">+{{ '%.2f'|format(pct) }}%</span>
                                 {% elif pct < 0 %}
