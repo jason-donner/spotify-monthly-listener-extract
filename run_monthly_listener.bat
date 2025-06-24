@@ -33,23 +33,15 @@ if errorlevel 1 (
     echo Warning: Suggestion processing failed, continuing with main workflow...
 )
 
-REM Step 2: Synchronize followed artists
-echo Running spotify_follow_sync.py to sync followed artists...
-"%~dp0.venv\Scripts\python.exe" src\spotify_follow_sync.py
-if errorlevel 1 (
-    echo %DATE% %TIME% - ERROR: spotify_follow_sync.py failed with exit code %ERRORLEVEL% >> %LOGFILE%
-    pause
-    exit /b %ERRORLEVEL%
-)
-
-REM Step 3: Run get_artists.py
+REM Step 2: Run get_artists.py
+echo Running get_artists.py to fetch followed artists...
 "%~dp0.venv\Scripts\python.exe" src\get_artists.py --log get_artists.log
 if errorlevel 1 (
     echo %DATE% %TIME% - ERROR: get_artists.py failed with exit code %ERRORLEVEL% >> %LOGFILE%
     exit /b %ERRORLEVEL%
 )
 
-REM Step 4: Run scrape.py
+REM Step 3: Run scrape.py
 echo Running scrape.py...
 "%~dp0.venv\Scripts\python.exe" src\scrape.py
 echo scrape.py exited with %ERRORLEVEL%

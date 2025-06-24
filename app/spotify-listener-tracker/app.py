@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 import json
 import requests
 import os
@@ -8,10 +8,63 @@ import time
 import sys
 from werkzeug.utils import redirect
 import re
+import spotipy
+from spotipy.oauth2 import SpotifyOAuth
+from dotenv import load_dotenv
 
 app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.jinja_env.auto_reload = True
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Configure session
+app.secret_key = os.getenv('FLASK_SECRET_KEY', 'your-secret-key-change-in-production')
+
+# Spotify OAuth configuration
+SPOTIFY_CLIENT_ID = os.getenv("SPOTIPY_CLIENT_ID")
+SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIPY_CLIENT_SECRET")
+SPOTIFY_REDIRECT_URI = os.getenv("SPOTIPY_REDIRECT_URI", "http://localhost:5000/callback")
+SPOTIFY_SCOPE = "user-follow-modify user-follow-read"
+
+def get_spotify_oauth():
+    """Create a SpotifyOAuth instance"""
+    return SpotifyOAuth(
+        client_id=SPOTIFY_CLIENT_ID,
+        client_secret=SPOTIFY_CLIENT_SECRET,
+        redirect_uri=SPOTIFY_REDIRECT_URI,
+        scope=SPOTIFY_SCOPE,
+        cache_path=None  # We'll use session storage instead
+    )
+
+def get_token_from_session():
+    """Get Spotify token from Flask session"""
+    return session.get('spotify_token')
+
+def save_token_to_session(token_info):
+    """Save Spotify token to Flask session"""
+    session['spotify_token'] = token_info
+
+def get_authenticated_spotify():
+    """Get an authenticated Spotify client or None if not authenticated"""
+    token_info = get_token_from_session()
+    
+    if not token_info:
+        return None
+    
+    sp_oauth = get_spotify_oauth()
+    
+    # Check if token is expired and refresh if needed
+    if sp_oauth.is_token_expired(token_info):
+        try:
+            token_info = sp_oauth.refresh_access_token(token_info['refresh_token'])
+            save_token_to_session(token_info)
+        except Exception as e:
+            session.pop('spotify_token', None)
+            return None
+    
+    return spotipy.Spotify(auth=token_info['access_token'])
 
 # Path to your master data file
 DATA_PATH = r"C:\Users\Jason\Spotify Monthly Listener Extract\src\results\spotify-monthly-listeners-master.json"
@@ -680,48 +733,139 @@ def admin_follow_artist():
         if not artist_id:
             return jsonify({"success": False, "message": "Artist ID is required"})
         
-        # Initialize Spotify client
-        headers = {"Authorization": f"Bearer {get_token()}"}
-        resp = requests.put(f"https://api.spotify.com/v1/me/following?type=artist&ids={artist_id}", headers=headers)
+        # Get authenticated Spotify client
+        sp = get_authenticated_spotify()
         
-        if resp.status_code == 204:  # Success - no content returned
-            # Also add to followed artists file
-            followed_file = os.path.join(os.path.dirname(__file__), "..", "..", "src", "results", "spotify-followed-artists-master.json")
-            try:
-                if os.path.exists(followed_file):
-                    with open(followed_file, "r", encoding="utf-8") as f:
-                        followed_artists = json.load(f)
-                else:
-                    followed_artists = []
-                
-                # Check if already in list
-                already_exists = any(
-                    followed.get("artist_id") == artist_id 
-                    for followed in followed_artists
-                )
-                
-                if not already_exists:
-                    new_artist = {
-                        "artist_name": artist_name,
-                        "artist_id": artist_id,
-                        "url": f"https://open.spotify.com/artist/{artist_id}",
-                        "source": "admin_follow",
-                        "date_added": datetime.now().strftime("%Y-%m-%d"),
-                        "removed": False
-                    }
-                    followed_artists.append(new_artist)
-                    
-                    with open(followed_file, "w", encoding="utf-8") as f:
-                        json.dump(followed_artists, f, indent=2, ensure_ascii=False)
-            except Exception as e:
-                print(f"Error updating followed artists file: {e}")
+        if not sp:
+            return jsonify({
+                "success": False, 
+                "message": "Spotify authentication required. Please log in with Spotify to follow artists.",
+                "auth_required": True
+            })
+        
+        try:
+            # Test authentication and get user info
+            user = sp.current_user()
+            print(f"Following artist as user: {user.get('display_name', user.get('id'))}")
             
-            return jsonify({"success": True, "message": f"Successfully followed {artist_name} on Spotify!"})
-        else:
-            return jsonify({"success": False, "message": f"Failed to follow artist: {resp.text}"})
+            # Follow the artist
+            sp.user_follow_artists([artist_id])
+            print(f"Successfully followed artist {artist_id} ({artist_name})")
+            
+        except spotipy.SpotifyException as e:
+            if e.http_status == 401:
+                # Clear invalid token
+                session.pop('spotify_token', None)
+                return jsonify({
+                    "success": False,
+                    "message": "Authentication expired. Please log in again.",
+                    "auth_required": True
+                })
+            else:
+                return jsonify({"success": False, "message": f"Spotify API error: {str(e)}"})
+        
+        # Also add to followed artists file
+        followed_file = os.path.join(os.path.dirname(__file__), "..", "..", "src", "results", "spotify-followed-artists-master.json")
+        try:
+            if os.path.exists(followed_file):
+                with open(followed_file, "r", encoding="utf-8") as f:
+                    followed_artists = json.load(f)
+            else:
+                followed_artists = []
+            
+            # Check if already in list
+            already_exists = any(
+                followed.get("artist_id") == artist_id 
+                for followed in followed_artists
+            )
+            
+            if not already_exists:
+                new_artist = {
+                    "artist_name": artist_name,
+                    "artist_id": artist_id,
+                    "url": f"https://open.spotify.com/artist/{artist_id}",
+                    "source": "admin_follow",
+                    "date_added": datetime.now().strftime("%Y-%m-%d"),
+                    "removed": False
+                }
+                followed_artists.append(new_artist)
+                
+                with open(followed_file, "w", encoding="utf-8") as f:
+                    json.dump(followed_artists, f, indent=2, ensure_ascii=False)
+                    
+                print(f"Added {artist_name} to followed artists file")
+        except Exception as e:
+            print(f"Error updating followed artists file: {e}")
+        
+        return jsonify({"success": True, "message": f"Successfully followed {artist_name} on Spotify and added to tracking list!"})
             
     except Exception as e:
         return jsonify({"success": False, "message": f"Error: {str(e)}"})
 
-if __name__ == "__main__":
-    app.run(debug=True)
+@app.route("/login")
+def login():
+    """Initiate Spotify OAuth login"""
+    sp_oauth = get_spotify_oauth()
+    auth_url = sp_oauth.get_authorize_url()
+    return redirect(auth_url)
+
+@app.route("/callback")
+def callback():
+    """Handle Spotify OAuth callback"""
+    sp_oauth = get_spotify_oauth()
+    
+    # Clear any existing token
+    session.pop('spotify_token', None)
+    
+    code = request.args.get('code')
+    if not code:
+        return redirect('/admin?error=auth_cancelled')
+    
+    try:
+        token_info = sp_oauth.get_access_token(code)
+        save_token_to_session(token_info)
+        return redirect('/admin?success=logged_in')
+    except Exception as e:
+        print(f"OAuth callback error: {e}")
+        return redirect('/admin?error=auth_failed')
+
+@app.route("/logout")
+def logout():
+    """Clear Spotify authentication"""
+    session.pop('spotify_token', None)
+    return redirect('/admin?success=logged_out')
+
+@app.route("/auth_status")
+def auth_status():
+    """Check if user is authenticated with Spotify"""
+    token_info = get_token_from_session()
+    
+    if not token_info:
+        return jsonify({"authenticated": False})
+    
+    sp_oauth = get_spotify_oauth()
+    
+    # Check if token is expired and refresh if needed
+    if sp_oauth.is_token_expired(token_info):
+        try:
+            token_info = sp_oauth.refresh_access_token(token_info['refresh_token'])
+            save_token_to_session(token_info)
+        except Exception as e:
+            session.pop('spotify_token', None)
+            return jsonify({"authenticated": False})
+    
+    # Test the token by making a simple API call
+    try:
+        sp = spotipy.Spotify(auth=token_info['access_token'])
+        user = sp.current_user()
+        return jsonify({
+            "authenticated": True,
+            "user": {
+                "id": user.get('id'),
+                "display_name": user.get('display_name'),
+                "images": user.get('images', [])
+            }
+        })
+    except Exception as e:
+        session.pop('spotify_token', None)
+        return jsonify({"authenticated": False})

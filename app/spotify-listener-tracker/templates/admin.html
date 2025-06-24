@@ -5,6 +5,8 @@
 {% block content %}
 <!-- Bootstrap CSS -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<!-- Font Awesome for icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -12,6 +14,11 @@
     <div class="row">
         <div class="col-12">
             <h1 class="mb-4" style="color: #00ff7f; text-align: center;">🛠️ Admin Panel - Artist Suggestions</h1>
+            
+            <!-- Spotify Authentication Status -->
+            <div id="auth-status" class="alert" style="display: none;">
+                <!-- Content will be populated by JavaScript -->
+            </div>
             
             <div class="alert alert-info" style="background: rgba(0, 123, 255, 0.15); border: 1px solid rgba(0, 123, 255, 0.3); color: #87ceeb;">
                 <strong>Admin Controls:</strong> Review user-submitted artist suggestions and decide whether to follow them on Spotify or just add them to tracking.
@@ -83,11 +90,97 @@
 
 <script>
 let suggestions = [];
+let isAuthenticated = false;
+let currentUser = null;
 
-// Load suggestions on page load
+// Load suggestions and check auth on page load
 document.addEventListener('DOMContentLoaded', function() {
+    checkAuthStatus();
     loadSuggestions();
+    handleUrlParams();
 });
+
+function handleUrlParams() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const success = urlParams.get('success');
+    const error = urlParams.get('error');
+    
+    if (success === 'logged_in') {
+        showToast('Success', 'Successfully logged in to Spotify!', 'success');
+        // Clean URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (success === 'logged_out') {
+        showToast('Info', 'Successfully logged out of Spotify.', 'info');
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (error === 'auth_cancelled') {
+        showToast('Warning', 'Spotify login was cancelled.', 'warning');
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (error === 'auth_failed') {
+        showToast('Error', 'Spotify login failed. Please try again.', 'danger');
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+}
+
+function checkAuthStatus() {
+    fetch('/auth_status')
+        .then(response => response.json())
+        .then(data => {
+            isAuthenticated = data.authenticated;
+            currentUser = data.user || null;
+            updateAuthStatus();
+        })
+        .catch(error => {
+            console.error('Auth status check failed:', error);
+            isAuthenticated = false;
+            currentUser = null;
+            updateAuthStatus();
+        });
+}
+
+function updateAuthStatus() {
+    const authStatusDiv = document.getElementById('auth-status');
+    
+    if (isAuthenticated && currentUser) {
+        authStatusDiv.className = 'alert alert-success';
+        authStatusDiv.style.display = 'block';
+        authStatusDiv.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>🎵 Spotify Connected:</strong> 
+                    Logged in as <strong>${currentUser.display_name || currentUser.id}</strong>
+                    ${currentUser.images && currentUser.images.length > 0 ? 
+                        `<img src="${currentUser.images[0].url}" alt="Profile" class="rounded-circle ms-2" style="width: 24px; height: 24px;">` : 
+                        ''}
+                </div>
+                <button class="btn btn-outline-danger btn-sm" onclick="logout()">
+                    Logout
+                </button>
+            </div>
+        `;
+    } else {
+        authStatusDiv.className = 'alert alert-warning';
+        authStatusDiv.style.display = 'block';
+        authStatusDiv.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>⚠️ Spotify Not Connected:</strong> 
+                    You need to log in with Spotify to follow artists directly from this panel.
+                </div>
+                <button class="btn btn-success btn-sm" onclick="loginWithSpotify()">
+                    <i class="fab fa-spotify"></i> Login with Spotify
+                </button>
+            </div>
+        `;
+    }
+}
+
+function loginWithSpotify() {
+    window.location.href = '/login';
+}
+
+function logout() {
+    window.location.href = '/logout';
+}
 
 function loadSuggestions() {
     document.getElementById('loading').style.display = 'block';
@@ -236,6 +329,11 @@ function adminAction(suggestionId, action, successMessage) {
 }
 
 function followArtistNow(artistId, artistName) {
+    if (!isAuthenticated) {
+        showToast('Authentication Required', 'Please log in with Spotify first to follow artists.', 'warning');
+        return;
+    }
+    
     if (confirm(`Follow "${artistName}" on Spotify right now?`)) {
         fetch('/admin/follow_artist', {
             method: 'POST',
@@ -253,7 +351,13 @@ function followArtistNow(artistId, artistName) {
                 showToast('Success', data.message, 'success');
                 loadSuggestions(); // Reload to update UI
             } else {
-                showToast('Error', data.message, 'danger');
+                if (data.auth_required) {
+                    showToast('Authentication Required', data.message, 'warning');
+                    // Check auth status again to update UI
+                    checkAuthStatus();
+                } else {
+                    showToast('Error', data.message, 'danger');
+                }
             }
         })
         .catch(error => {
