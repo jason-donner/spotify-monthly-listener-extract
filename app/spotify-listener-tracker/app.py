@@ -520,7 +520,7 @@ def suggest_artist():
         # Create suggestions file if it doesn't exist
         suggestions_file = os.path.join(os.path.dirname(__file__), "artist_suggestions.json")
         
-        # Load existing suggestions
+        # Load existing suggestions and check first (more specific than followed)
         suggestions = []
         if os.path.exists(suggestions_file):
             try:
@@ -533,7 +533,30 @@ def suggest_artist():
         for suggestion in suggestions:
             if (suggestion.get("artist_name", "").lower() == artist_name.lower() or 
                 (spotify_id and suggestion.get("spotify_id") == spotify_id)):
-                return jsonify({"success": False, "message": "This artist has already been suggested"})
+                return jsonify({"success": False, "message": f"{artist_name} has already been suggested and is waiting to be added!"})
+        
+        # Check if artist is already followed (in the master followed list)
+        followed_artists_file = os.path.join(os.path.dirname(__file__), "..", "..", "src", "results", "spotify-followed-artists-master.json")
+        if os.path.exists(followed_artists_file):
+            try:
+                with open(followed_artists_file, "r", encoding="utf-8") as f:
+                    followed_artists = json.load(f)
+                    
+                # Check if artist is already followed (by name or Spotify ID)
+                for followed in followed_artists:
+                    followed_name = followed.get("artist_name", "").lower()
+                    followed_id = followed.get("artist_id", "")
+                    followed_url = followed.get("url", "")
+                    
+                    # Extract ID from URL if not directly available
+                    if not followed_id and followed_url:
+                        followed_id = get_artist_id_from_url(followed_url)
+                    
+                    if (artist_name.lower() == followed_name or 
+                        (spotify_id and followed_id and spotify_id == followed_id)):
+                        return jsonify({"success": False, "message": f"You're already following {artist_name} on Spotify!"})
+            except Exception as e:
+                print(f"Error checking followed artists: {e}")
         
         # Add new suggestion - auto-approved unless blacklisted
         new_suggestion = {
