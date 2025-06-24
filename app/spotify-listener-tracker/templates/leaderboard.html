@@ -30,6 +30,16 @@
                 {% endfor %}
             </div>
         </div>
+        {% if start_date and end_date %}
+        <div style="text-align:center;margin-bottom:20px;padding:12px 20px;background:rgba(30,30,40,0.7);border-radius:12px;border:1px solid rgba(255,255,255,0.1);">
+            <span style="color:#aaa;font-size:1.05em;font-weight:500;">
+                Comparing data from 
+                <span style="color:#00ff7f;font-weight:700;">{{ start_date.strftime('%B %d, %Y') }}</span> 
+                to 
+                <span style="color:#00ff7f;font-weight:700;">{{ end_date.strftime('%B %d, %Y') }}</span>
+            </span>
+        </div>
+        {% endif %}
         <table class="leaderboard-table">
             <tr>
                 <th>Artist</th>

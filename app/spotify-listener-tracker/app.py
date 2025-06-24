@@ -284,11 +284,21 @@ def leaderboard():
             "slug": slugify(artist)
         })
     leaderboard_data = []
+    start_date = None
+    end_date = None
+    
     for artist, records in artist_changes.items():
         recent = [r for r in records if r["date"] >= cutoff]
         if len(recent) < 2:
             continue
         recent.sort(key=lambda x: x["date"])
+        
+        # Track the overall date range for the leaderboard
+        if start_date is None or recent[0]["date"] < start_date:
+            start_date = recent[0]["date"]
+        if end_date is None or recent[-1]["date"] > end_date:
+            end_date = recent[-1]["date"]
+        
         start = recent[0]["listeners"]
         end = recent[-1]["listeners"]
         if start == 0:
@@ -343,6 +353,8 @@ def leaderboard():
         leaderboard=leaderboard_data,
         leaderboard_mode=mode,
         leaderboard_tier=tier,
+        start_date=start_date,
+        end_date=end_date,
     )
 
 # Helper to slugify artist names for URLs
