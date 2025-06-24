@@ -24,6 +24,69 @@
                 <strong>Admin Controls:</strong> Review user-submitted artist suggestions and decide whether to follow them on Spotify or just add them to tracking.
             </div>
             
+            <!-- Scraping Controls Section -->
+            <div class="card mb-4" style="background: rgba(40, 40, 60, 0.95); border: 1px solid rgba(0, 255, 127, 0.3);">
+                <div class="card-header" style="background: rgba(0, 255, 127, 0.1); border-bottom: 1px solid rgba(0, 255, 127, 0.3);">
+                    <h5 class="mb-0" style="color: #00ff7f;">
+                        <i class="fas fa-spider"></i> Scraping Controls
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <p class="text-light">Run the monthly listener scraping script to update artist data from Spotify.</p>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="headlessMode" checked>
+                                <label class="form-check-label text-light" for="headlessMode">
+                                    Run in headless mode (no browser window)
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <button id="runScrapingBtn" class="btn btn-success btn-lg" onclick="runScraping()">
+                                <i class="fas fa-play"></i> Run Scraping
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Scraping Status -->
+                    <div id="scrapingStatus" style="display: none;" class="mt-3">
+                        <div class="alert alert-info" id="scrapingAlert">
+                            <div class="d-flex align-items-center">
+                                <div class="spinner-border spinner-border-sm me-2" role="status" id="scrapingSpinner">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <span id="scrapingStatusText">Starting scraping...</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Progress and Output -->
+                        <div id="scrapingOutput" style="display: none;">
+                            <div class="card" style="background: rgba(20, 20, 30, 0.95); border: 1px solid rgba(255, 255, 255, 0.1);">
+                                <div class="card-header">
+                                    <h6 class="mb-0 text-light">Scraping Output</h6>
+                                </div>
+                                <div class="card-body">
+                                    <pre id="scrapingOutputText" class="text-light" style="max-height: 300px; overflow-y: auto; font-size: 0.8rem;"></pre>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Error Output -->
+                        <div id="scrapingError" style="display: none;">
+                            <div class="card" style="background: rgba(20, 20, 30, 0.95); border: 1px solid rgba(220, 53, 69, 0.3);">
+                                <div class="card-header" style="background: rgba(220, 53, 69, 0.1);">
+                                    <h6 class="mb-0 text-danger">Error Output</h6>
+                                </div>
+                                <div class="card-body">
+                                    <pre id="scrapingErrorText" class="text-danger" style="max-height: 200px; overflow-y: auto; font-size: 0.8rem;"></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
             <!-- Filter tabs -->
             <ul class="nav nav-tabs mb-3" id="suggestionTabs" role="tablist">
                 <li class="nav-item" role="presentation">
@@ -394,6 +457,185 @@ function showToast(title, message, type) {
     
     const bsToast = new bootstrap.Toast(toast);
     bsToast.show();
+}
+
+// Scraping functionality
+let currentScrapingJobId = null;
+let scrapingStatusInterval = null;
+
+function runScraping() {
+    const headless = document.getElementById('headlessMode').checked;
+    const btn = document.getElementById('runScrapingBtn');
+    const status = document.getElementById('scrapingStatus');
+    const alert = document.getElementById('scrapingAlert');
+    const statusText = document.getElementById('scrapingStatusText');
+    const spinner = document.getElementById('scrapingSpinner');
+    
+    // Disable button and show status
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting...';
+    status.style.display = 'block';
+    alert.className = 'alert alert-info';
+    statusText.textContent = 'Starting scraping script...';
+    spinner.style.display = 'inline-block';
+    
+    // Hide previous outputs
+    document.getElementById('scrapingOutput').style.display = 'none';
+    document.getElementById('scrapingError').style.display = 'none';
+    
+    fetch('/admin/run_scraping', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            headless: headless
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            currentScrapingJobId = data.job_id;
+            statusText.textContent = 'Scraping is running...';
+            
+            // Start polling for status updates
+            scrapingStatusInterval = setInterval(checkScrapingStatus, 2000);
+            
+            showToast('Success', 'Scraping started successfully!', 'success');
+        } else {
+            resetScrapingUI();
+            showToast('Error', data.message, 'danger');
+        }
+    })
+    .catch(error => {
+        resetScrapingUI();
+        showToast('Error', 'Failed to start scraping: ' + error.message, 'danger');
+    });
+}
+
+function checkScrapingStatus() {
+    if (!currentScrapingJobId) return;
+    
+    fetch(`/admin/scraping_status/${currentScrapingJobId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.job) {
+                updateScrapingUI(data.job);
+                
+                // If job is completed, stop polling
+                if (data.job.completed) {
+                    clearInterval(scrapingStatusInterval);
+                    scrapingStatusInterval = null;
+                    currentScrapingJobId = null;
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error checking scraping status:', error);
+        });
+}
+
+function updateScrapingUI(job) {
+    const alert = document.getElementById('scrapingAlert');
+    const statusText = document.getElementById('scrapingStatusText');
+    const spinner = document.getElementById('scrapingSpinner');
+    const outputDiv = document.getElementById('scrapingOutput');
+    const outputText = document.getElementById('scrapingOutputText');
+    const errorDiv = document.getElementById('scrapingError');
+    const errorText = document.getElementById('scrapingErrorText');
+    
+    // Update status based on job status
+    switch (job.status) {
+        case 'starting':
+            alert.className = 'alert alert-info';
+            statusText.textContent = 'Starting scraping script...';
+            spinner.style.display = 'inline-block';
+            break;
+            
+        case 'running':
+            alert.className = 'alert alert-primary';
+            statusText.textContent = 'Scraping in progress... This may take several minutes.';
+            spinner.style.display = 'inline-block';
+            break;
+            
+        case 'completed':
+            alert.className = 'alert alert-success';
+            statusText.textContent = `Scraping completed successfully! (${formatDuration(job.started_at, job.completed_at)})`;
+            spinner.style.display = 'none';
+            resetScrapingButton();
+            showToast('Success', 'Scraping completed successfully!', 'success');
+            break;
+            
+        case 'failed':
+            alert.className = 'alert alert-danger';
+            statusText.textContent = `Scraping failed! (${formatDuration(job.started_at, job.completed_at)})`;
+            spinner.style.display = 'none';
+            resetScrapingButton();
+            showToast('Error', 'Scraping failed. Check the error output below.', 'danger');
+            break;
+            
+        case 'timeout':
+            alert.className = 'alert alert-warning';
+            statusText.textContent = 'Scraping timed out after 30 minutes.';
+            spinner.style.display = 'none';
+            resetScrapingButton();
+            showToast('Warning', 'Scraping timed out. The process took too long.', 'warning');
+            break;
+            
+        case 'error':
+            alert.className = 'alert alert-danger';
+            statusText.textContent = 'An error occurred while running the scraping script.';
+            spinner.style.display = 'none';
+            resetScrapingButton();
+            showToast('Error', 'An error occurred during scraping.', 'danger');
+            break;
+    }
+    
+    // Show output if available
+    if (job.output && job.output.trim()) {
+        outputText.textContent = job.output;
+        outputDiv.style.display = 'block';
+    }
+    
+    // Show error if available
+    if (job.error && job.error.trim()) {
+        errorText.textContent = job.error;
+        errorDiv.style.display = 'block';
+    }
+}
+
+function resetScrapingButton() {
+    const btn = document.getElementById('runScrapingBtn');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-play"></i> Run Scraping';
+}
+
+function resetScrapingUI() {
+    resetScrapingButton();
+    document.getElementById('scrapingStatus').style.display = 'none';
+    
+    if (scrapingStatusInterval) {
+        clearInterval(scrapingStatusInterval);
+        scrapingStatusInterval = null;
+    }
+    currentScrapingJobId = null;
+}
+
+function formatDuration(startTime, endTime) {
+    if (!startTime || !endTime) return '';
+    
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    const diffMs = end - start;
+    const diffSecs = Math.floor(diffMs / 1000);
+    const diffMins = Math.floor(diffSecs / 60);
+    
+    if (diffMins > 0) {
+        const remainingSecs = diffSecs % 60;
+        return `${diffMins}m ${remainingSecs}s`;
+    } else {
+        return `${diffSecs}s`;
+    }
 }
 </script>
 {% endblock %}

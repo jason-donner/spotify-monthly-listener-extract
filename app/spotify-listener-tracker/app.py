@@ -11,6 +11,9 @@ import re
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 from dotenv import load_dotenv
+import subprocess
+import threading
+import uuid
 
 app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
@@ -905,6 +908,142 @@ def auth_status():
         print(f"DEBUG: Auth status error: {e}")
         session.pop('spotify_token', None)
         return jsonify({"authenticated": False})
+
+@app.route("/admin/run_scraping", methods=["POST"])
+def admin_run_scraping():
+    """Admin endpoint to run the scraping script."""
+    import subprocess
+    import threading
+    import uuid
+    from datetime import datetime
+    
+    try:
+        data = request.get_json()
+        headless = data.get("headless", True)  # Default to headless mode
+        
+        # Generate a unique job ID for this scraping run
+        job_id = str(uuid.uuid4())
+        
+        # Store job status in session (in production, you'd use Redis or a database)
+        if 'scraping_jobs' not in session:
+            session['scraping_jobs'] = {}
+        
+        session['scraping_jobs'][job_id] = {
+            'status': 'starting',
+            'started_at': datetime.now().isoformat(),
+            'output': '',
+            'error': '',
+            'completed': False
+        }
+        session.modified = True
+        
+        def run_scraping():
+            try:
+                # Path to the scraping script
+                scrape_script = os.path.join(os.path.dirname(__file__), "..", "..", "src", "scrape.py")
+                
+                # Build the command
+                cmd = [sys.executable, scrape_script]
+                
+                # Add --no-prompt to skip the login prompt
+                cmd.append("--no-prompt")
+                
+                # For headless mode, we'd need to modify the scrape.py script to support it
+                # For now, we'll run it as-is
+                
+                print(f"DEBUG: Running scraping command: {' '.join(cmd)}")
+                
+                # Update status to running
+                session['scraping_jobs'][job_id]['status'] = 'running'
+                session.modified = True
+                
+                # Run the script
+                result = subprocess.run(
+                    cmd,
+                    cwd=os.path.dirname(scrape_script),
+                    capture_output=True,
+                    text=True,
+                    timeout=1800  # 30 minute timeout
+                )
+                
+                # Update job status with results
+                session['scraping_jobs'][job_id].update({
+                    'status': 'completed' if result.returncode == 0 else 'failed',
+                    'output': result.stdout,
+                    'error': result.stderr,
+                    'completed': True,
+                    'return_code': result.returncode,
+                    'completed_at': datetime.now().isoformat()
+                })
+                session.modified = True
+                
+                print(f"DEBUG: Scraping completed with return code: {result.returncode}")
+                
+            except subprocess.TimeoutExpired:
+                session['scraping_jobs'][job_id].update({
+                    'status': 'timeout',
+                    'error': 'Scraping script timed out after 30 minutes',
+                    'completed': True,
+                    'completed_at': datetime.now().isoformat()
+                })
+                session.modified = True
+                print("DEBUG: Scraping timed out")
+                
+            except Exception as e:
+                session['scraping_jobs'][job_id].update({
+                    'status': 'error',
+                    'error': str(e),
+                    'completed': True,
+                    'completed_at': datetime.now().isoformat()
+                })
+                session.modified = True
+                print(f"DEBUG: Scraping error: {e}")
+        
+        # Start scraping in background thread
+        thread = threading.Thread(target=run_scraping)
+        thread.daemon = True
+        thread.start()
+        
+        return jsonify({
+            "success": True, 
+            "message": "Scraping started successfully", 
+            "job_id": job_id
+        })
+        
+    except Exception as e:
+        print(f"Error starting scraping: {e}")
+        return jsonify({"success": False, "message": f"Error: {str(e)}"})
+
+@app.route("/admin/scraping_status/<job_id>")
+def admin_scraping_status(job_id):
+    """Get the status of a scraping job."""
+    try:
+        jobs = session.get('scraping_jobs', {})
+        job = jobs.get(job_id)
+        
+        if not job:
+            return jsonify({"success": False, "message": "Job not found"})
+        
+        return jsonify({
+            "success": True,
+            "job": job
+        })
+        
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Error: {str(e)}"})
+
+@app.route("/admin/scraping_jobs")
+def admin_scraping_jobs():
+    """Get all scraping jobs for the current session."""
+    try:
+        jobs = session.get('scraping_jobs', {})
+        return jsonify({
+            "success": True,
+            "jobs": jobs
+        })
+        
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Error: {str(e)}"})
 
 if __name__ == "__main__":
     print("Starting Spotify Monthly Listener Tracker...")
