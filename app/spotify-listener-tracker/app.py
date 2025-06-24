@@ -100,6 +100,11 @@ def search():
             else:
                 r["image_url"] = None
         results_for_chart = list(reversed(results))
+        
+        # Initialize artist_info and artist_image_url
+        artist_info = None
+        artist_image_url = None
+        
         artist_url = results[0].get("artist_url") or results[0].get("url") if results else None
         if artist_url:
             artist_id = get_artist_id_from_url(artist_url)
@@ -426,6 +431,57 @@ def artist_detail(artist_name_slug, artist_id):
         all_time_high=all_time_high,
         artist_id=artist_id,
     )
+
+@app.route("/suggest_artist", methods=["POST"])
+def suggest_artist():
+    import json
+    import os
+    from datetime import datetime
+    
+    try:
+        data = request.get_json()
+        artist_name = data.get("artist_name", "").strip()
+        spotify_url = data.get("spotify_url", "").strip()
+        
+        if not artist_name:
+            return jsonify({"success": False, "message": "Artist name is required"})
+        
+        # Create suggestions file if it doesn't exist
+        suggestions_file = os.path.join(os.path.dirname(__file__), "artist_suggestions.json")
+        
+        # Load existing suggestions
+        suggestions = []
+        if os.path.exists(suggestions_file):
+            try:
+                with open(suggestions_file, "r", encoding="utf-8") as f:
+                    suggestions = json.load(f)
+            except:
+                suggestions = []
+        
+        # Check if artist already suggested
+        for suggestion in suggestions:
+            if suggestion.get("artist_name", "").lower() == artist_name.lower():
+                return jsonify({"success": False, "message": "This artist has already been suggested"})
+        
+        # Add new suggestion
+        new_suggestion = {
+            "artist_name": artist_name,
+            "spotify_url": spotify_url if spotify_url else None,
+            "timestamp": datetime.now().isoformat(),
+            "status": "pending"
+        }
+        
+        suggestions.append(new_suggestion)
+        
+        # Save suggestions
+        with open(suggestions_file, "w", encoding="utf-8") as f:
+            json.dump(suggestions, f, indent=2, ensure_ascii=False)
+        
+        return jsonify({"success": True, "message": "Artist suggestion submitted successfully"})
+        
+    except Exception as e:
+        print(f"Error handling artist suggestion: {e}")
+        return jsonify({"success": False, "message": "Server error occurred"})
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -1,37 +1,71 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="content-container{% if grow_results %} grow-results{% endif %}">
-    {% if results %}
-    <div class="results-table-container">
-        <h2 style="color:#1DB954;text-align:center;margin-bottom:16px;">Results for "{{ query }}"</h2>
-        <div style="color:#aaa;font-size:0.98em;margin-bottom:10px;">Click an artist name below to view their detail page.</div>
-        <table class="results-table">
-            <tr>
-                <th>Artist</th>
-                <th>Date</th>
-                <th>Monthly Listeners</th>
-            </tr>
-            {% for row in results %}
-            <tr>
-                <td>
-                    {% if row.image_url %}
-                        <img src="{{ row.image_url }}" alt="{{ row.artist_name }}" class="artist-img">
-                    {% else %}
-                        <img src="{{ url_for('static', filename='placeholder.png') }}" alt="No image" class="artist-img">
-                    {% endif %}
-                    {% if row.artist_id %}
-                        <a href="/artist/{{ row.slug }}/{{ row.artist_id }}" class="artist-link-table">{{ row.artist_name }}</a>
-                    {% else %}
-                        {{ row.artist_name }}
-                    {% endif %}
-                </td>
-                <td>{{ row.date | datetimeformat('%b %d, %Y') }}</td>
-                <td>{{ "{:,}".format(row.monthly_listeners) }}</td>
-            </tr>
-            {% endfor %}
-        </table>
-    </div>
+    {% if query %}
+        {% if results and results|length > 0 %}
+        <div class="results-table-container">
+            <h2 style="color:#00ff7f;text-align:center;margin-bottom:16px;">Results for "{{ query }}"</h2>
+            <div style="color:#aaa;font-size:0.98em;margin-bottom:10px;">Click an artist name below to view their detail page.</div>
+            <table class="results-table">
+                <tr>
+                    <th>Artist</th>
+                    <th>Date</th>
+                    <th>Monthly Listeners</th>
+                </tr>
+                {% for row in results %}
+                <tr>
+                    <td>
+                        {% if row.image_url %}
+                            <img src="{{ row.image_url }}" alt="{{ row.artist_name }}" class="artist-img">
+                        {% else %}
+                            <img src="{{ url_for('static', filename='placeholder.png') }}" alt="No image" class="artist-img">
+                        {% endif %}
+                        {% if row.artist_id %}
+                            <a href="/artist/{{ row.slug }}/{{ row.artist_id }}" class="artist-link-table">{{ row.artist_name }}</a>
+                        {% else %}
+                            {{ row.artist_name }}
+                        {% endif %}
+                    </td>
+                    <td>{{ row.date | datetimeformat('%b %d, %Y') }}</td>
+                    <td>{{ "{:,}".format(row.monthly_listeners) }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+        {% else %}
+        <!-- No Results Found -->
+        <div class="no-results-container">
+            <div style="text-align:center;padding:40px 20px;">
+                <div style="font-size:3em;margin-bottom:16px;">🔍</div>
+                <h2 style="color:#00ff7f;margin-bottom:16px;font-size:1.6em;">No Results Found</h2>
+                <p style="color:#aaa;font-size:1.1em;margin-bottom:8px;">We couldn't find any artists matching "{{ query }}"</p>
+                <p style="color:#777;font-size:0.95em;">Try a different spelling or suggest the artist below!</p>
+            </div>
+        </div>
+        {% endif %}
     {% endif %}
+    
+    <!-- Artist Suggestion Form -->
+    <div class="suggestion-form-container">
+        <h3 style="color:#00ff7f;text-align:center;margin-bottom:16px;font-size:1.4em;">Suggest an Artist</h3>
+        <p style="color:#aaa;font-size:0.95em;text-align:center;margin-bottom:20px;">
+            Can't find an artist? Suggest them to be added to our database!
+        </p>
+        <form id="suggestionForm" style="max-width:580px;margin:0 auto;">
+            <div style="margin-bottom:18px;">
+                <input type="text" id="artistName" name="artistName" placeholder="Artist name..." required class="suggestion-input">
+            </div>
+            <div style="margin-bottom:18px;">
+                <input type="url" id="spotifyUrl" name="spotifyUrl" placeholder="Spotify URL (optional)" class="suggestion-input" style="min-width:0;">
+            </div>
+            <div style="text-align:center;">
+                <button type="submit" style="padding:14px 36px;border:none;border-radius:8px;background:linear-gradient(90deg,#00ff7f 0%,#1ed760 100%);color:#191414;font-weight:bold;font-size:1.1em;cursor:pointer;transition:transform 0.2s,box-shadow 0.2s;height:auto;line-height:1.1;">
+                    Suggest Artist
+                </button>
+            </div>
+        </form>
+        <div id="suggestionMessage" style="margin-top:20px;text-align:center;font-weight:500;line-height:1.4;"></div>
+    </div>
 </div>
 <style>
 .results-table-container {
@@ -56,10 +90,10 @@
 }
 .results-table th {
     background: #232323;
-    color: #1DB954;
+    color: #00ff7f;
     font-size: 1.08em;
     letter-spacing: 1px;
-    border-bottom: 2px solid #1DB954;
+    border-bottom: 2px solid #00ff7f;
 }
 .results-table tr {
     background: #191414;
@@ -81,7 +115,7 @@
     box-shadow: 0 2px 8px #0006;
 }
 .artist-link-table {
-    color: #1DB954;
+    color: #00ff7f;
     font-weight: bold;
     text-decoration: underline;
     cursor: pointer;
@@ -89,6 +123,76 @@
 }
 .artist-link-table:hover {
     color: #ff5ecd;
+}
+.no-results-container {
+    max-width: 600px;
+    margin: 40px auto 0 auto;
+    background: rgba(30, 30, 40, 0.65);
+    border-radius: 18px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    backdrop-filter: blur(10px) saturate(140%);
+}
+.suggestion-form-container {
+    max-width: 700px;
+    margin: 40px auto 0 auto;
+    background: rgba(30, 30, 40, 0.65);
+    border-radius: 18px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    padding: 40px 36px;
+    backdrop-filter: blur(10px) saturate(140%);
+}
+.suggestion-form-container h3 {
+    line-height: 1.3;
+    margin-bottom: 20px;
+}
+.suggestion-form-container p {
+    line-height: 1.5;
+    margin-bottom: 24px;
+    max-width: 90%;
+    margin-left: auto;
+    margin-right: auto;
+}
+.suggestion-form-container input {
+    width: 100%;
+    padding: 14px 18px;
+    border: none;
+    border-radius: 8px;
+    background: #232323;
+    color: #fff;
+    font-size: 1.1em;
+    outline: none;
+    border: 2px solid transparent;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+.suggestion-form-container input:focus {
+    border-color: #00ff7f !important;
+    box-shadow: 0 0 0 3px rgba(0,255,127,0.2);
+}
+.suggestion-input {
+    width: 100%;
+    padding: 14px 18px;
+    border: none;
+    border-radius: 8px;
+    background: #232323;
+    color: #fff;
+    font-size: 1.1em;
+    outline: none;
+    border: 2px solid transparent;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+    min-width: 0;
+    overflow: visible;
+}
+.suggestion-input::placeholder {
+    color: #888;
+    font-size: 1.05em;
+    overflow: visible;
+    white-space: nowrap;
+}
+.suggestion-form-container button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,255,127,0.3);
 }
 .grow-results {
     animation: growResults 0.7s cubic-bezier(0.22, 1, 0.36, 1);
@@ -110,4 +214,46 @@
     }
 }
 </style>
+<script>
+document.getElementById('suggestionForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const artistName = document.getElementById('artistName').value.trim();
+    const spotifyUrl = document.getElementById('spotifyUrl').value.trim();
+    const messageDiv = document.getElementById('suggestionMessage');
+    
+    if (!artistName) {
+        messageDiv.innerHTML = '<span style="color:#e74c3c;">Please enter an artist name.</span>';
+        return;
+    }
+    
+    // Show loading message
+    messageDiv.innerHTML = '<span style="color:#aaa;">Submitting suggestion...</span>';
+    
+    // Submit the suggestion
+    fetch('/suggest_artist', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            artist_name: artistName,
+            spotify_url: spotifyUrl
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            messageDiv.innerHTML = '<span style="color:#00ff7f;">✓ Thank you! Your suggestion has been submitted.</span>';
+            document.getElementById('suggestionForm').reset();
+        } else {
+            messageDiv.innerHTML = '<span style="color:#e74c3c;">❌ ' + (data.message || 'Error submitting suggestion.') + '</span>';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        messageDiv.innerHTML = '<span style="color:#e74c3c;">❌ Error submitting suggestion. Please try again.</span>';
+    });
+});
+</script>
 {% endblock %}
