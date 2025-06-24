@@ -51,3 +51,6 @@ src/main_account_extract.py
 
 # ignore artist suggestions JSON file
 app/spotify-listener-tracker/artist_suggestions.json
+
+# ignore artist blacklist JSON file
+app/spotify-listener-tracker/artist_blacklist.json
