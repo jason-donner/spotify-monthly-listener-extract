@@ -493,15 +493,28 @@ def suggest_artist():
         # Check blacklist
         blacklist_file = os.path.join(os.path.dirname(__file__), "artist_blacklist.json")
         blacklisted_artists = []
+        blacklisted_ids = []
         if os.path.exists(blacklist_file):
             try:
                 with open(blacklist_file, "r", encoding="utf-8") as f:
-                    blacklisted_artists = [name.lower() for name in json.load(f)]
+                    blacklist_data = json.load(f)
+                    for item in blacklist_data:
+                        if isinstance(item, str):
+                            # Old format - just artist name
+                            blacklisted_artists.append(item.lower())
+                        elif isinstance(item, dict):
+                            # New format - object with name, spotify_id, etc.
+                            if item.get("name"):
+                                blacklisted_artists.append(item["name"].lower())
+                            if item.get("spotify_id"):
+                                blacklisted_ids.append(item["spotify_id"])
             except:
                 blacklisted_artists = []
+                blacklisted_ids = []
         
-        # Check if artist is blacklisted
-        if artist_name.lower() in blacklisted_artists:
+        # Check if artist is blacklisted (by name or Spotify ID)
+        if (artist_name.lower() in blacklisted_artists or 
+            (spotify_id and spotify_id in blacklisted_ids)):
             return jsonify({"success": False, "message": "This artist cannot be suggested"})
         
         # Create suggestions file if it doesn't exist
