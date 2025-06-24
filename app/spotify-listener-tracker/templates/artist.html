@@ -8,7 +8,9 @@
             <div style="display:flex;flex-direction:row;gap:32px;align-items:stretch;justify-content:center;">
                 {% if artist_image_url %}
                     <div class="artist-image-border">
-                        <img src="{{ artist_image_url }}" alt="{{ artist_info.name }}" class="artist-image-animate" style="width:180px;height:180px;border-radius:50%;background:rgba(30,30,40,0.85);object-fit:cover;">
+                        <a href="{{ artist_info.url }}" target="_blank" rel="noopener" title="View {{ artist_info.name }} on Spotify">
+                            <img src="{{ artist_image_url }}" alt="{{ artist_info.name }}" class="artist-image-animate" style="width:180px;height:180px;border-radius:50%;background:rgba(30,30,40,0.85);object-fit:cover;">
+                        </a>
                     </div>
                 {% endif %}
                 {% if artist_info.genres or artist_info.followers %}
@@ -452,6 +454,7 @@ new Chart(ctx, {
         background:rgba(30,30,40,0.85);
         object-fit: cover;
         transition: transform 0.3s;
+        cursor: pointer;
     }
     .artist-image-animate:hover {
         transform: scale(1.05);
