@@ -48,15 +48,15 @@
                     {% else %}
                     <img src="{{ url_for('static', filename='placeholder.png') }}" alt="No image" style="width:60px;height:60px;border-radius:50%;vertical-align:middle;">
                     {% endif %}
-                    <span style="color:#1DB954;font-weight:bold;font-size:1.13em;">{{ row.artist }}</span>
+                    <span style="color:#00ff7f;font-weight:bold;font-size:1.13em;">{{ row.artist }}</span>
                 </a>
                 {% else %}
-                    <span style="color:#1DB954;font-weight:bold;font-size:1.13em;">{{ row.artist }}</span>
+                    <span style="color:#00ff7f;font-weight:bold;font-size:1.13em;">{{ row.artist }}</span>
                 {% endif %}
                 </td>
                 <td class="change-col">
                     {% if row.change > 0 %}
-                        <span style="color:#1DB954;">+{{ "{:,}".format(row.change) }}</span>
+                        <span style="color:#00ff7f;">+{{ "{:,}".format(row.change) }}</span>
                     {% elif row.change < 0 %}
                         <span style="color:#e74c3c;">{{ "{:,}".format(row.change) }}</span>
                     {% else %}
@@ -65,7 +65,7 @@
                 </td>
                 <td>
                     {% if row.percent_change > 0 %}
-                        <span style="color:#1DB954;font-weight:bold;">+{{ '%.2f'|format(row.percent_change) }}%</span>
+                        <span style="color:#00ff7f;font-weight:bold;">+{{ '%.2f'|format(row.percent_change) }}%</span>
                     {% elif row.percent_change < 0 %}
                         <span style="color:#e74c3c;font-weight:bold;">{{ '%.2f'|format(row.percent_change) }}%</span>
                     {% else %}
@@ -77,21 +77,15 @@
             </tr>
             {% endfor %}
         </table>
-        <div style="text-align:right;margin-top:12px;">
-            <a href="https://open.spotify.com/" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;color:#1DB954;font-weight:700;font-size:1.08em;text-decoration:none;">
-                <svg width="22" height="22" viewBox="0 0 168 168" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle;"><circle cx="84" cy="84" r="84" fill="#1DB954"/><path d="M120.1 116.2c-2.1 3.5-6.6 4.6-10.1 2.5-27.7-16.9-62.6-20.7-103.7-11.2-4 0.9-8.1-1.6-9-5.6-0.9-4 1.6-8.1 5.6-9 44.7-10.1 82.2-6 112.1 12.5 3.5 2.1 4.6 6.6 2.5 10.1zm14.3-28.6c-2.6 4.2-8.1 5.6-12.3 3-31.8-19.4-80.2-25-117.7-13.5-4.7 1.4-9.7-1.2-11.1-5.9-1.4-4.7 1.2-9.7 5.9-11.1 41.8-12.3 94.1-6.2 129.7 15.1 4.2 2.6 5.6 8.1 3 12.4zm15.1-30.2C128.7 44.7 70.2 42.5 32.2 53.7c-5.3 1.5-10.8-1.5-12.3-6.8-1.5-5.3 1.5-10.8 6.8-12.3 42.7-12.2 107.7-9.7 146.2 15.7 4.7 2.9 6.2 9.1 3.3 13.8-2.9 4.7-9.1 6.2-13.8 3.3z" fill="#fff"/></svg>
-                Listen on Spotify
-            </a>
-        </div>
     </div>
 </div>
 <style>
 .aura-growth {
-    box-shadow: 0 0 48px 8px #1DB95444, 0 0 0 0 #e74c3c00;
+    box-shadow: 0 0 48px 8px #00ff7f44, 0 0 0 0 #e74c3c00;
     transition: box-shadow 0.4s;
 }
 .aura-loss {
-    box-shadow: 0 0 48px 8px #e74c3c44, 0 0 0 0 #1DB95400;
+    box-shadow: 0 0 48px 8px #e74c3c44, 0 0 0 0 #00ff7f00;
     transition: box-shadow 0.4s;
 }
 </style>

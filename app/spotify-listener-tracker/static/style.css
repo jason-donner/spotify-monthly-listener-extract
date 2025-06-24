@@ -270,10 +270,10 @@ button[type="submit"]:hover {
 }
 .artist-history-table th, .leaderboard-table th {
     background: #232323;
-    color: #1DB954;
+    color: #00ff7f;
     font-size: 1.08em;
     letter-spacing: 1px;
-    border-bottom: 2px solid #1DB954;
+    border-bottom: 2px solid #00ff7f;
     text-align: center;
 }
 .artist-history-table th {

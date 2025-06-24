@@ -7,14 +7,14 @@
 </head>
 <body>
     <div class="global-title" style="text-align:center;margin-top:32px;margin-bottom:0;">
-        <a href="/" style="color:#1DB954;text-decoration:none;font-size:2.1em;font-weight:800;letter-spacing:1.5px;line-height:1.1;display:inline-block;">
+        <a href="/" style="color:#00ff7f;text-decoration:none;font-size:2.1em;font-weight:800;letter-spacing:1.5px;line-height:1.1;display:inline-block;">
             Spotify Monthly Listener Tracker
         </a>
     </div>
     <div class="search-bar-global" style="max-width:600px;margin:18px auto 0 auto;">
         <form method="get" action="/search" style="display:flex;gap:8px;align-items:center;">
             <a href="/" class="home-btn" title="Home">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1DB954" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><path d="M3 12L12 4l9 8"/><path d="M9 21V9h6v12"/></svg>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#00ff7f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><path d="M3 12L12 4l9 8"/><path d="M9 21V9h6v12"/></svg>
             </a>
             <input type="text" name="artist" placeholder="Search artist..." value="{{ request.args.get('artist', '') }}" autocomplete="off" style="flex:1;">
             <button type="submit">Search</button>
@@ -90,7 +90,7 @@
         letter-spacing: 1.5px;
         line-height: 1.1;
         display: inline-block;
-        background: linear-gradient(90deg, #1DB954 60%, #1ed760 100%);
+        background: linear-gradient(90deg, #1ed760 60%, #00ff7f 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
@@ -117,14 +117,14 @@
         outline: none;
     }
     .home-btn:hover, .home-btn:focus {
-        background: #1DB95422;
-        box-shadow: 0 2px 8px #1DB95444;
+        background: #1ed76022;
+        box-shadow: 0 2px 8px #1ed76044;
     }
     .home-btn svg {
         display: block;
         width: 28px;
         height: 28px;
-        stroke: #1DB954;
+        stroke: #1ed760;
         transition: stroke 0.18s;
     }
     .home-btn:hover svg, .home-btn:focus svg {
