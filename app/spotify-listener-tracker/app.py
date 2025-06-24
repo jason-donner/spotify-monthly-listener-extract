@@ -515,7 +515,7 @@ def suggest_artist():
         # Check if artist is blacklisted (by name or Spotify ID)
         if (artist_name.lower() in blacklisted_artists or 
             (spotify_id and spotify_id in blacklisted_ids)):
-            return jsonify({"success": False, "message": "This artist cannot be suggested"})
+            return jsonify({"success": False, "message": "We do not support predators"})
         
         # Create suggestions file if it doesn't exist
         suggestions_file = os.path.join(os.path.dirname(__file__), "artist_suggestions.json")
