@@ -35,11 +35,18 @@
                     <div class="row">
                         <div class="col-md-8">
                             <p class="text-light">Run the monthly listener scraping script to update artist data from Spotify.</p>
-                            <div class="form-check mb-3">
+                            <div class="form-check mb-2">
                                 <input class="form-check-input" type="checkbox" id="headlessMode" checked>
                                 <label class="form-check-label text-light" for="headlessMode">
                                     Run in headless mode (no browser window)
                                 </label>
+                            </div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="todayOnlyMode" checked>
+                                <label class="form-check-label text-light" for="todayOnlyMode">
+                                    <strong>Today only</strong> - Only scrape artists added today (avoids duplicates)
+                                </label>
+                                <small class="text-muted d-block">Recommended for daily updates after adding new artists</small>
                             </div>
                         </div>
                         <div class="col-md-4 text-end">
@@ -465,6 +472,7 @@ let scrapingStatusInterval = null;
 
 function runScraping() {
     const headless = document.getElementById('headlessMode').checked;
+    const todayOnly = document.getElementById('todayOnlyMode').checked;
     const btn = document.getElementById('runScrapingBtn');
     const status = document.getElementById('scrapingStatus');
     const alert = document.getElementById('scrapingAlert');
@@ -476,7 +484,7 @@ function runScraping() {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting...';
     status.style.display = 'block';
     alert.className = 'alert alert-info';
-    statusText.textContent = 'Starting scraping script...';
+    statusText.textContent = todayOnly ? 'Starting scraping for today\'s artists...' : 'Starting full scraping...';
     spinner.style.display = 'inline-block';
     
     // Hide previous outputs
@@ -489,7 +497,8 @@ function runScraping() {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            headless: headless
+            headless: headless,
+            today_only: todayOnly
         })
     })
     .then(response => response.json())

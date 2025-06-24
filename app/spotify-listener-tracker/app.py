@@ -920,6 +920,7 @@ def admin_run_scraping():
     try:
         data = request.get_json()
         headless = data.get("headless", True)  # Default to headless mode
+        today_only = data.get("today_only", False)  # New option for today-only scraping
         
         # Generate a unique job ID for this scraping run
         job_id = str(uuid.uuid4())
@@ -933,14 +934,22 @@ def admin_run_scraping():
             'started_at': datetime.now().isoformat(),
             'output': '',
             'error': '',
-            'completed': False
+            'completed': False,
+            'today_only': today_only
         }
         session.modified = True
         
         def run_scraping():
             try:
-                # Path to the scraping script
-                scrape_script = os.path.join(os.path.dirname(__file__), "..", "..", "src", "scrape.py")
+                # Set environment variables from our .env file for the subprocess
+                env = os.environ.copy()
+                env['CHROMEDRIVER_PATH'] = os.getenv('CHROMEDRIVER_PATH', 'chromedriver')
+                
+                # Choose the appropriate scraping script based on today_only option
+                if today_only:
+                    scrape_script = os.path.join(os.path.dirname(__file__), "..", "..", "src", "scrape_filtered.py")
+                else:
+                    scrape_script = os.path.join(os.path.dirname(__file__), "..", "..", "src", "scrape.py")
                 
                 # Build the command
                 cmd = [sys.executable, scrape_script]
@@ -948,22 +957,31 @@ def admin_run_scraping():
                 # Add --no-prompt to skip the login prompt
                 cmd.append("--no-prompt")
                 
-                # For headless mode, we'd need to modify the scrape.py script to support it
-                # For now, we'll run it as-is
+                # Add headless mode flag if supported
+                if headless:
+                    cmd.append("--headless")
+                
+                # For filtered scraping, add today-only flag
+                if today_only:
+                    # Use today's date in YYYY-MM-DD format
+                    today_date = datetime.now().strftime('%Y-%m-%d')
+                    cmd.extend(["--date", today_date])
                 
                 print(f"DEBUG: Running scraping command: {' '.join(cmd)}")
+                print(f"DEBUG: Using CHROMEDRIVER_PATH: {env.get('CHROMEDRIVER_PATH')}")
                 
                 # Update status to running
                 session['scraping_jobs'][job_id]['status'] = 'running'
                 session.modified = True
                 
-                # Run the script
+                # Run the script with updated environment
                 result = subprocess.run(
                     cmd,
                     cwd=os.path.dirname(scrape_script),
                     capture_output=True,
                     text=True,
-                    timeout=1800  # 30 minute timeout
+                    timeout=1800,  # 30 minute timeout
+                    env=env  # Pass the updated environment
                 )
                 
                 # Update job status with results
@@ -1004,9 +1022,10 @@ def admin_run_scraping():
         thread.daemon = True
         thread.start()
         
+        scraping_type = "filtered (today's artists only)" if today_only else "full"
         return jsonify({
             "success": True, 
-            "message": "Scraping started successfully", 
+            "message": f"Scraping started successfully ({scraping_type})", 
             "job_id": job_id
         })
         
