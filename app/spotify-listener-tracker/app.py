@@ -490,6 +490,20 @@ def suggest_artist():
         if not artist_name:
             return jsonify({"success": False, "message": "Artist name is required"})
         
+        # Check blacklist
+        blacklist_file = os.path.join(os.path.dirname(__file__), "artist_blacklist.json")
+        blacklisted_artists = []
+        if os.path.exists(blacklist_file):
+            try:
+                with open(blacklist_file, "r", encoding="utf-8") as f:
+                    blacklisted_artists = [name.lower() for name in json.load(f)]
+            except:
+                blacklisted_artists = []
+        
+        # Check if artist is blacklisted
+        if artist_name.lower() in blacklisted_artists:
+            return jsonify({"success": False, "message": "This artist cannot be suggested"})
+        
         # Create suggestions file if it doesn't exist
         suggestions_file = os.path.join(os.path.dirname(__file__), "artist_suggestions.json")
         
@@ -508,13 +522,13 @@ def suggest_artist():
                 (spotify_id and suggestion.get("spotify_id") == spotify_id)):
                 return jsonify({"success": False, "message": "This artist has already been suggested"})
         
-        # Add new suggestion
+        # Add new suggestion - auto-approved unless blacklisted
         new_suggestion = {
             "artist_name": artist_name,
             "spotify_url": spotify_url if spotify_url else None,
             "spotify_id": spotify_id if spotify_id else None,
             "timestamp": datetime.now().isoformat(),
-            "status": "pending"
+            "status": "approved"  # Auto-approve everything not blacklisted
         }
         
         suggestions.append(new_suggestion)
@@ -523,7 +537,7 @@ def suggest_artist():
         with open(suggestions_file, "w", encoding="utf-8") as f:
             json.dump(suggestions, f, indent=2, ensure_ascii=False)
         
-        return jsonify({"success": True, "message": "Artist suggestion submitted successfully"})
+        return jsonify({"success": True, "message": "Artist suggestion approved and added to the queue!"})
         
     except Exception as e:
         print(f"Error handling artist suggestion: {e}")
