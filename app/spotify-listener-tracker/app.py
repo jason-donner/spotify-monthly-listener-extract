@@ -22,20 +22,30 @@ load_dotenv()
 # Configure session
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'your-secret-key-change-in-production')
 
-# Spotify OAuth configuration
-SPOTIFY_CLIENT_ID = os.getenv("SPOTIPY_CLIENT_ID")
-SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIPY_CLIENT_SECRET")
-SPOTIFY_REDIRECT_URI = os.getenv("SPOTIPY_REDIRECT_URI", "http://localhost:5000/callback")
+def get_spotify_credentials():
+    """Get fresh Spotify credentials from environment"""
+    client_id = os.getenv("SPOTIPY_CLIENT_ID")
+    client_secret = os.getenv("SPOTIPY_CLIENT_SECRET")
+    redirect_uri = os.getenv("SPOTIPY_REDIRECT_URI", "http://127.0.0.1:5000/callback")
+    
+    if not client_id or not client_secret:
+        raise ValueError("Spotify credentials not found in environment variables")
+    
+    print(f"DEBUG: Using Client ID: {client_id}")  # Debug log
+    return client_id, client_secret, redirect_uri
+
 SPOTIFY_SCOPE = "user-follow-modify user-follow-read"
 
 def get_spotify_oauth():
     """Create a SpotifyOAuth instance"""
+    client_id, client_secret, redirect_uri = get_spotify_credentials()
     return SpotifyOAuth(
-        client_id=SPOTIFY_CLIENT_ID,
-        client_secret=SPOTIFY_CLIENT_SECRET,
-        redirect_uri=SPOTIFY_REDIRECT_URI,
+        client_id=client_id,
+        client_secret=client_secret,
+        redirect_uri=redirect_uri,
         scope=SPOTIFY_SCOPE,
-        cache_path=None  # We'll use session storage instead
+        cache_path=None,  # We'll use session storage instead
+        show_dialog=True  # Force account selection dialog
     )
 
 def get_token_from_session():
@@ -746,7 +756,9 @@ def admin_follow_artist():
         try:
             # Test authentication and get user info
             user = sp.current_user()
-            print(f"Following artist as user: {user.get('display_name', user.get('id'))}")
+            print(f"DEBUG: Following artist as user ID: {user.get('id')}")
+            print(f"DEBUG: Following artist as user display name: {user.get('display_name', user.get('id'))}")
+            print(f"DEBUG: User email: {user.get('email', 'Not available')}")
             
             # Follow the artist
             sp.user_follow_artists([artist_id])
@@ -805,7 +817,24 @@ def admin_follow_artist():
 @app.route("/login")
 def login():
     """Initiate Spotify OAuth login"""
+    # Check if force login is requested
+    force = request.args.get('force', 'false').lower() == 'true'
+    
     sp_oauth = get_spotify_oauth()
+    if force:
+        # Clear any existing session data
+        session.pop('spotify_token', None)
+        # Create OAuth with show_dialog=True to force account selection
+        client_id, client_secret, redirect_uri = get_spotify_credentials()
+        sp_oauth = SpotifyOAuth(
+            client_id=client_id,
+            client_secret=client_secret,
+            redirect_uri=redirect_uri,
+            scope=SPOTIFY_SCOPE,
+            cache_path=None,
+            show_dialog=True
+        )
+    
     auth_url = sp_oauth.get_authorize_url()
     return redirect(auth_url)
 
@@ -858,6 +887,12 @@ def auth_status():
     try:
         sp = spotipy.Spotify(auth=token_info['access_token'])
         user = sp.current_user()
+        
+        # Debug logging to see which account we're actually authenticated as
+        print(f"DEBUG: Authenticated user ID: {user.get('id')}")
+        print(f"DEBUG: Authenticated user display name: {user.get('display_name')}")
+        print(f"DEBUG: User email: {user.get('email', 'Not available')}")
+        
         return jsonify({
             "authenticated": True,
             "user": {
@@ -867,5 +902,10 @@ def auth_status():
             }
         })
     except Exception as e:
+        print(f"DEBUG: Auth status error: {e}")
         session.pop('spotify_token', None)
         return jsonify({"authenticated": False})
+
+if __name__ == "__main__":
+    print("Starting Spotify Monthly Listener Tracker...")
+    app.run(debug=True, host="127.0.0.1", port=5000)

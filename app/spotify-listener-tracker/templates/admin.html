@@ -152,9 +152,14 @@ function updateAuthStatus() {
                         `<img src="${currentUser.images[0].url}" alt="Profile" class="rounded-circle ms-2" style="width: 24px; height: 24px;">` : 
                         ''}
                 </div>
-                <button class="btn btn-outline-danger btn-sm" onclick="logout()">
-                    Logout
-                </button>
+                <div>
+                    <button class="btn btn-outline-warning btn-sm me-2" onclick="forceLoginWithSpotify()" title="Switch to different account">
+                        <i class="fas fa-user-plus"></i> Switch Account
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm" onclick="logout()">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
+                </div>
             </div>
         `;
     } else {
@@ -166,9 +171,14 @@ function updateAuthStatus() {
                     <strong>⚠️ Spotify Not Connected:</strong> 
                     You need to log in with Spotify to follow artists directly from this panel.
                 </div>
-                <button class="btn btn-success btn-sm" onclick="loginWithSpotify()">
-                    <i class="fab fa-spotify"></i> Login with Spotify
-                </button>
+                <div>
+                    <button class="btn btn-success btn-sm me-2" onclick="loginWithSpotify()">
+                        <i class="fab fa-spotify"></i> Login with Spotify
+                    </button>
+                    <button class="btn btn-outline-success btn-sm" onclick="forceLoginWithSpotify()" title="Choose different account">
+                        <i class="fas fa-user-plus"></i> Switch Account
+                    </button>
+                </div>
             </div>
         `;
     }
@@ -176,6 +186,11 @@ function updateAuthStatus() {
 
 function loginWithSpotify() {
     window.location.href = '/login';
+}
+
+function forceLoginWithSpotify() {
+    // Add a parameter to force account selection
+    window.location.href = '/login?force=true';
 }
 
 function logout() {
