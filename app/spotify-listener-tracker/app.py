@@ -382,7 +382,7 @@ def artist_detail_redirect(artist_id):
 def artist_detail(artist_name_slug, artist_id):
     artists = load_data()
     results = [a for a in artists if a.get("artist_id") == artist_id]
-    results.sort(key=lambda x: x.get("date", ""), reverse=True)
+    results.sort(key=lambda x: x.get("date", ""), reverse=False)  # oldest first
     # Convert date strings to datetime objects for template formatting
     def parse_date(val):
         if isinstance(val, datetime):

@@ -40,7 +40,7 @@
                         </svg>
                         <div style="display:flex;flex-direction:column;align-items:center;">
                             <span style="background:linear-gradient(90deg,#7f5eff 0%,#ff5ecd 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:1.13em;font-weight:700;">Current</span>
-                            <span style="color:#fff;font-size:1.35em;font-weight:700;line-height:1.1;">{{ "{:,}".format(results[0].monthly_listeners) }}</span>
+                            <span style="color:#fff;font-size:1.35em;font-weight:700;line-height:1.1;">{{ "{:,}".format(results[-1].monthly_listeners) }}</span>
                             <span style="color:#aaa;font-size:0.95em;margin-top:2px;">Monthly Listeners</span>
                         </div>
                     </div>
@@ -103,10 +103,10 @@
                     <tr>
                         <td>{{ row.date | datetimeformat('%B %d, %Y') }}</td>
                         <td>
-                            {% if not loop.last %}
-                                {% set next_idx = loop.index0 + 1 %}
-                                {% set next = results[next_idx] %}
-                                {% set diff = next.monthly_listeners - row.monthly_listeners %}
+                            {% if not loop.first %}
+                                {% set prev_idx = loop.index0 - 1 %}
+                                {% set prev = results[prev_idx] %}
+                                {% set diff = row.monthly_listeners - prev.monthly_listeners %}
                                 {% if diff > 0 %}
                                     <span class="positive-change">+{{ "{:,}".format(diff) }}</span>
                                 {% elif diff < 0 %}
@@ -119,10 +119,10 @@
                             {% endif %}
                         </td>
                         <td>
-                            {% if not loop.last and row.monthly_listeners != 0 %}
-                                {% set next_idx = loop.index0 + 1 %}
-                                {% set next = results[next_idx] %}
-                                {% set pct = ((next.monthly_listeners - row.monthly_listeners) / row.monthly_listeners) * 100 %}
+                            {% if not loop.first and prev.monthly_listeners != 0 %}
+                                {% set prev_idx = loop.index0 - 1 %}
+                                {% set prev = results[prev_idx] %}
+                                {% set pct = ((row.monthly_listeners - prev.monthly_listeners) / prev.monthly_listeners) * 100 %}
                                 {% if pct > 0 %}
                                     <span class="positive-change">+{{ '%.2f'|format(pct) }}%</span>
                                 {% elif pct < 0 %}
@@ -225,8 +225,8 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-const chartLabels = [{% for row in results|reverse %}"{{ row.date | datetimeformat('short') }}"{% if not loop.last %},{% endif %}{% endfor %}];
-const chartData = [{% for row in results|reverse %}{{ row.monthly_listeners }}{% if not loop.last %},{% endif %}{% endfor %}];
+const chartLabels = [{% for row in results %}"{{ row.date | datetimeformat('short') }}"{% if not loop.last %},{% endif %}{% endfor %}];
+const chartData = [{% for row in results %}{{ row.monthly_listeners }}{% if not loop.last %},{% endif %}{% endfor %}];
 const ctx = document.getElementById('listenersChart').getContext('2d');
 const gradient = ctx.createLinearGradient(0, 0, 0, 220);
 gradient.addColorStop(0, 'rgba(30,215,96,0.97)');
