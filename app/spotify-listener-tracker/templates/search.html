@@ -52,13 +52,11 @@
             Can't find an artist? Suggest them to be added to our database!
         </p>
         <form id="suggestionForm" style="max-width:580px;margin:0 auto;">
-            <div style="margin-bottom:18px;position:relative;">
-                <input type="text" id="artistName" name="artistName" placeholder="Search for an artist on Spotify..." required class="suggestion-input" autocomplete="off">
+            <div style="margin-bottom:24px;position:relative;">
+                <input type="text" id="artistName" name="artistName" placeholder="Search for an artist..." required class="suggestion-input" autocomplete="off">
                 <div id="artistSuggestions" class="artist-suggestions"></div>
             </div>
-            <div style="margin-bottom:18px;">
-                <input type="url" id="spotifyUrl" name="spotifyUrl" placeholder="Spotify URL (auto-filled when you select an artist)" class="suggestion-input" style="min-width:0;" readonly>
-            </div>
+            <input type="hidden" id="spotifyUrl" name="spotifyUrl">
             <div style="text-align:center;">
                 <button type="submit" style="padding:14px 36px;border:none;border-radius:8px;background:linear-gradient(90deg,#00ff7f 0%,#1ed760 100%);color:#191414;font-weight:bold;font-size:1.1em;cursor:pointer;transition:transform 0.2s,box-shadow 0.2s;height:auto;line-height:1.1;">
                     Suggest Artist
@@ -183,13 +181,12 @@
     transition: border-color 0.2s;
     box-sizing: border-box;
     min-width: 0;
-    overflow: visible;
 }
 .suggestion-input::placeholder {
     color: #888;
     font-size: 1.05em;
-    overflow: visible;
-    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .suggestion-form-container button:hover {
     transform: translateY(-2px);
@@ -366,8 +363,8 @@ document.getElementById('suggestionForm').addEventListener('submit', function(e)
         return;
     }
     
-    if (!selectedArtist && !spotifyUrl) {
-        messageDiv.innerHTML = '<span style="color:#e74c3c;">Please select an artist from the suggestions or provide a Spotify URL.</span>';
+    if (!selectedArtist) {
+        messageDiv.innerHTML = '<span style="color:#e74c3c;">Please select an artist from the suggestions.</span>';
         return;
     }
     
