@@ -63,6 +63,11 @@ python app.py
    - Choose your options (headless recommended)
    - Monitor progress in real-time
 
+5. **View Leaderboard**
+   - Go to: http://127.0.0.1:5000/leaderboard
+   - Shows top artists for current month (e.g., "June 2025")
+   - Automatically updates to new month when calendar changes
+
 ## Common Issues
 
 ### "Failed to fetch" Error

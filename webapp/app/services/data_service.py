@@ -173,21 +173,30 @@ class DataService:
         
         return results
     
-    def get_leaderboard_data(self, mode: str = 'growth', tier: str = 'all', days: int = 30) -> Dict[str, Any]:
+    def get_leaderboard_data(self, mode: str = 'growth', tier: str = 'all', current_month: bool = True) -> Dict[str, Any]:
         """
         Generate leaderboard data.
         
         Args:
             mode: 'growth' or 'loss'
             tier: Artist tier filter
-            days: Number of days to look back
+            current_month: If True, only show current month data; if False, use last 30 days
         
         Returns:
             Dictionary with leaderboard data and metadata
         """
         data = self.load_data()
         artist_changes = {}
-        cutoff = datetime.now() - timedelta(days=days)
+        
+        # Set date range based on current_month parameter
+        if current_month:
+            # Get start and end of current month
+            now = datetime.now()
+            start_of_month = datetime(now.year, now.month, 1)
+            cutoff = start_of_month
+        else:
+            # Use traditional 30-day lookback
+            cutoff = datetime.now() - timedelta(days=30)
         
         # Group data by artist
         for entry in data:
@@ -215,8 +224,21 @@ class DataService:
             })
         
         leaderboard_data = []
-        start_date = None
-        end_date = None
+        
+        # Set the display dates based on current_month parameter
+        if current_month:
+            # For current month display, show the month name
+            now = datetime.now()
+            start_date = datetime(now.year, now.month, 1)
+            # End date is current date or last day of month if we're past it
+            if now.month == 12:
+                next_month = datetime(now.year + 1, 1, 1)
+            else:
+                next_month = datetime(now.year, now.month + 1, 1)
+            end_date = min(now, next_month - timedelta(days=1))
+        else:
+            start_date = None
+            end_date = None
         
         for artist, records in artist_changes.items():
             recent = [r for r in records if r["date"] >= cutoff]
@@ -224,12 +246,6 @@ class DataService:
                 continue
             
             recent.sort(key=lambda x: x["date"])
-            
-            # Track the overall date range
-            if start_date is None or recent[0]["date"] < start_date:
-                start_date = recent[0]["date"]
-            if end_date is None or recent[-1]["date"] > end_date:
-                end_date = recent[-1]["date"]
             
             start = recent[0]["listeners"]
             end = recent[-1]["listeners"]

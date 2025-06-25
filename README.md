@@ -6,6 +6,12 @@ A modern web-based system for tracking Spotify artists' monthly listener counts 
 
 ## 🎉 Recent Updates (June 2025)
 
+### Leaderboard Enhancement (June 25, 2025)
+- **📅 Current Month Focus** - Leaderboard now shows only current month data (e.g., "June 2025")
+- **🎯 Improved Date Display** - Clear month/year display instead of confusing date ranges
+- **⚡ Automatic Month Updates** - Automatically switches to new month when the calendar changes
+- **📊 Better Data Relevance** - Shows more relevant, timely artist performance data
+
 ### Critical Authentication Fix (June 25, 2025)
 - **🔐 Fixed "Failed to fetch" Error** - Resolved authentication issues in admin scraping endpoints
 - **🛡️ Enhanced Route Security** - Added proper `@admin_login_required` decorators to all admin endpoints
@@ -46,6 +52,7 @@ A modern web-based system for tracking Spotify artists' monthly listener counts 
 ## 🌟 Features
 
 - **🎵 Web-based Artist Management** - Manage followed artists through a modern web interface
+- **📅 Current Month Leaderboard** - Track artist performance for the current calendar month (e.g., "June 2025")
 - **✨ Artist Suggestion System** - Users can suggest new artists to track
 - **👨‍💼 Admin Panel** - Review, approve, and manage artist suggestions
 - **🔗 Direct Spotify Integration** - Follow artists directly from the web interface using OAuth
