@@ -1,1 +1,56 @@
-[]
+[
+  {
+    "name": "Brand New",
+    "spotify_id": "168dgYui7ExaU612eooDF1",
+    "reason": "Added by admin",
+    "date_added": "2025-06-25 16:50:45"
+  },
+  {
+    "name": "Tiny Moving Parts",
+    "spotify_id": "5rJVTTK0ucAxQhkUc0nXbH",
+    "reason": "Added by admin",
+    "date_added": "2025-06-25 16:50:53"
+  },
+  {
+    "name": "Sorority Noise",
+    "spotify_id": "7jXQfCP0xRnnind08ie0zT",
+    "reason": "Added by admin",
+    "date_added": "2025-06-25 16:51:01"
+  },
+  {
+    "name": "Old Gray",
+    "spotify_id": "6s42sZbLh06iCqpdOs1J2Y",
+    "reason": "Added by admin",
+    "date_added": "2025-06-25 16:51:07"
+  },
+  {
+    "name": "Moose Blood",
+    "spotify_id": "5fEKZRCUa0JApec5Xy095q",
+    "reason": "Added by admin",
+    "date_added": "2025-06-25 16:51:15"
+  },
+  {
+    "name": "Jank",
+    "spotify_id": "0r6lpyGfncWPmR3vBdvlH9",
+    "reason": "Added by admin",
+    "date_added": "2025-06-25 16:51:19"
+  },
+  {
+    "name": "Knocked Loose",
+    "spotify_id": "4qrHkx5cgWIslciLXUMrYw",
+    "reason": "Added by admin",
+    "date_added": "2025-06-25 16:52:23"
+  },
+  {
+    "name": "Saves The Day",
+    "spotify_id": "5gWhlJBlLQGLOgYWO8lwCU",
+    "reason": "Added by admin",
+    "date_added": "2025-06-25 16:54:31"
+  },
+  {
+    "name": "Panucci's Pizza",
+    "spotify_id": "5GLpYMkUSUNq5kLLeBovSi",
+    "reason": "Added by admin",
+    "date_added": "2025-06-25 17:00:13"
+  }
+]

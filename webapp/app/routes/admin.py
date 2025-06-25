@@ -529,4 +529,111 @@ def create_admin_routes(spotify_service, data_service, job_service, scheduler_se
             logger.error(f"Error running immediate scrape: {e}")
             return jsonify({"success": False, "message": f"Error: {str(e)}"})
     
+    @admin_bp.route("/blacklist")
+    @admin_login_required
+    def blacklist_management():
+        """Blacklist management page."""
+        try:
+            blacklist_data = data_service.get_blacklist_data()
+            return jsonify({
+                "success": True,
+                "blacklist": blacklist_data,
+                "count": len(blacklist_data)
+            })
+        except Exception as e:
+            logger.error(f"Error loading blacklist: {e}")
+            return jsonify({"success": False, "message": f"Error: {str(e)}"})
+    
+    @admin_bp.route("/blacklist/add", methods=["POST"])
+    @admin_login_required
+    def add_to_blacklist():
+        """Add an artist to the blacklist."""
+        try:
+            data = request.get_json()
+            artist_name = (data.get("artist_name") or "").strip()
+            spotify_id = (data.get("spotify_id") or "").strip()
+            reason = (data.get("reason") or "").strip()
+            
+            if not artist_name:
+                return jsonify({"success": False, "message": "Artist name is required"})
+            
+            # Get current blacklist
+            blacklist_data = data_service.get_blacklist_data()
+            
+            # Check if already blacklisted
+            for item in blacklist_data:
+                if (item["name"].lower() == artist_name.lower() or 
+                    (spotify_id and item.get("spotify_id") == spotify_id)):
+                    return jsonify({
+                        "success": False, 
+                        "message": f"{artist_name} is already blacklisted"
+                    })
+            
+            # Add new blacklist entry
+            new_entry = {
+                "name": artist_name,
+                "spotify_id": spotify_id if spotify_id else None,
+                "reason": reason if reason else "Added by admin",
+                "date_added": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+            
+            blacklist_data.append(new_entry)
+            
+            if data_service.save_blacklist(blacklist_data):
+                admin_security_logger.info(
+                    f"Admin added {artist_name} to blacklist from IP: {get_client_ip()}"
+                )
+                return jsonify({
+                    "success": True, 
+                    "message": f"{artist_name} added to blacklist successfully"
+                })
+            else:
+                return jsonify({"success": False, "message": "Failed to save blacklist"})
+        
+        except Exception as e:
+            logger.error(f"Error adding to blacklist: {e}")
+            return jsonify({"success": False, "message": f"Error: {str(e)}"})
+    
+    @admin_bp.route("/blacklist/remove", methods=["POST"])
+    @admin_login_required
+    def remove_from_blacklist():
+        """Remove an artist from the blacklist."""
+        try:
+            data = request.get_json()
+            artist_name = (data.get("artist_name") or "").strip()
+            
+            if not artist_name:
+                return jsonify({"success": False, "message": "Artist name is required"})
+            
+            # Get current blacklist
+            blacklist_data = data_service.get_blacklist_data()
+            
+            # Find and remove the entry
+            original_count = len(blacklist_data)
+            blacklist_data = [
+                item for item in blacklist_data 
+                if item["name"].lower() != artist_name.lower()
+            ]
+            
+            if len(blacklist_data) == original_count:
+                return jsonify({
+                    "success": False, 
+                    "message": f"{artist_name} not found in blacklist"
+                })
+            
+            if data_service.save_blacklist(blacklist_data):
+                admin_security_logger.info(
+                    f"Admin removed {artist_name} from blacklist from IP: {get_client_ip()}"
+                )
+                return jsonify({
+                    "success": True, 
+                    "message": f"{artist_name} removed from blacklist successfully"
+                })
+            else:
+                return jsonify({"success": False, "message": "Failed to save blacklist"})
+        
+        except Exception as e:
+            logger.error(f"Error removing from blacklist: {e}")
+            return jsonify({"success": False, "message": f"Error: {str(e)}"})
+
     return admin_bp

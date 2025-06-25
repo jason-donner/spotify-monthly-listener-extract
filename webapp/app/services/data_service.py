@@ -374,6 +374,65 @@ class DataService:
         
         return blacklisted_artists, blacklisted_ids
     
+    def save_blacklist(self, blacklist_data: List[Dict[str, Any]]) -> bool:
+        """
+        Save blacklist data to file.
+        
+        Args:
+            blacklist_data: List of blacklist entries
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            with open(self.blacklist_file, "w", encoding="utf-8") as f:
+                json.dump(blacklist_data, f, indent=2, ensure_ascii=False)
+            logger.info(f"Saved {len(blacklist_data)} blacklist entries")
+            return True
+        except Exception as e:
+            logger.error(f"Error saving blacklist: {e}")
+            return False
+    
+    def get_blacklist_data(self) -> List[Dict[str, Any]]:
+        """
+        Get full blacklist data for admin management.
+        
+        Returns:
+            List of blacklist entries with full details
+        """
+        try:
+            if not os.path.exists(self.blacklist_file):
+                return []
+            
+            with open(self.blacklist_file, "r", encoding="utf-8") as f:
+                blacklist_data = json.load(f)
+                
+            # Ensure all entries have required fields
+            formatted_data = []
+            for item in blacklist_data:
+                if isinstance(item, str):
+                    # Legacy format - just artist name
+                    formatted_data.append({
+                        "name": item,
+                        "spotify_id": None,
+                        "reason": "Legacy entry",
+                        "date_added": "Unknown"
+                    })
+                elif isinstance(item, dict):
+                    # New format with full details
+                    formatted_data.append({
+                        "name": item.get("name", "Unknown"),
+                        "spotify_id": item.get("spotify_id"),
+                        "reason": item.get("reason", "No reason provided"),
+                        "date_added": item.get("date_added", "Unknown")
+                    })
+            
+            return formatted_data
+            
+        except Exception as e:
+            logger.error(f"Error getting blacklist data: {e}")
+            return []
+    
     def load_followed_artists(self) -> List[Dict[str, Any]]:
         """Load followed artists from file."""
         if not os.path.exists(self.followed_artists_path):
