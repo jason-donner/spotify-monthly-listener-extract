@@ -15,6 +15,7 @@ A modern web-based system for tracking Spotify artists' monthly listener counts 
 - **🎨 Modern Admin Login** - Beautiful Spotify-themed login page with improved UX
 - **🔒 Secure Authentication** - Environment variable-based password management
 - **🛡️ Security Logging** - Comprehensive admin activity and authentication logging
+- **📋 Enhanced Scraping Feedback** - Detailed messages showing newly added artists when running "today only" scraping
 
 ### Search & Discovery Enhancements  
 - **🎵 Top Tracks Preview** - Added artist top tracks preview on search page
@@ -263,6 +264,10 @@ Load Data → Display Charts → Search/Filter → Artist Details
 - ✅ Check ChromeDriver path in environment variables
 - ✅ Verify Spotify login works manually
 - ✅ Review `scrape.log` for errors
+- ✅ **Smart detailed feedback**: 
+  - "Today only" scraping shows detailed list of newly added artists
+  - Full scraping shows appropriate detail level (detailed list for small batches, top performers for medium batches, statistics for large batches)
+- ✅ **Completion messages**: Admin panel displays context-aware artist count and performance statistics
 
 ### Web Interface Issues
 - ✅ Check Flask app logs in terminal

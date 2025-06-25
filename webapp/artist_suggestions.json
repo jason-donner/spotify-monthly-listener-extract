@@ -115,5 +115,15 @@
     "admin_approved": true,
     "admin_action_date": "2025-06-25T01:32:45.235464",
     "processed_date": "2025-06-25T01:32:45.235487"
+  },
+  {
+    "artist_name": "First Day Back",
+    "spotify_url": "https://open.spotify.com/artist/7DgsNBbuNxmm5et9oYHJgx",
+    "spotify_id": "7DgsNBbuNxmm5et9oYHJgx",
+    "timestamp": "2025-06-25T10:45:32.224951",
+    "status": "processed",
+    "admin_approved": true,
+    "admin_action_date": "2025-06-25T10:46:10.025549",
+    "processed_date": "2025-06-25T10:46:10.025553"
   }
 ]

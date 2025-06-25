@@ -44,6 +44,18 @@ def parse_listener_count(val):
         return 0
 
 
+def format_listener_count(count):
+    """
+    Format an integer listener count back to a readable string (e.g., 1200000 -> "1.2M").
+    """
+    if count >= 1000000:
+        return f"{count / 1000000:.1f}M"
+    elif count >= 1000:
+        return f"{count / 1000:.1f}K"
+    else:
+        return str(count)
+
+
 def setup_driver(chromedriver_path=None):
     """
     Set up and return a Selenium Chrome WebDriver with custom options.
@@ -205,13 +217,55 @@ def append_to_master(results, master_path=None):
 
 def report(results, failed_urls):
     """
-    Print a summary report.
+    Print a summary report with smart detailed output based on result count.
     """
     print(Style.BRIGHT + f"\nScraping complete. {len(results)} artists scraped successfully.")
+    
+    if results:
+        # Smart detailed output based on result count
+        if len(results) <= 20:
+            # Small batch - show all artists
+            print(Fore.GREEN + "\n✅ Successfully scraped artists:")
+            for result in results:
+                listeners_formatted = format_listener_count(result['monthly_listeners'])
+                print(Fore.GREEN + f"  • {result['artist_name']} - {listeners_formatted} monthly listeners")
+        
+        elif len(results) <= 50:
+            # Medium batch - show summary + top performers
+            sorted_results = sorted(results, key=lambda x: x['monthly_listeners'], reverse=True)
+            top_5 = sorted_results[:5]
+            
+            print(Fore.GREEN + f"\n✅ Successfully scraped {len(results)} artists")
+            print(Fore.CYAN + "\n🏆 Top 5 performers:")
+            for i, result in enumerate(top_5, 1):
+                listeners_formatted = format_listener_count(result['monthly_listeners'])
+                print(Fore.CYAN + f"  {i}. {result['artist_name']} - {listeners_formatted} monthly listeners")
+            
+            if len(results) > 5:
+                print(Fore.WHITE + f"\n... and {len(results) - 5} other artists")
+        
+        else:
+            # Large batch - show statistics only
+            sorted_results = sorted(results, key=lambda x: x['monthly_listeners'], reverse=True)
+            top_artist = sorted_results[0]
+            total_listeners = sum(result['monthly_listeners'] for result in results)
+            avg_listeners = total_listeners // len(results)
+            
+            print(Fore.GREEN + f"\n✅ Successfully scraped {len(results)} artists")
+            print(Fore.CYAN + "\n📊 Summary statistics:")
+            print(Fore.CYAN + f"  🏆 Top performer: {top_artist['artist_name']} - {format_listener_count(top_artist['monthly_listeners'])} monthly listeners")
+            print(Fore.CYAN + f"  📈 Average listeners: {format_listener_count(avg_listeners)}")
+            print(Fore.CYAN + f"  💫 Total listeners tracked: {format_listener_count(total_listeners)}")
+    
     if failed_urls:
-        print(Fore.RED + f"{len(failed_urls)} artists failed to scrape:")
-        for url in failed_urls:
-            print(Fore.RED + f"  {url['url'] if isinstance(url, dict) else url}")
+        print(Fore.RED + f"\n❌ {len(failed_urls)} artists failed to scrape:")
+        # Only show first 10 failed URLs to avoid overwhelming output
+        display_failed = failed_urls[:10]
+        for url in display_failed:
+            print(Fore.RED + f"  • {url['url'] if isinstance(url, dict) else url}")
+        
+        if len(failed_urls) > 10:
+            print(Fore.RED + f"  ... and {len(failed_urls) - 10} more failed URLs")
 
 
 def now():

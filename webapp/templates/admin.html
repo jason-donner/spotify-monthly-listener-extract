@@ -693,10 +693,14 @@ function updateScrapingUI(job) {
             
         case 'completed':
             alert.className = 'alert alert-success';
-            statusText.textContent = `Scraping completed successfully! (${formatDuration(job.started_at, job.completed_at)})`;
+            const completionMessage = getCompletionMessage(job);
+            statusText.textContent = `${completionMessage} (${formatDuration(job.started_at, job.completed_at)})`;
             spinner.style.display = 'none';
             resetScrapingButton();
-            showToast('Success', 'Scraping completed successfully!', 'success');
+            
+            // Show enhanced toast with artist count details
+            const toastMessage = getDetailedToastMessage(job);
+            showToast('Success', toastMessage, 'success');
             break;
             
         case 'failed':
@@ -726,7 +730,7 @@ function updateScrapingUI(job) {
     
     // Show output if available
     if (job.output && job.output.trim()) {
-        outputText.textContent = job.output;
+        outputText.innerHTML = formatScrapingOutput(job.output);
         outputDiv.style.display = 'block';
     }
     
@@ -769,6 +773,175 @@ function formatDuration(startTime, endTime) {
     } else {
         return `${diffSecs}s`;
     }
+}
+
+function getCompletionMessage(job) {
+    if (!job.output) {
+        return 'Scraping completed successfully!';
+    }
+    
+    // Parse the output to count newly scraped artists
+    const output = job.output;
+    
+    // Look for the completion message with count
+    const filteredMatch = output.match(/Filtered scraping complete\. (\d+) new artists scraped successfully\./);
+    const regularMatch = output.match(/Scraping complete\. (\d+) artists scraped successfully\./);
+    
+    if (filteredMatch) {
+        const count = parseInt(filteredMatch[1]);
+        if (count === 0) {
+            return 'Today-only scraping completed - no new artists added today';
+        } else {
+            return `Today-only scraping completed - ${count} new artist${count === 1 ? '' : 's'} added!`;
+        }
+    } else if (regularMatch) {
+        const count = parseInt(regularMatch[1]);
+        return `Full scraping completed - ${count} artist${count === 1 ? '' : 's'} updated!`;
+    }
+    
+    return 'Scraping completed successfully!';
+}
+
+function getDetailedToastMessage(job) {
+    if (!job.output) {
+        return 'Scraping completed successfully!';
+    }
+    
+    const output = job.output;
+    
+    // Check if this was filtered (today-only) scraping
+    const isFiltered = output.includes('Filtered scraping complete');
+    
+    if (isFiltered) {
+        // Count successful artists by looking for artist entries in the output
+        const artistMatches = output.match(/  • [^-]+ - [^\n]+/g);
+        const artistCount = artistMatches ? artistMatches.length : 0;
+        
+        if (artistCount === 0) {
+            return 'Today-only scraping completed - no new artists to add today';
+        } else if (artistCount === 1) {
+            // Extract the artist name for single artist
+            const singleArtist = artistMatches[0].match(/  • ([^-]+) -/);
+            const artistName = singleArtist ? singleArtist[1].trim() : 'artist';
+            return `Today-only scraping completed - added ${artistName}!`;
+        } else {
+            return `Today-only scraping completed - added ${artistCount} new artists!`;
+        }
+    } else {
+        // Full scraping - parse different output formats
+        const regularMatch = output.match(/Scraping complete\. (\d+) artists scraped successfully\./);
+        if (regularMatch) {
+            const count = parseInt(regularMatch[1]);
+            
+            // Check if it's a large batch (has summary statistics)
+            if (output.includes('📊 Summary statistics:')) {
+                const topPerformerMatch = output.match(/🏆 Top performer: ([^-]+) -/);
+                const topPerformer = topPerformerMatch ? topPerformerMatch[1].trim() : '';
+                
+                if (topPerformer) {
+                    return `Full scraping completed - ${count} artists updated! Top: ${topPerformer}`;
+                } else {
+                    return `Full scraping completed - ${count} artists updated!`;
+                }
+            } else if (output.includes('🏆 Top 5 performers:')) {
+                // Medium batch
+                return `Full scraping completed - ${count} artists updated! Check top performers below.`;
+            } else {
+                // Small batch
+                return `Full scraping completed - ${count} artists updated!`;
+            }
+        }
+        
+        return 'Full scraping completed successfully!';
+    }
+}
+
+function formatScrapingOutput(output) {
+    // Escape HTML to prevent XSS
+    const escapedOutput = output.replace(/&/g, '&amp;')
+                               .replace(/</g, '&lt;')
+                               .replace(/>/g, '&gt;');
+    
+    // Highlight successful artist scraping sections
+    let formattedOutput = escapedOutput.replace(
+        /✅ Successfully scraped new artists:/g,
+        '<span style="color: #28a745; font-weight: bold;">✅ Successfully scraped new artists:</span>'
+    );
+    
+    formattedOutput = formattedOutput.replace(
+        /✅ Successfully scraped (\d+) artists/g,
+        '<span style="color: #28a745; font-weight: bold;">✅ Successfully scraped $1 artists</span>'
+    );
+    
+    // Highlight top performers section
+    formattedOutput = formattedOutput.replace(
+        /🏆 Top 5 performers:/g,
+        '<span style="color: #ffc107; font-weight: bold;">🏆 Top 5 performers:</span>'
+    );
+    
+    // Highlight summary statistics
+    formattedOutput = formattedOutput.replace(
+        /📊 Summary statistics:/g,
+        '<span style="color: #17a2b8; font-weight: bold;">📊 Summary statistics:</span>'
+    );
+    
+    // Highlight individual artist entries with green color and better formatting
+    formattedOutput = formattedOutput.replace(
+        /  • ([^-]+) - ([^\n]+)/g,
+        '  <span style="color: #28a745;">•</span> <span style="color: #ffffff; font-weight: bold;">$1</span> - <span style="color: #17a2b8;">$2</span>'
+    );
+    
+    // Highlight numbered top performers
+    formattedOutput = formattedOutput.replace(
+        /  (\d+)\. ([^-]+) - ([^\n]+)/g,
+        '  <span style="color: #ffc107; font-weight: bold;">$1.</span> <span style="color: #ffffff; font-weight: bold;">$2</span> - <span style="color: #17a2b8;">$3</span>'
+    );
+    
+    // Highlight statistics lines
+    formattedOutput = formattedOutput.replace(
+        /  🏆 Top performer: ([^-]+) - ([^\n]+)/g,
+        '  <span style="color: #ffc107;">🏆</span> <span style="color: #ffffff; font-weight: bold;">Top performer:</span> <span style="color: #ffffff; font-weight: bold;">$1</span> - <span style="color: #17a2b8;">$2</span>'
+    );
+    
+    formattedOutput = formattedOutput.replace(
+        /  📈 Average listeners: ([^\n]+)/g,
+        '  <span style="color: #17a2b8;">📈</span> <span style="color: #ffffff; font-weight: bold;">Average listeners:</span> <span style="color: #17a2b8;">$1</span>'
+    );
+    
+    formattedOutput = formattedOutput.replace(
+        /  💫 Total listeners tracked: ([^\n]+)/g,
+        '  <span style="color: #28a745;">💫</span> <span style="color: #ffffff; font-weight: bold;">Total listeners tracked:</span> <span style="color: #28a745;">$1</span>'
+    );
+    
+    // Highlight failed artists section
+    formattedOutput = formattedOutput.replace(
+        /❌ (\d+) artists failed to scrape:/g,
+        '<span style="color: #dc3545; font-weight: bold;">❌ $1 artists failed to scrape:</span>'
+    );
+    
+    // Highlight completion messages
+    formattedOutput = formattedOutput.replace(
+        /(Filtered scraping complete\. \d+ new artists scraped successfully\.)/g,
+        '<span style="color: #28a745; font-weight: bold;">$1</span>'
+    );
+    
+    formattedOutput = formattedOutput.replace(
+        /(Scraping complete\. \d+ artists scraped successfully\.)/g,
+        '<span style="color: #28a745; font-weight: bold;">$1</span>'
+    );
+    
+    // Highlight summary text
+    formattedOutput = formattedOutput.replace(
+        /(... and \d+ other artists)/g,
+        '<span style="color: #6c757d; font-style: italic;">$1</span>'
+    );
+    
+    formattedOutput = formattedOutput.replace(
+        /(... and \d+ more failed URLs)/g,
+        '<span style="color: #dc3545; font-style: italic;">$1</span>'
+    );
+    
+    return formattedOutput;
 }
 
 // Processing functionality

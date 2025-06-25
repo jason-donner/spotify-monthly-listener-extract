@@ -45,6 +45,18 @@ def parse_listener_count(val):
         return 0
 
 
+def format_listener_count(count):
+    """
+    Format an integer listener count back to a readable string (e.g., 1200000 -> "1.2M").
+    """
+    if count >= 1000000:
+        return f"{count / 1000000:.1f}M"
+    elif count >= 1000:
+        return f"{count / 1000:.1f}K"
+    else:
+        return str(count)
+
+
 def setup_driver(chromedriver_path=None, headless=False):
     """
     Set up and return a Selenium Chrome WebDriver with custom options.
@@ -294,13 +306,19 @@ def main():
             save_results(results, today_formatted, args.output)
             append_to_master(results)
             print(Style.BRIGHT + f"\nFiltered scraping complete. {len(results)} new artists scraped successfully.")
+            
+            # Print detailed list of newly scraped artists
+            print(Fore.GREEN + "\n✅ Successfully scraped new artists:")
+            for result in results:
+                listeners_formatted = format_listener_count(result['monthly_listeners'])
+                print(Fore.GREEN + f"  • {result['artist_name']} - {listeners_formatted} monthly listeners")
         else:
             print(Fore.YELLOW + "\nNo new data to save - all artists already scraped today or failed.")
         
         if failed_urls:
-            print(Fore.RED + f"{len(failed_urls)} artists failed to scrape:")
+            print(Fore.RED + f"\n❌ {len(failed_urls)} artists failed to scrape:")
             for artist in failed_urls:
-                print(Fore.RED + f"  {artist.get('artist_name', 'Unknown')} - {artist.get('url', 'No URL')}")
+                print(Fore.RED + f"  • {artist.get('artist_name', 'Unknown')} - {artist.get('url', 'No URL')}")
     
     finally:
         driver.quit()
