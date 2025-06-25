@@ -727,6 +727,14 @@ function resetScrapingButton() {
 
 function resetScrapingUI() {
     resetScrapingButton();
+    
+    // Also reset the "Run Full Scrape Now" button
+    const runNowBtn = document.getElementById('runNowBtn');
+    if (runNowBtn) {
+        runNowBtn.disabled = false;
+        runNowBtn.innerHTML = '<i class="fas fa-play-circle"></i> Run Full Scrape Now';
+    }
+    
     document.getElementById('scrapingStatus').style.display = 'none';
     
     if (scrapingStatusInterval) {
@@ -1005,13 +1013,39 @@ function runScheduledScrapeNow() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            showToast('Success', data.message, 'success');
+            // Set up the job tracking like regular scraping
+            currentScrapingJobId = data.job_id;
             
             // Switch to scraping tab to show progress
             const scrapingSection = document.querySelector('[href="#scraping"]');
             if (scrapingSection) {
                 scrapingSection.click();
             }
+            
+            // Set up the scraping UI to show status
+            const status = document.getElementById('scrapingStatus');
+            const alert = document.getElementById('scrapingAlert');
+            const statusText = document.getElementById('scrapingStatusText');
+            const spinner = document.getElementById('scrapingSpinner');
+            
+            status.style.display = 'block';
+            alert.className = 'alert alert-info';
+            statusText.textContent = 'Running scheduled full scraping...';
+            spinner.style.display = 'inline-block';
+            
+            // Hide previous outputs
+            document.getElementById('scrapingOutput').style.display = 'none';
+            document.getElementById('scrapingError').style.display = 'none';
+            
+            // Disable the regular scraping button while this runs
+            const runScrapingBtn = document.getElementById('runScrapingBtn');
+            runScrapingBtn.disabled = true;
+            runScrapingBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Running...';
+            
+            // Start polling for status updates
+            scrapingStatusInterval = setInterval(checkScrapingStatus, 2000);
+            
+            showToast('Success', data.message, 'success');
         } else {
             showToast('Error', data.message, 'danger');
         }
