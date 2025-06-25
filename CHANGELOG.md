@@ -1,5 +1,36 @@
 # Changelog
 
+## [2025-06-25] - Security & Configuration Improvements
+
+### Security Enhancements
+- **Admin Password Migration**: Moved `ADMIN_PASSWORD` from environment variables to `.env` file for better security
+- **Centralized Configuration**: Single `.env` file now contains all application configuration
+- **Enhanced .gitignore**: Added comprehensive patterns to exclude test/debug files from version control
+
+### Development Cleanup
+- **Test File Management**: Removed debugging files (`test_admin_fix.py`, `debug_webapp.py`) from git tracking
+- **Diagnostic File Cleanup**: Excluded Chrome diagnostic and WebDriver test files from repository
+- **Preserved Legitimate Tests**: Kept unit tests in `tests/` directory and utility scripts in `scripts/`
+
+### Configuration Changes
+- **Updated .env.example**: Added `ADMIN_PASSWORD` field with documentation
+- **Simplified Setup Process**: Removed manual environment variable steps from README
+- **Enhanced Documentation**: Updated all setup instructions to use .env file approach
+
+### Files Modified
+- `webapp/.env` - Added ADMIN_PASSWORD configuration
+- `.env.example` - Added admin password field with comments
+- `webapp/start_app.bat` - Updated to reference .env file instead of manual env vars
+- `webapp/app/routes/admin.py` - Updated warning messages to reference .env file
+- `.gitignore` - Enhanced patterns for test files, debugging files, and diagnostics
+
+### Data Integrity Verification
+- **Clean Data Confirmed**: Verified 6,392 entries with zero duplicate records
+- **Prevention System Verified**: Automatic duplicate protection working correctly
+- **Documentation Updated**: Enhanced deduplication guide with verification records
+
+---
+
 ## [2025-06-25] - Real-Time Progress Indicator
 
 ### Added

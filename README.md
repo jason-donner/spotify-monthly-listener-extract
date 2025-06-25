@@ -6,6 +6,13 @@ A modern web-based system for tracking Spotify artists' monthly listener counts 
 
 ## 🎉 Recent Updates (June 2025)
 
+### Security & Configuration Improvements (June 25, 2025)
+- **🔒 Admin Password in .env File** - Moved admin password from environment variables to secure .env file
+- **📋 Streamlined Setup** - Single .env file now contains all configuration including admin password
+- **🧹 Testing File Cleanup** - Removed debugging and diagnostic files from git tracking
+- **📝 Enhanced .gitignore** - Better exclusion patterns for test files and temporary data
+- **🛡️ Improved Security** - More secure credential management following best practices
+
 ### Data Integrity Verification (June 25, 2025)
 - **✅ Clean Data Confirmed** - Comprehensive analysis shows 6,392 entries with zero duplicates
 - **🛡️ Prevention System Verified** - Automatic duplicate protection working correctly since implementation
@@ -92,6 +99,7 @@ SPOTIPY_CLIENT_SECRET=your_spotify_app_client_secret
 SPOTIPY_REDIRECT_URI=http://127.0.0.1:5000/admin/callback
 FLASK_SECRET_KEY=your-secret-key-for-sessions
 CHROMEDRIVER_PATH=C:\Windows\System32\chromedriver.exe
+ADMIN_PASSWORD=your_secure_admin_password_here
 ```
 
 ### 3. Install Dependencies
@@ -126,17 +134,7 @@ cd webapp
 python app.py
 ```
 
-### 6. Set Admin Password (Required for Admin Access)
-Set your admin password as an environment variable:
-```powershell
-# Windows PowerShell
-$env:ADMIN_PASSWORD = "your_secure_password_here"
-
-# Linux/Mac
-export ADMIN_PASSWORD="your_secure_password_here"
-```
-
-### 7. Access the Application
+### 6. Access the Application
 - **Main App**: http://localhost:5000
 - **Admin Login**: http://localhost:5000/admin_login
 - **Admin Panel**: http://localhost:5000/admin (requires login)
@@ -276,10 +274,13 @@ Load Data → Display Charts → Search/Filter → Artist Details
 ### Authentication Issues
 - ✅ Check Spotify app redirect URI
 - ✅ Verify client credentials in `.env`
+- ✅ **Admin login issues**: Ensure `ADMIN_PASSWORD` is set in your `.env` file
 - ✅ Clear browser cache/cookies
 - ✅ Check Flask app is running on port 5000
 
 ### Admin Panel Issues
+- ✅ **Admin login fails**: Verify `ADMIN_PASSWORD` in `.env` file matches your input
+- ✅ **"Failed to fetch" errors**: Check that admin password is properly configured in `.env`
 - ✅ **Suggestions stuck in "Pending Review"**: Check suggestion status in `artist_suggestions.json`
 - ✅ **"Follow & Track" not working**: Ensure Spotify authentication is active
 - ✅ **Tab counts incorrect**: Refresh the page or check filtering logic in browser console
@@ -334,9 +335,16 @@ If you were using the old dual-account system, see `MIGRATION_GUIDE.md` for deta
 
 ## 📚 Additional Documentation
 
-- `WEB_OAUTH_GUIDE.md` - Web-based OAuth setup guide
-- `MIGRATION_GUIDE.md` - Migration from dual-account system
-- `WORKFLOW.md` - Detailed workflow documentation
+### Setup & Configuration
+- `docs/SECURITY.md` - Security guidelines and best practices
+- `docs/ADMIN_PASSWORD_MIGRATION.md` - Migration guide for admin password changes
+- `docs/WEB_OAUTH_GUIDE.md` - Web-based OAuth setup guide
+- `docs/MIGRATION_GUIDE.md` - Migration from dual-account system
+
+### Features & Operations
+- `docs/WORKFLOW.md` - Detailed workflow documentation
+- `docs/DATA_DEDUPLICATION.md` - Data integrity and duplicate prevention guide
+- `docs/PROGRESS_TRACKING.md` - Real-time progress indicator documentation
 
 ---
 

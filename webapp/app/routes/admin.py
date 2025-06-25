@@ -11,11 +11,11 @@ import os
 logger = logging.getLogger(__name__)
 admin_security_logger = logging.getLogger('admin_security')
 
-# Admin password from environment variable (required)
+# Admin password from .env file (required)
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD')
 
 if not ADMIN_PASSWORD:
-    logger.warning("ADMIN_PASSWORD environment variable not set! Admin login will not work.")
+    logger.warning("ADMIN_PASSWORD not found in .env file! Admin login will not work.")
 
 def get_client_ip():
     """Get client IP address for logging"""
