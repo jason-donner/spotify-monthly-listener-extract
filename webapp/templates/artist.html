@@ -6,13 +6,11 @@
         <div style="display:flex;flex-direction:column;align-items:stretch;gap:0;margin-bottom:12px;padding:24px 32px;background:rgba(30,30,40,0.85);border-radius:18px;box-shadow:0 2px 16px rgba(0,0,0,0.10);">
             <div class="artist-header-name" style="margin-bottom:28px;text-align:center;font-size:3.5em;font-family:'Montserrat', 'Segoe UI', 'Arial', sans-serif;background:linear-gradient(90deg,#7f5eff 0%,#ff5ecd 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-fill-color:transparent;text-shadow:0 0 18px #7f5eff55,0 0 32px #ff5ecd55;font-weight:800;padding-bottom:16px;">{{ artist_info.name }}</div>
             <div style="display:flex;flex-direction:row;gap:32px;align-items:stretch;justify-content:center;">
-                {% if artist_image_url %}
-                    <div class="artist-image-border">
-                        <a href="{{ artist_info.url }}" target="_blank" rel="noopener" title="View {{ artist_info.name }} on Spotify">
-                            <img src="{{ artist_image_url }}" alt="{{ artist_info.name }}" class="artist-image-animate" style="width:180px;height:180px;border-radius:50%;background:rgba(30,30,40,0.85);object-fit:cover;">
-                        </a>
-                    </div>
-                {% endif %}
+                <div class="artist-image-border">
+                    <a href="{{ artist_info.url if artist_info else '#' }}" target="_blank" rel="noopener" title="View {{ artist_info.name if artist_info else 'Artist' }} on Spotify">
+                        <img src="{{ artist_image_url if artist_image_url else '/static/default-artist.png' }}" alt="{{ artist_info.name if artist_info else 'Artist' }}" class="artist-image-animate" style="width:180px;height:180px;border-radius:50%;background:rgba(30,30,40,0.85);object-fit:cover;">
+                    </a>
+                </div>
                 {% if artist_info.genres or artist_info.followers %}
                 <div style="display:flex;flex-direction:column;justify-content:center;gap:10px;flex:1;min-width:200px;">
                     {% if artist_info.genres %}

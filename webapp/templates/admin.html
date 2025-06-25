@@ -349,8 +349,8 @@ function loadSuggestions() {
 }
 
 function renderSuggestions() {
-    const pending = suggestions.filter(s => s.status === 'approved' && !s.admin_approved);
-    const approved = suggestions.filter(s => s.admin_approved === true && s.status !== 'processed');
+    const pending = suggestions.filter(s => !s.admin_approved && (!s.status || s.status === 'pending'));
+    const approved = suggestions.filter(s => s.admin_approved === true && s.status !== 'processed' && s.status !== 'rejected');
     const rejected = suggestions.filter(s => s.status === 'rejected');
     const processed = suggestions.filter(s => s.status === 'processed');
     
@@ -378,8 +378,8 @@ function renderSuggestionList(suggestionList, type) {
         if (type === 'pending') {
             actionButtons = `
                 <div class="btn-group" role="group">
-                    <button class="btn btn-success btn-sm" onclick="approveForFollow('${suggestion.timestamp}', '${suggestion.artist_name}')">
-                        ✓ Follow on Spotify
+                    <button class="btn btn-success btn-sm" onclick="followArtistNow('${suggestion.spotify_id}', '${suggestion.artist_name}', '${suggestion.timestamp}')">
+                        🎵 Follow & Track
                     </button>
                     <button class="btn btn-warning btn-sm" onclick="approveForTracking('${suggestion.timestamp}', '${suggestion.artist_name}')">
                         👁️ Track Only
@@ -388,12 +388,6 @@ function renderSuggestionList(suggestionList, type) {
                         ✗ Reject
                     </button>
                 </div>
-            `;
-        } else if (type === 'approved' && suggestion.status === 'approved_for_follow') {
-            actionButtons = `
-                <button class="btn btn-primary btn-sm" onclick="followArtistNow('${suggestion.spotify_id}', '${suggestion.artist_name}')">
-                    🎵 Follow Now
-                </button>
             `;
         }
         
@@ -427,8 +421,8 @@ function renderSuggestionList(suggestionList, type) {
 }
 
 function updateCounts() {
-    const pending = suggestions.filter(s => s.status === 'approved' && !s.admin_approved).length;
-    const approved = suggestions.filter(s => s.admin_approved === true && s.status !== 'processed').length;
+    const pending = suggestions.filter(s => !s.admin_approved && (!s.status || s.status === 'pending')).length;
+    const approved = suggestions.filter(s => s.admin_approved === true && s.status !== 'processed' && s.status !== 'rejected').length;
     const rejected = suggestions.filter(s => s.status === 'rejected').length;
     const processed = suggestions.filter(s => s.status === 'processed').length;
     
@@ -477,13 +471,19 @@ function adminAction(suggestionId, action, successMessage) {
     });
 }
 
-function followArtistNow(artistId, artistName) {
+function followArtistNow(artistId, artistName, timestamp = null) {
     if (!isAuthenticated) {
         showToast('Authentication Required', 'Please log in with Spotify first to follow artists.', 'warning');
         return;
     }
     
-    if (confirm(`Follow "${artistName}" on Spotify right now?`)) {
+    if (confirm(`Follow "${artistName}" on Spotify and add to tracking?`)) {
+        // Show loading state
+        const button = event.target;
+        const originalText = button.innerHTML;
+        button.innerHTML = '⏳ Following...';
+        button.disabled = true;
+        
         fetch('/admin/follow_artist', {
             method: 'POST',
             headers: {
@@ -491,15 +491,20 @@ function followArtistNow(artistId, artistName) {
             },
             body: JSON.stringify({
                 artist_id: artistId,
-                artist_name: artistName
+                artist_name: artistName,
+                suggestion_id: timestamp // Pass the suggestion ID for automatic processing
             })
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
                 showToast('Success', data.message, 'success');
-                loadSuggestions(); // Reload to update UI
+                // Reload suggestions to reflect the changes
+                loadSuggestions();
             } else {
+                button.innerHTML = originalText;
+                button.disabled = false;
+                
                 if (data.auth_required) {
                     showToast('Authentication Required', data.message, 'warning');
                     // Check auth status again to update UI
@@ -510,6 +515,8 @@ function followArtistNow(artistId, artistName) {
             }
         })
         .catch(error => {
+            button.innerHTML = originalText;
+            button.disabled = false;
             showToast('Error', 'Failed to follow artist: ' + error.message, 'danger');
         });
     }

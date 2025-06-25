@@ -3,7 +3,7 @@ Spotify service module for handling Spotify API interactions.
 """
 
 import spotipy
-from spotipy.oauth2 import SpotifyOAuth
+from spotipy.oauth2 import SpotifyOAuth, SpotifyClientCredentials
 import requests
 from flask import session
 import logging
@@ -19,6 +19,22 @@ class SpotifyService:
         self.redirect_uri = redirect_uri
         self.scope = scope
         self._image_cache = {}
+        self._public_client = None
+    
+    def get_public_client(self):
+        """Get a public Spotify client using client credentials flow."""
+        if not self._public_client:
+            try:
+                client_credentials_manager = SpotifyClientCredentials(
+                    client_id=self.client_id,
+                    client_secret=self.client_secret
+                )
+                self._public_client = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
+            except Exception as e:
+                logger.error(f"Failed to create public Spotify client: {e}")
+                return None
+        
+        return self._public_client
     
     def get_oauth(self, show_dialog=True):
         """Create a SpotifyOAuth instance."""
@@ -69,6 +85,9 @@ class SpotifyService:
             sp_oauth = self.get_oauth(show_dialog=True)
         else:
             sp_oauth = self.get_oauth()
+        
+        # Debug: Log the redirect URI being used
+        logger.info(f"Using redirect URI: {self.redirect_uri}")
         
         return sp_oauth.get_authorize_url()
     
@@ -138,53 +157,65 @@ class SpotifyService:
             bearer_token: Bearer token for API requests (optional)
         
         Returns:
-            str: Image URL or None if not found
+            str: Image URL or default image path if not found
         """
         if not artist_id:
             logger.warning("No artist_id provided for image fetch")
-            return None
+            return "/static/default-artist.png"
         
         # Check cache first
         if artist_id in self._image_cache:
             return self._image_cache[artist_id]
         
         try:
-            # Use provided token or get from authenticated client
+            artist_data = None
+            
+            # Try using provided token first
             if bearer_token:
                 headers = {"Authorization": f"Bearer {bearer_token}"}
                 resp = requests.get(f"https://api.spotify.com/v1/artists/{artist_id}", headers=headers)
-            else:
-                sp = self.get_authenticated_client()
-                if not sp:
-                    return None
-                artist = sp.artist(artist_id)
-                # Create a mock response object that behaves like requests.Response
-                class MockResponse:
-                    def __init__(self, data):
-                        self.status_code = 200
-                        self._data = data
-                    
-                    def json(self):
-                        return self._data
-                
-                resp = MockResponse(artist)
+                if resp.status_code == 200:
+                    artist_data = resp.json()
             
-            if resp.status_code == 200:
-                artist_data = resp.json() if hasattr(resp, 'json') else resp
-                if artist_data.get("images"):
-                    image_url = artist_data["images"][0]["url"]
-                    # Cache the result
-                    self._image_cache[artist_id] = image_url
-                    return image_url
-                else:
-                    logger.debug(f"No images found for artist {artist_id}")
+            # Try public client credentials first (works without session)
+            if not artist_data:
+                sp_public = self.get_public_client()
+                if sp_public:
+                    try:
+                        artist_data = sp_public.artist(artist_id)
+                    except Exception as e:
+                        logger.debug(f"Public client failed for {artist_id}: {e}")
+            
+            # Fallback to authenticated client
+            if not artist_data:
+                try:
+                    sp = self.get_authenticated_client()
+                    if sp:
+                        try:
+                            artist_data = sp.artist(artist_id)
+                        except Exception as e:
+                            logger.debug(f"Authenticated client failed for {artist_id}: {e}")
+                except RuntimeError:
+                    # No session context, skip authenticated client
+                    pass
+            
+            # Extract image URL if we have artist data
+            if artist_data and artist_data.get("images"):
+                image_url = artist_data["images"][0]["url"]
+                # Cache the result
+                self._image_cache[artist_id] = image_url
+                return image_url
             else:
-                logger.error(f"Spotify API error for {artist_id}: {resp.status_code}")
+                logger.debug(f"No images found for artist {artist_id}")
+                # Cache the default result to avoid repeated API calls
+                self._image_cache[artist_id] = "/static/default-artist.png"
+                return "/static/default-artist.png"
         
         except Exception as e:
             logger.error(f"Error fetching artist image for {artist_id}: {e}")
-        
-        return None
+            # Cache the default result to avoid repeated API calls  
+            self._image_cache[artist_id] = "/static/default-artist.png"
+            return "/static/default-artist.png"
     
     def search_artists(self, query, limit=10):
         """
@@ -197,14 +228,35 @@ class SpotifyService:
         Returns:
             list: List of artist dictionaries
         """
-        sp = self.get_authenticated_client()
-        if not sp:
+        results = None
+        
+        # Try public client first (works without session context)
+        sp_public = self.get_public_client()
+        if sp_public:
+            try:
+                results = sp_public.search(q=query, type='artist', limit=limit)
+            except Exception as e:
+                logger.debug(f"Public client failed for artist search '{query}': {e}")
+        
+        # Fallback to authenticated client if public client fails
+        if not results:
+            try:
+                sp = self.get_authenticated_client()
+                if sp:
+                    try:
+                        results = sp.search(q=query, type='artist', limit=limit)
+                    except Exception as e:
+                        logger.debug(f"Authenticated client failed for artist search '{query}': {e}")
+            except RuntimeError:
+                # No session context, skip authenticated client
+                pass
+        
+        if not results:
+            logger.error(f"Could not search artists for query: {query}")
             return []
         
         try:
-            results = sp.search(q=query, type='artist', limit=limit)
             artists = []
-            
             for artist in results.get('artists', {}).get('items', []):
                 artists.append({
                     "id": artist["id"],
@@ -217,7 +269,7 @@ class SpotifyService:
             return artists
         
         except Exception as e:
-            logger.error(f"Error searching artists: {e}")
+            logger.error(f"Error processing artist search results for '{query}': {e}")
             return []
     
     def get_artist_info(self, artist_id):
@@ -230,23 +282,45 @@ class SpotifyService:
         Returns:
             dict: Artist information or empty dict
         """
-        sp = self.get_authenticated_client()
-        if not sp:
+        artist_data = None
+        
+        # Try public client first (works without session context)
+        sp_public = self.get_public_client()
+        if sp_public:
+            try:
+                artist_data = sp_public.artist(artist_id)
+            except Exception as e:
+                logger.debug(f"Public client failed for artist info {artist_id}: {e}")
+        
+        # Fallback to authenticated client if public client fails
+        if not artist_data:
+            try:
+                sp = self.get_authenticated_client()
+                if sp:
+                    try:
+                        artist_data = sp.artist(artist_id)
+                    except Exception as e:
+                        logger.debug(f"Authenticated client failed for artist info {artist_id}: {e}")
+            except RuntimeError:
+                # No session context, skip authenticated client
+                pass
+        
+        if not artist_data:
+            logger.error(f"Could not get artist info for {artist_id}")
             return {}
         
         try:
-            artist = sp.artist(artist_id)
             return {
-                "name": artist["name"],
-                "image": artist["images"][0]["url"] if artist.get("images") else "",
-                "genres": artist.get("genres", []),
-                "popularity": artist.get("popularity", 0),
-                "followers": artist.get("followers", {}).get("total", 0),
-                "url": artist["external_urls"]["spotify"]
+                "name": artist_data["name"],
+                "image": artist_data["images"][0]["url"] if artist_data.get("images") else "",
+                "genres": artist_data.get("genres", []),
+                "popularity": artist_data.get("popularity", 0),
+                "followers": artist_data.get("followers", {}).get("total", 0),
+                "url": artist_data["external_urls"]["spotify"]
             }
         
         except Exception as e:
-            logger.error(f"Error getting artist info for {artist_id}: {e}")
+            logger.error(f"Error processing artist info for {artist_id}: {e}")
             return {}
     
     def get_top_tracks(self, artist_id, market="US"):
@@ -260,14 +334,35 @@ class SpotifyService:
         Returns:
             list: List of track dictionaries
         """
-        sp = self.get_authenticated_client()
-        if not sp:
+        results = None
+        
+        # Try public client first (works without session context)
+        sp_public = self.get_public_client()
+        if sp_public:
+            try:
+                results = sp_public.artist_top_tracks(artist_id, country=market)
+            except Exception as e:
+                logger.debug(f"Public client failed for top tracks {artist_id}: {e}")
+        
+        # Fallback to authenticated client if public client fails
+        if not results:
+            try:
+                sp = self.get_authenticated_client()
+                if sp:
+                    try:
+                        results = sp.artist_top_tracks(artist_id, country=market)
+                    except Exception as e:
+                        logger.debug(f"Authenticated client failed for top tracks {artist_id}: {e}")
+            except RuntimeError:
+                # No session context, skip authenticated client
+                pass
+        
+        if not results:
+            logger.error(f"Could not get top tracks for {artist_id}")
             return []
         
         try:
-            results = sp.artist_top_tracks(artist_id, country=market)
             tracks = []
-            
             for track in results.get("tracks", []):
                 tracks.append({
                     "name": track["name"],
@@ -278,7 +373,7 @@ class SpotifyService:
             return tracks
         
         except Exception as e:
-            logger.error(f"Error getting top tracks for {artist_id}: {e}")
+            logger.error(f"Error processing top tracks for {artist_id}: {e}")
             return []
     
     def follow_artist(self, artist_id):

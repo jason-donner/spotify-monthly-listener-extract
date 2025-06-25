@@ -374,4 +374,88 @@ def create_main_routes(spotify_service, data_service):
             logger.error(f"Error handling artist suggestion: {e}")
             return jsonify({"success": False, "message": "Server error occurred"})
     
+    @main_bp.route("/refresh_data")
+    def refresh_data():
+        """Refresh data cache manually."""
+        try:
+            # Clear cache and reload data
+            data_service.clear_cache()
+            data = data_service.load_data(use_cache=False)
+            return jsonify({
+                "success": True, 
+                "message": f"Data refreshed successfully. Loaded {len(data)} records.",
+                "records": len(data)
+            })
+        except Exception as e:
+            logger.error(f"Error refreshing data: {e}")
+            return jsonify({"success": False, "error": str(e)})
+    
+    @main_bp.route("/follow_artist", methods=["POST"])
+    def follow_artist():
+        """Public endpoint to follow an artist on Spotify."""
+        try:
+            data = request.get_json()
+            artist_id = data.get("artist_id")
+            artist_name = data.get("artist_name", "Unknown Artist")
+            
+            if not artist_id:
+                return jsonify({"success": False, "message": "Artist ID is required"})
+            
+            # Check if authenticated
+            if not spotify_service.get_token_from_session():
+                return jsonify({
+                    "success": False,
+                    "message": "Spotify authentication required. Please log in with Spotify to follow artists.",
+                    "auth_required": True,
+                    "auth_url": spotify_service.get_auth_url()
+                })
+            
+            # Follow the artist
+            success, error_message = spotify_service.follow_artist(artist_id)
+            
+            if not success:
+                if "Authentication" in error_message:
+                    return jsonify({
+                        "success": False,
+                        "message": error_message,
+                        "auth_required": True,
+                        "auth_url": spotify_service.get_auth_url()
+                    })
+                else:
+                    return jsonify({"success": False, "message": error_message})
+            
+            # Add to followed artists file
+            followed_artists = data_service.load_followed_artists()
+            
+            # Check if already in list
+            already_exists = any(
+                followed.get("artist_id") == artist_id 
+                for followed in followed_artists
+            )
+            
+            if not already_exists:
+                new_artist = {
+                    "artist_name": artist_name,
+                    "artist_id": artist_id,
+                    "url": f"https://open.spotify.com/artist/{artist_id}",
+                    "source": "public_follow",
+                    "date_added": datetime.now().strftime("%Y-%m-%d"),
+                    "removed": False
+                }
+                followed_artists.append(new_artist)
+                
+                if data_service.save_followed_artists(followed_artists):
+                    logger.info(f"Added {artist_name} to followed artists file")
+                else:
+                    logger.error(f"Failed to update followed artists file for {artist_name}")
+            
+            return jsonify({
+                "success": True, 
+                "message": f"Successfully followed {artist_name} on Spotify!"
+            })
+        
+        except Exception as e:
+            logger.error(f"Error following artist: {e}")
+            return jsonify({"success": False, "message": f"Error: {str(e)}"})
+
     return main_bp

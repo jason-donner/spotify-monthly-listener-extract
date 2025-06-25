@@ -21,7 +21,7 @@ class DataService:
         self.blacklist_file = blacklist_file
         self._data_cache = None
         self._cache_timestamp = None
-        self._cache_ttl = 300  # 5 minutes
+        self._cache_ttl = 60  # 1 minute - more responsive to changes
     
     def load_data(self, use_cache: bool = True) -> List[Dict[str, Any]]:
         """
@@ -35,11 +35,28 @@ class DataService:
         """
         current_time = datetime.now()
         
-        # Check cache validity
-        if (use_cache and 
+        # Check if file exists
+        if not os.path.exists(self.data_path):
+            logger.error(f"Data file not found: {self.data_path}")
+            return []
+        
+        # Get file modification time
+        try:
+            file_mtime = datetime.fromtimestamp(os.path.getmtime(self.data_path))
+        except OSError as e:
+            logger.error(f"Error getting file modification time: {e}")
+            file_mtime = current_time
+        
+        # Check cache validity - invalidate if file is newer than cache
+        cache_valid = (
+            use_cache and 
             self._data_cache is not None and 
             self._cache_timestamp is not None and
-            (current_time - self._cache_timestamp).seconds < self._cache_ttl):
+            (current_time - self._cache_timestamp).seconds < self._cache_ttl and
+            (self._cache_timestamp >= file_mtime)  # Cache is newer than file
+        )
+        
+        if cache_valid:
             return self._data_cache
         
         try:
@@ -50,6 +67,7 @@ class DataService:
             self._data_cache = data
             self._cache_timestamp = current_time
             
+            logger.info(f"Loaded {len(data)} records from data file (cache {'refreshed' if not cache_valid else 'used'})")
             return data
         
         except FileNotFoundError:

@@ -133,15 +133,16 @@ def create_admin_routes(spotify_service, data_service, job_service):
     
     @admin_bp.route("/follow_artist", methods=["POST"])
     def admin_follow_artist():
-        """Admin endpoint to immediately follow an artist on Spotify."""
+        """Admin endpoint to immediately follow an artist on Spotify and process suggestion if provided."""
         try:
             data = request.get_json()
             artist_id = data.get("artist_id")
             artist_name = data.get("artist_name", "Unknown Artist")
+            suggestion_id = data.get("suggestion_id")  # Optional - for processing suggestions
             
             if not artist_id:
                 return jsonify({"success": False, "message": "Artist ID is required"})
-            
+
             # Check if authenticated
             if not spotify_service.get_token_from_session():
                 return jsonify({
@@ -149,15 +150,15 @@ def create_admin_routes(spotify_service, data_service, job_service):
                     "message": "Spotify authentication required. Please log in with Spotify to follow artists.",
                     "auth_required": True
                 })
-            
+
             # Get current user info for logging
             user = spotify_service.get_current_user()
             if user:
                 logger.info(f"Following artist as user: {user.get('display_name', user.get('id'))}")
-            
+
             # Follow the artist
             success, error_message = spotify_service.follow_artist(artist_id)
-            
+
             if not success:
                 if "Authentication" in error_message:
                     return jsonify({
@@ -167,16 +168,16 @@ def create_admin_routes(spotify_service, data_service, job_service):
                     })
                 else:
                     return jsonify({"success": False, "message": error_message})
-            
+
             # Add to followed artists file
             followed_artists = data_service.load_followed_artists()
-            
+
             # Check if already in list
             already_exists = any(
                 followed.get("artist_id") == artist_id 
                 for followed in followed_artists
             )
-            
+
             if not already_exists:
                 new_artist = {
                     "artist_name": artist_name,
@@ -193,9 +194,43 @@ def create_admin_routes(spotify_service, data_service, job_service):
                 else:
                     logger.error(f"Failed to update followed artists file for {artist_name}")
             
+            # If this was from a suggestion, mark it as processed
+            success_message = f"Successfully followed {artist_name} on Spotify and added to tracking list!"
+            if suggestion_id:
+                try:
+                    # Load suggestions
+                    suggestions = data_service.load_suggestions()
+                    logger.info(f"Attempting to process suggestion with ID: {suggestion_id}")
+                    
+                    # Find and update the suggestion
+                    suggestion_found = False
+                    for suggestion in suggestions:
+                        logger.debug(f"Checking suggestion with timestamp: {suggestion.get('timestamp')}")
+                        if suggestion.get('timestamp') == suggestion_id:
+                            suggestion['status'] = 'processed'
+                            suggestion['admin_approved'] = True
+                            suggestion['admin_action_date'] = datetime.now().isoformat()
+                            suggestion['processed_date'] = datetime.now().isoformat()
+                            suggestion_found = True
+                            logger.info(f"Marked suggestion {suggestion_id} as processed for artist {artist_name}")
+                            break
+                    
+                    if suggestion_found:
+                        if data_service.save_suggestions(suggestions):
+                            success_message = f"Successfully followed {artist_name} on Spotify, added to tracking, and marked suggestion as processed!"
+                            logger.info(f"Suggestion {suggestion_id} successfully saved as processed")
+                        else:
+                            logger.error(f"Failed to save processed suggestion {suggestion_id}")
+                    else:
+                        logger.warning(f"Suggestion {suggestion_id} not found when trying to mark as processed. Available timestamps: {[s.get('timestamp') for s in suggestions]}")
+                        
+                except Exception as e:
+                    logger.error(f"Error processing suggestion {suggestion_id}: {e}")
+                    # Don't fail the whole operation if suggestion processing fails
+            
             return jsonify({
                 "success": True, 
-                "message": f"Successfully followed {artist_name} on Spotify and added to tracking list!"
+                "message": success_message
             })
         
         except Exception as e:

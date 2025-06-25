@@ -65,5 +65,45 @@
     "admin_approved": true,
     "admin_action_date": "2025-06-24T22:26:23.070248",
     "processed_date": "2025-06-24T22:45:56.432009"
+  },
+  {
+    "artist_name": "departmefrombearisland",
+    "spotify_url": "https://open.spotify.com/artist/7ocHgk6jaUOwvzkNyU0op0",
+    "spotify_id": "7ocHgk6jaUOwvzkNyU0op0",
+    "timestamp": "2025-06-24T23:52:27.320326",
+    "status": "processed",
+    "admin_approved": true,
+    "admin_action_date": "2025-06-24T23:52:35.486491",
+    "processed_date": "2025-06-24T23:52:44.916949"
+  },
+  {
+    "artist_name": "Beds",
+    "spotify_url": "https://open.spotify.com/artist/3DNUBolRFBz8Mc0IyJNqoK",
+    "spotify_id": "3DNUBolRFBz8Mc0IyJNqoK",
+    "timestamp": "2025-06-25T00:01:10.960890",
+    "status": "processed",
+    "admin_approved": true,
+    "admin_action_date": "2025-06-25T00:01:17.098497",
+    "processed_date": "2025-06-25T00:01:45.854395"
+  },
+  {
+    "artist_name": "Sleep Schedule",
+    "spotify_url": "https://open.spotify.com/artist/2uPvj7oLr6XsEVxqp4D3JZ",
+    "spotify_id": "2uPvj7oLr6XsEVxqp4D3JZ",
+    "timestamp": "2025-06-25T00:08:22.884075",
+    "status": "processed",
+    "admin_approved": true,
+    "admin_action_date": "2025-06-25T00:09:30.991739",
+    "processed_date": "2025-06-25T00:09:56.308169"
+  },
+  {
+    "artist_name": "Prawn",
+    "spotify_url": "https://open.spotify.com/artist/29yppqr48ptt5PmMQvawXs",
+    "spotify_id": "29yppqr48ptt5PmMQvawXs",
+    "timestamp": "2025-06-25T00:24:42.657431",
+    "status": "processed",
+    "admin_approved": true,
+    "admin_action_date": "2025-06-25T00:24:45.000000",
+    "processed_date": "2025-06-25T00:24:45.000000"
   }
 ]

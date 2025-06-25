@@ -4,6 +4,34 @@ A modern web-based system for tracking Spotify artists' monthly listener counts 
 
 ---
 
+## 🎉 Recent Updates (June 2025)
+
+### Admin Panel Improvements
+- **🚀 Streamlined "Follow & Track" Process** - One-click approval that follows artists and marks suggestions as processed
+- **🔧 Fixed Suggestion Tab Management** - Properly moves processed suggestions between tabs
+- **📊 Enhanced Filtering Logic** - Accurate categorization of pending, approved, and processed suggestions
+- **🐛 Bug Fixes** - Resolved issues with stuck suggestions in "Pending Review"
+- **📝 Improved Logging** - Added detailed debug logging for suggestion processing
+
+### Search & Discovery Enhancements  
+- **🎵 Top Tracks Preview** - Added artist top tracks preview on search page
+- **✨ Improved UI/UX** - Better visual feedback and user experience
+- **🎯 Refined Artist Selection** - Top tracks appear after artist selection, not on hover
+
+### Backend Improvements
+- **🔄 Enhanced Suggestion Lifecycle** - Better handling of suggestion status transitions
+- **⚡ Optimized Admin Actions** - Combined follow and processing into single operation
+- **🛡️ Error Handling** - More robust error handling and user feedback
+- **📋 Data Consistency** - Fixed data structure inconsistencies in suggestion processing
+
+### Code Quality Enhancements
+- **🔍 Improved Logging** - Added detailed debug logging for better troubleshooting
+- **🧹 Code Cleanup** - Removed redundant buttons and streamlined JavaScript
+- **📊 Better State Management** - Enhanced frontend filtering and tab management
+- **🎯 Consistent Data Flow** - Unified suggestion processing workflow
+
+---
+
 ## 🌟 Features
 
 - **🎵 Web-based Artist Management** - Manage followed artists through a modern web interface
@@ -83,8 +111,15 @@ python app.py
 ### Admin Panel
 1. **Login**: Click "Login with Spotify" to authenticate
 2. **Review Suggestions**: View pending, approved, and rejected suggestions
-3. **Manage Artists**: Approve for tracking or following
-4. **Follow on Spotify**: Follow artists directly from the interface
+3. **Process Suggestions**: 
+   - **🎵 Follow & Track** - Immediately follows artist on Spotify and adds to tracking (one-step process)
+   - **👁️ Track Only** - Adds to tracking without following on Spotify
+   - **✗ Reject** - Rejects the suggestion
+4. **Tab Management**: Suggestions automatically move between tabs based on status:
+   - **Pending Review** - New suggestions awaiting admin action
+   - **Approved** - Suggestions approved but not yet processed
+   - **Processed** - Completed suggestions (followed/tracked)
+   - **Rejected** - Declined suggestions
 
 ### Data Collection
 1. **Manual Collection**: Run scripts individually
@@ -152,15 +187,19 @@ Spotify Monthly Listener Extract/
 
 ### Public Endpoints
 - `GET /` - Home page/leaderboard
-- `GET /search` - Search artists
+- `GET /search` - Search artists with top tracks preview
 - `GET /artist/<slug>/<id>` - Artist detail page
 - `POST /suggest_artist` - Submit artist suggestion
+- `GET /api/artist/<artist_id>/top-tracks` - Get artist's top tracks (JSON)
 
 ### Admin Endpoints
-- `GET /admin` - Admin panel
-- `GET /admin/suggestions` - Get suggestions (JSON)
+- `GET /admin` - Admin panel interface
+- `GET /admin/suggestions` - Get all suggestions (JSON)
 - `POST /admin/approve_suggestion` - Approve/reject suggestions
-- `POST /admin/follow_artist` - Follow artist on Spotify
+- `POST /admin/follow_artist` - Follow artist on Spotify and process suggestion
+- `POST /admin/run_scraping` - Start automated scraping job
+- `POST /admin/process_suggestions` - Process approved suggestions in batch
+- `GET /admin/scraping_status/<job_id>` - Check scraping job status
 
 ### Authentication Endpoints
 - `GET /login` - Start Spotify OAuth
@@ -197,6 +236,12 @@ Load Data → Display Charts → Search/Filter → Artist Details
 - ✅ Clear browser cache/cookies
 - ✅ Check Flask app is running on port 5000
 
+### Admin Panel Issues
+- ✅ **Suggestions stuck in "Pending Review"**: Check suggestion status in `artist_suggestions.json`
+- ✅ **"Follow & Track" not working**: Ensure Spotify authentication is active
+- ✅ **Tab counts incorrect**: Refresh the page or check filtering logic in browser console
+- ✅ **Processing errors**: Check Flask app logs for detailed error messages
+
 ### Scraping Issues
 - ✅ Ensure ChromeDriver is compatible with Chrome version
 - ✅ Check ChromeDriver path in environment variables
@@ -208,6 +253,7 @@ Load Data → Display Charts → Search/Filter → Artist Details
 - ✅ Verify all dependencies are installed
 - ✅ Check browser developer console for JavaScript errors
 - ✅ Ensure data files exist in `data/results/`
+- ✅ **Top tracks not loading**: Check Spotify API credentials and rate limits
 
 ---
 
