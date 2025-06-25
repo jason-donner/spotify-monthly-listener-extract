@@ -25,11 +25,12 @@ class JobService:
         self.scraping_timeout = scraping_timeout
         self.temp_dir = tempfile.gettempdir()
     
-    def create_scraping_job(self, today_only: bool = False) -> str:
+    def create_scraping_job(self, headless: bool = True, today_only: bool = False) -> str:
         """
         Create a new scraping job.
         
         Args:
+            headless: Whether to run browser in headless mode (applies to both scripts)
             today_only: Whether to scrape only today's artists
         
         Returns:
@@ -45,7 +46,8 @@ class JobService:
             'output': '',
             'error': '',
             'completed': False,
-            'today_only': today_only
+            'today_only': today_only,
+            'headless': headless
         }
         
         # Save initial job status to file
@@ -131,13 +133,17 @@ class JobService:
             # Add arguments
             cmd.append("--no-prompt")  # Skip login prompt
             
-            # Note: --headless argument removed from scrape.py (browser now runs in non-headless mode)
-            # The duplicate protection is enabled by default in scrape.py
+            # Add headless mode for both scripts
+            if job_data.get('headless', True):
+                cmd.append("--headless")
             
             if job_data.get('today_only', False):
-                # Use today's date in YYYY-MM-DD format
+                # Use today's date in YYYY-MM-DD format for filtered script
                 today_date = datetime.now().strftime('%Y-%m-%d')
                 cmd.extend(["--date", today_date])
+            else:
+                # Full scraping with scrape.py (now supports headless too)
+                pass
             
             logger.info(f"Running scraping command for job {job_id}: {' '.join(cmd)}")
             
