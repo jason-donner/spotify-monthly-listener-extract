@@ -8,6 +8,8 @@ It handles retries for failed fetches, saves results to a JSON file, and provide
 import os
 import sys
 import json
+import platform
+import subprocess
 from datetime import datetime
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
@@ -20,6 +22,7 @@ from colorama import Fore, Style, init
 from dotenv import load_dotenv
 import time
 import re
+import argparse
 
 # Initialize colorama for colored console output
 init(autoreset=True)
@@ -56,27 +59,156 @@ def format_listener_count(count):
         return str(count)
 
 
-def setup_driver(chromedriver_path=None, headless=False):
+def kill_chrome_processes():
+    """
+    Kill any existing Chrome/ChromeDriver processes that might be stuck.
+    """
+    import subprocess
+    import platform
+    
+    try:
+        if platform.system() == "Windows":
+            # Kill Chrome processes
+            subprocess.run(["taskkill", "/f", "/im", "chrome.exe"], 
+                         capture_output=True, check=False)
+            subprocess.run(["taskkill", "/f", "/im", "chromedriver.exe"], 
+                         capture_output=True, check=False)
+        else:
+            # Linux/Mac
+            subprocess.run(["pkill", "-f", "chrome"], capture_output=True, check=False)
+            subprocess.run(["pkill", "-f", "chromedriver"], capture_output=True, check=False)
+        time.sleep(2)  # Give processes time to die
+    except Exception as e:
+        print(Fore.YELLOW + f"Warning: Could not kill existing Chrome processes: {e}")
+
+
+def check_chrome_version():
+    """
+    Check Chrome and ChromeDriver version compatibility.
+    """
+    import subprocess
+    
+    try:
+        # Get Chrome version
+        if platform.system() == "Windows":
+            chrome_cmd = r'"C:\Program Files\Google\Chrome\Application\chrome.exe" --version'
+            result = subprocess.run(chrome_cmd, shell=True, capture_output=True, text=True)
+        else:
+            result = subprocess.run(["google-chrome", "--version"], capture_output=True, text=True)
+        
+        if result.returncode == 0:
+            chrome_version = result.stdout.strip()
+            print(f"Chrome version: {chrome_version}")
+        else:
+            print(Fore.YELLOW + "Could not determine Chrome version")
+            
+    except Exception as e:
+        print(Fore.YELLOW + f"Could not check Chrome version: {e}")
+
+
+def setup_driver(chromedriver_path=None, headless=False, max_retries=3):
     """
     Set up and return a Selenium Chrome WebDriver with custom options.
+    Includes network resilience settings and session recovery.
     """
-    if not chromedriver_path:
-        chromedriver_path = os.environ.get("CHROMEDRIVER_PATH", "chromedriver")
-
-    service = Service(chromedriver_path)
-    chrome_options = Options()
-    chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    chrome_options.add_experimental_option('useAutomationExtension', False)
-    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-    chrome_options.add_argument("--log-level=3")
-    chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
+    import platform
+    from selenium.webdriver.chrome.service import Service
     
-    if headless:
-        chrome_options.add_argument("--headless")
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
+    # Check Chrome version for diagnostics
+    check_chrome_version()
     
-    return webdriver.Chrome(service=service, options=chrome_options)
+    for attempt in range(max_retries):
+        try:
+            if attempt > 0:
+                print(f"Retrying driver setup (attempt {attempt + 1}/{max_retries})...")
+                kill_chrome_processes()
+                time.sleep(3)
+            
+            # Set up Chrome options
+            chrome_options = Options()
+            
+            # Essential Chrome arguments for session stability
+            chrome_options.add_argument("--no-sandbox")
+            chrome_options.add_argument("--disable-dev-shm-usage")
+            chrome_options.add_argument("--disable-gpu")
+            chrome_options.add_argument("--disable-software-rasterizer")
+            chrome_options.add_argument("--disable-background-timer-throttling")
+            chrome_options.add_argument("--disable-backgrounding-occluded-windows")
+            chrome_options.add_argument("--disable-renderer-backgrounding")
+            chrome_options.add_argument("--disable-features=TranslateUI")
+            chrome_options.add_argument("--disable-ipc-flooding-protection")
+            
+            # Session management
+            chrome_options.add_argument("--remote-debugging-port=9222")
+            chrome_options.add_argument("--disable-web-security")
+            chrome_options.add_argument("--disable-features=VizDisplayCompositor")
+            chrome_options.add_argument("--no-first-run")
+            chrome_options.add_argument("--disable-default-apps")
+            
+            # Anti-detection settings
+            chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+            chrome_options.add_experimental_option('useAutomationExtension', False)
+            chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+            
+            # Logging and errors
+            chrome_options.add_argument("--log-level=3")
+            chrome_options.add_argument("--silent")
+            chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
+            
+            # User agent
+            chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+            
+            if headless:
+                chrome_options.add_argument("--headless=new")  # Use new headless mode
+                chrome_options.add_argument("--disable-extensions")
+                chrome_options.add_argument("--disable-plugins")
+            
+            # Set page load strategy
+            chrome_options.page_load_strategy = 'normal'
+            
+            # Create driver - try auto-installation first
+            print("Creating Chrome WebDriver...")
+            
+            if chromedriver_path and os.path.exists(chromedriver_path):
+                # Use specified ChromeDriver path
+                service = Service(chromedriver_path)
+                driver = webdriver.Chrome(service=service, options=chrome_options)
+            else:
+                # Try auto-installer first
+                try:
+                    import chromedriver_autoinstaller
+                    chromedriver_autoinstaller.install()  # This installs compatible ChromeDriver
+                    driver = webdriver.Chrome(options=chrome_options)
+                except ImportError:
+                    # Fallback to Selenium's auto-management
+                    print("Auto-installer not available, trying Selenium auto-management...")
+                    driver = webdriver.Chrome(options=chrome_options)
+            
+            # Set timeouts
+            driver.set_page_load_timeout(30)
+            driver.implicitly_wait(10)
+            
+            # Test the driver with a simple command
+            driver.execute_script("return navigator.userAgent;")
+            
+            print(Fore.GREEN + "✓ Chrome WebDriver created successfully")
+            return driver
+            
+        except Exception as e:
+            print(Fore.RED + f"Failed to create driver (attempt {attempt + 1}/{max_retries}): {e}")
+            if attempt == max_retries - 1:
+                print(Fore.RED + "All driver creation attempts failed. Please try:")
+                print("1. Update Chrome to the latest version")
+                print("2. Install/update ChromeDriver:")
+                print("   - Download from https://chromedriver.chromium.org/")
+                print("   - Or install: pip install chromedriver-autoinstaller")
+                print("3. Restart your computer to clear any stuck processes")
+                print("4. Try running the script with --headless flag")
+                print("5. Run chrome_diagnostic.py for detailed troubleshooting")
+                raise
+            time.sleep(2)
+    
+    return None
 
 
 
@@ -125,31 +257,65 @@ def load_existing_listeners(target_date):
     return existing_artist_ids
 
 
-def scrape_artist(driver, url, wait_time=7):
+def scrape_artist(driver, url, wait_time=7, max_retries=3, retry_delay=2):
     """
     Scrape the artist name and monthly listeners from a Spotify artist page.
     Returns (name, monthly_listeners) or (None, None) on failure.
+    Includes retry logic for network errors.
     """
-    driver.get(url['url'] if isinstance(url, dict) else url)  # Open the artist page
-    try:
-        # Wait for the artist name to be present
-        meta_title = WebDriverWait(driver, wait_time).until(
-            lambda d: d.find_element(By.XPATH, "//meta[@property='og:title']")
-        )
-        name = meta_title.get_attribute("content")
-    except Exception as e:
-        print(Fore.RED + f"Failed to get artist name for {url}: {e}")
-        return None, None
-    try:
-        # Wait for the monthly listeners element
-        listeners_elem = WebDriverWait(driver, wait_time).until(
-            EC.presence_of_element_located((By.XPATH, "//span[contains(text(),'monthly listeners')]"))
-        )
-        monthly = listeners_elem.text.strip().split(' ')[0]
-    except Exception:
-        print(Fore.YELLOW + f"Could not find monthly listeners for {url}")
-        monthly = None
-    return name, monthly
+    import time
+    from selenium.common.exceptions import WebDriverException, TimeoutException
+    
+    artist_url = url['url'] if isinstance(url, dict) else url
+    artist_name = url.get('artist_name', 'Unknown') if isinstance(url, dict) else 'Unknown'
+    
+    for attempt in range(max_retries):
+        try:
+            # Navigate to the artist page
+            driver.get(artist_url)
+            
+            # Wait for the artist name to be present
+            meta_title = WebDriverWait(driver, wait_time).until(
+                lambda d: d.find_element(By.XPATH, "//meta[@property='og:title']")
+            )
+            name = meta_title.get_attribute("content")
+            
+            # Wait for the monthly listeners element
+            try:
+                listeners_elem = WebDriverWait(driver, wait_time).until(
+                    EC.presence_of_element_located((By.XPATH, "//span[contains(text(),'monthly listeners')]"))
+                )
+                monthly = listeners_elem.text.strip().split(' ')[0]
+            except TimeoutException:
+                print(Fore.YELLOW + f"Could not find monthly listeners for {artist_name}")
+                monthly = None
+            
+            return name, monthly
+            
+        except WebDriverException as e:
+            if "ERR_CONNECTION_RESET" in str(e) or "net::" in str(e):
+                if attempt < max_retries - 1:
+                    print(Fore.YELLOW + f"Network error for {artist_name}, retrying in {retry_delay}s... (attempt {attempt + 1}/{max_retries})")
+                    time.sleep(retry_delay)
+                    retry_delay *= 1.5  # Exponential backoff
+                    continue
+                else:
+                    print(Fore.RED + f"Network error for {artist_name} after {max_retries} attempts: {e}")
+                    return None, None
+            else:
+                print(Fore.RED + f"WebDriver error for {artist_name}: {e}")
+                return None, None
+        except Exception as e:
+            print(Fore.RED + f"Unexpected error for {artist_name}: {e}")
+            if attempt < max_retries - 1:
+                print(Fore.YELLOW + f"Retrying in {retry_delay}s... (attempt {attempt + 1}/{max_retries})")
+                time.sleep(retry_delay)
+                retry_delay *= 1.5
+                continue
+            else:
+                return None, None
+    
+    return None, None
 
 
 def extract_artist_id(url):
@@ -188,38 +354,57 @@ def scrape_all(driver, urls, today, bar_format, existing_artist_ids, wait_time=0
     if not urls_to_scrape:
         print(Fore.YELLOW + "No new artists to scrape - all artists already have data for today!")
         return results, failed_urls
-    
+
     is_tty = sys.stdout.isatty()
     with tqdm(total=len(urls_to_scrape), desc="Scraping artists", bar_format=bar_format if is_tty else None,
               colour="#1DB954" if is_tty else None, disable=not is_tty, dynamic_ncols=is_tty, file=sys.stdout) as pbar:
-        for url in urls_to_scrape:
-            name, monthly = scrape_artist(driver, url)
-            artist_url = url['url'] if isinstance(url, dict) else url
-            artist_id = url.get('artist_id') if isinstance(url, dict) and url.get('artist_id') else extract_artist_id(artist_url)
-            monthly_listeners = parse_listener_count(monthly)
-            if name and monthly_listeners != 0:
-                results.append({
-                    'url': artist_url,
-                    'artist_name': name,
-                    'monthly_listeners': monthly_listeners,
-                    'date': today,
-                    'artist_id': artist_id
-                })
-            else:
+        for i, url in enumerate(urls_to_scrape):
+            try:
+                name, monthly = scrape_artist(driver, url)
+                artist_url = url['url'] if isinstance(url, dict) else url
+                artist_id = url.get('artist_id') if isinstance(url, dict) and url.get('artist_id') else extract_artist_id(artist_url)
+                monthly_listeners = parse_listener_count(monthly)
+                if name and monthly_listeners != 0:
+                    results.append({
+                        'url': artist_url,
+                        'artist_name': name,
+                        'monthly_listeners': monthly_listeners,
+                        'date': today,
+                        'artist_id': artist_id
+                    })
+                else:
+                    failed_urls.append(url)
+                pbar.update(1)
+                
+                # Add progressive delay to avoid rate limiting
+                if i < len(urls_to_scrape) - 1:  # Don't wait after the last artist
+                    base_wait = max(wait_time, 0.5)  # Minimum 0.5 second wait
+                    # Add extra delay every 20 requests to be extra cautious
+                    if (i + 1) % 20 == 0:
+                        extended_wait = base_wait * 3
+                        print(f"\nPausing for {extended_wait:.1f}s to avoid rate limiting...")
+                        time.sleep(extended_wait)
+                    else:
+                        time.sleep(base_wait)
+                        
+            except Exception as e:
+                print(Fore.RED + f"Unexpected error processing {url}: {e}")
                 failed_urls.append(url)
-            pbar.update(1)
-            time.sleep(wait_time)
+                pbar.update(1)
+                time.sleep(wait_time * 2)  # Longer wait after errors
+                
     return results, failed_urls
 
 
 def retry_failed(driver, failed_urls, today):
     """
-    Retry scraping for failed URLs.
+    Retry failed URLs with longer delays between requests.
     """
+    print(Fore.CYAN + "Retrying failed URLs with increased delays...")
     results = []
     still_failed = []
     for url in failed_urls:
-        name, monthly = scrape_artist(driver, url, wait_time=15)
+        name, monthly = scrape_artist(driver, url, wait_time=10)  # Longer wait time for retries
         artist_url = url['url'] if isinstance(url, dict) else url
         artist_id = url.get('artist_id') if isinstance(url, dict) and url.get('artist_id') else extract_artist_id(artist_url)
         monthly_listeners = parse_listener_count(monthly)
@@ -233,18 +418,49 @@ def retry_failed(driver, failed_urls, today):
             })
         else:
             still_failed.append(url)
+        time.sleep(1)  # Longer delay between retry attempts
     return results, still_failed
+
+
+def parse_listener_count(monthly_str):
+    """
+    Parse the monthly listener count string and convert to integer.
+    """
+    if not monthly_str:
+        return 0
+    monthly_str = monthly_str.replace(',', '')
+    try:
+        count = int(monthly_str)
+    except ValueError:
+        print(Fore.RED + f"Could not parse listener count: {monthly_str}")
+        return 0
+    return count
+
+
+def report(results, failed_urls):
+    """
+    Print a summary report of the scraping results.
+    """
+    print("\n" + "="*60)
+    print(Fore.GREEN + f"Successfully scraped {len(results)} artists")
+    if failed_urls:
+        print(Fore.RED + f"Failed to scrape {len(failed_urls)} artists")
+        for url in failed_urls:
+            artist_name = url.get('artist_name', 'Unknown') if isinstance(url, dict) else 'Unknown'
+            print(f"  - {artist_name}")
+    print("="*60)
 
 
 def save_results(results, today, output_path=None):
     """
-    Save the scraped results to a JSON file in src/results.
+    Save the scraping results to a JSON file.
     """
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    results_dir = os.path.join(script_dir, "..", "data", "results")
     if not output_path:
-        output_path = os.path.join(results_dir, f"spotify-monthly-listeners-{today}.json")
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        results_dir = os.path.join(script_dir, "..", "data", "results")
+        os.makedirs(results_dir, exist_ok=True)
+        output_path = os.path.join(results_dir, f'spotify-monthly-listeners-{today}.json')
+    
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(results, f, ensure_ascii=False, indent=2)
     print(Fore.GREEN + f"Saved {len(results)} results to {output_path}")
@@ -266,72 +482,10 @@ def append_to_master(results, master_path=None):
     master.extend(results)
     with open(master_path, 'w', encoding='utf-8') as f:
         json.dump(master, f, ensure_ascii=False, indent=2)
-    print(Fore.GREEN + f"Appended {len(results)} results to {master_path}")
-
-
-def report(results, failed_urls):
-    """
-    Print a summary report with smart detailed output based on result count.
-    """
-    if len(results) == 0:
-        print(Style.BRIGHT + f"\nScraping complete. No new artists were scraped.")
-        print(Fore.YELLOW + "This may be because all artists already have data for today.")
-    else:
-        print(Style.BRIGHT + f"\nScraping complete. {len(results)} artists scraped successfully.")
-    
-    if results:
-        # Smart detailed output based on result count
-        if len(results) <= 20:
-            # Small batch - show all artists
-            print(Fore.GREEN + "\n✅ Successfully scraped artists:")
-            for result in results:
-                listeners_formatted = format_listener_count(result['monthly_listeners'])
-                print(Fore.GREEN + f"  • {result['artist_name']} - {listeners_formatted} monthly listeners")
-        
-        elif len(results) <= 50:
-            # Medium batch - show summary + top performers
-            sorted_results = sorted(results, key=lambda x: x['monthly_listeners'], reverse=True)
-            top_5 = sorted_results[:5]
-            
-            print(Fore.GREEN + f"\n✅ Successfully scraped {len(results)} artists")
-            print(Fore.CYAN + "\n🏆 Top 5 performers:")
-            for i, result in enumerate(top_5, 1):
-                listeners_formatted = format_listener_count(result['monthly_listeners'])
-                print(Fore.CYAN + f"  {i}. {result['artist_name']} - {listeners_formatted} monthly listeners")
-            
-            if len(results) > 5:
-                print(Fore.WHITE + f"\n... and {len(results) - 5} other artists")
-        
-        else:
-            # Large batch - show statistics only
-            sorted_results = sorted(results, key=lambda x: x['monthly_listeners'], reverse=True)
-            top_artist = sorted_results[0]
-            total_listeners = sum(result['monthly_listeners'] for result in results)
-            avg_listeners = total_listeners // len(results)
-            
-            print(Fore.GREEN + f"\n✅ Successfully scraped {len(results)} artists")
-            print(Fore.CYAN + "\n📊 Summary statistics:")
-            print(Fore.CYAN + f"  🏆 Top performer: {top_artist['artist_name']} - {format_listener_count(top_artist['monthly_listeners'])} monthly listeners")
-            print(Fore.CYAN + f"  📈 Average listeners: {format_listener_count(avg_listeners)}")
-            print(Fore.CYAN + f"  💫 Total listeners tracked: {format_listener_count(total_listeners)}")
-    
-    if failed_urls:
-        print(Fore.RED + f"\n❌ {len(failed_urls)} artists failed to scrape:")
-        # Only show first 10 failed URLs to avoid overwhelming output
-        display_failed = failed_urls[:10]
-        for url in display_failed:
-            print(Fore.RED + f"  • {url['url'] if isinstance(url, dict) else url}")
-        
-        if len(failed_urls) > 10:
-            print(Fore.RED + f"  ... and {len(failed_urls) - 10} more failed URLs")
-
-
-def now():
-    return datetime.now().strftime('%Y%m%d')
+    print(Fore.GREEN + f"Appended {len(results)} results to master file")
 
 
 def parse_args():
-    import argparse
     parser = argparse.ArgumentParser(description="Scrape Spotify artist monthly listeners.")
     parser.add_argument('--input', help="Input JSON file with artist URLs")
     parser.add_argument('--chromedriver', help="Path to chromedriver")
@@ -342,39 +496,131 @@ def parse_args():
     return parser.parse_args()
 
 
+def now():
+    """
+    Return the current date as a string in the format YYYY-MM-DD.
+    """
+    return datetime.now().strftime("%Y-%m-%d")
+
+
+def test_network_connectivity():
+    """
+    Test basic network connectivity to Spotify.
+    """
+    import urllib.request
+    import urllib.error
+    
+    try:
+        print("Testing network connectivity to Spotify...")
+        response = urllib.request.urlopen("https://open.spotify.com", timeout=10)
+        if response.getcode() == 200:
+            print(Fore.GREEN + "✓ Network connectivity to Spotify is working")
+            return True
+        else:
+            print(Fore.YELLOW + f"⚠ Spotify returned status code: {response.getcode()}")
+            return False
+    except urllib.error.URLError as e:
+        print(Fore.RED + f"✗ Network connectivity test failed: {e}")
+        print("Check your internet connection and try again.")
+        return False
+    except Exception as e:
+        print(Fore.YELLOW + f"⚠ Network test inconclusive: {e}")
+        return True  # Continue anyway
+
+
 def main():
     args = parse_args()
     today = now()
-    urls = load_urls(args.input)
+    driver = None
     
-    # Load existing listeners to prevent duplicates (unless bypassed)
-    if args.allow_duplicates:
-        print("Duplicate protection disabled - will scrape all artists")
-        existing_artist_ids = set()
-    else:
-        existing_artist_ids = load_existing_listeners(today)
-    
-    driver = setup_driver(chromedriver_path=args.chromedriver, headless=args.headless)
-    driver.get("https://open.spotify.com")
-    time.sleep(3)  # Wait for session/cookies to initialize
-
-    # Only prompt if --no-prompt is NOT set
-    if not args.no_prompt:
-        input("Please sign in to Spotify in the opened browser window, then press Enter here to continue...")
-
-    bar_format = "{l_bar}{bar}| {n_fmt}/{total_fmt} artists | Elapsed: {elapsed} | ETA: {remaining}"
     try:
+        # Test network connectivity first
+        if not test_network_connectivity():
+            print("Network connectivity issues detected. Please check your internet connection.")
+            return
+        
+        urls = load_urls(args.input)
+        
+        # Load existing listeners to prevent duplicates (unless bypassed)
+        if args.allow_duplicates:
+            print("Duplicate protection disabled - will scrape all artists")
+            existing_artist_ids = set()
+        else:
+            existing_artist_ids = load_existing_listeners(today)
+        
+        print("\nSetting up Chrome WebDriver...")
+        try:
+            driver = setup_driver(chromedriver_path=args.chromedriver, headless=args.headless)
+        except Exception as e:
+            print(Fore.RED + f"Failed to create Chrome WebDriver: {e}")
+            print("\nTroubleshooting steps:")
+            print("1. Make sure Chrome is installed and updated")
+            print("2. Download the correct ChromeDriver version from https://chromedriver.chromium.org/")
+            print("3. Try running with --headless flag")
+            print("4. Restart your computer to clear stuck processes")
+            return
+        
+        # Initial navigation with retry logic
+        max_init_retries = 3
+        for attempt in range(max_init_retries):
+            try:
+                print("Navigating to Spotify...")
+                driver.get("https://open.spotify.com")
+                time.sleep(3)  # Wait for session/cookies to initialize
+                break
+            except Exception as e:
+                if attempt < max_init_retries - 1:
+                    print(Fore.YELLOW + f"Failed to load Spotify (attempt {attempt + 1}/{max_init_retries}): {e}")
+                    print("Retrying in 5 seconds...")
+                    time.sleep(5)
+                else:
+                    print(Fore.RED + f"Failed to load Spotify after {max_init_retries} attempts: {e}")
+                    raise
+
+        # Only prompt if --no-prompt is NOT set
+        if not args.no_prompt:
+            input("Please sign in to Spotify in the opened browser window, then press Enter here to continue...")
+
+        bar_format = "{l_bar}{bar}| {n_fmt}/{total_fmt} artists | Elapsed: {elapsed} | ETA: {remaining}"
+        
         results, failed_urls = scrape_all(driver, urls, today, bar_format, existing_artist_ids)
+        
         if failed_urls:
             print(Fore.YELLOW + f"\nRetrying {len(failed_urls)} failed URLs...")
             retry_results, still_failed = retry_failed(driver, failed_urls, today)
             results.extend(retry_results)
             failed_urls = still_failed
+            
         save_results(results, today, args.output)
         append_to_master(results)
         report(results, failed_urls)
+        
+    except KeyboardInterrupt:
+        print(Fore.YELLOW + "\n\nScraping interrupted by user. Saving partial results...")
+        if 'results' in locals():
+            save_results(results, today, args.output)
+            append_to_master(results)
+            report(results, failed_urls if 'failed_urls' in locals() else [])
+        print("Partial results saved.")
+    except Exception as e:
+        print(Fore.RED + f"\nUnexpected error during scraping: {e}")
+        print("This might be due to network issues or Spotify blocking requests.")
+        print("Try running the script again later or with fewer concurrent requests.")
+        if 'results' in locals() and results:
+            print("Saving partial results...")
+            save_results(results, today, args.output)
+            append_to_master(results)
+            print("Partial results saved.")
+        raise
     finally:
-        driver.quit()
+        if driver:
+            try:
+                print("Closing browser...")
+                driver.quit()
+            except Exception as e:
+                print(Fore.YELLOW + f"Warning: Error closing browser: {e}")
+                # Force kill if normal quit fails
+                kill_chrome_processes()
 
 
 if __name__ == "__main__":
