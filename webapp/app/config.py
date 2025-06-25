@@ -21,8 +21,8 @@ class Config:
     SPOTIFY_SCOPE = "user-follow-modify user-follow-read"
     
     # Data file paths
-    DATA_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "src", "results", "spotify-monthly-listeners-master.json")
-    FOLLOWED_ARTISTS_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "src", "results", "spotify-followed-artists-master.json")
+    DATA_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "results", "spotify-monthly-listeners-master.json")
+    FOLLOWED_ARTISTS_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "results", "spotify-followed-artists-master.json")
     SUGGESTIONS_FILE = os.path.join(os.path.dirname(__file__), "..", "artist_suggestions.json")
     BLACKLIST_FILE = os.path.join(os.path.dirname(__file__), "..", "artist_blacklist.json")
     

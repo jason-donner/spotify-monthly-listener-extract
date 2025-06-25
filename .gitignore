@@ -1,22 +1,29 @@
 # Ignore virtual environment
 .venv/
+venv/
 
 # Ignore environment variables file
 .env
+webapp/.env
 
 # Ignore Spotipy and other cache files
 .cache
 .cache-*
+webapp/.cache
 
-# Ignore results directory
-src/results/
+# Ignore data results (keep structure but not actual data)
+data/results/*.json
+data/results/*.backup.*
 
 # Ignore log files
 *.log
+scraping/*.log
+scripts/*.log
 
 # Ignore Python bytecode
 __pycache__/
 *.pyc
+*.pyo
 
 # VS Code settings
 .vscode/
@@ -32,7 +39,7 @@ htmlcov/
 *.pytest_cache/
 .pytest_cache/
 
-# Jupyter Notebook checkpoints (if you ever use notebooks)
+# Jupyter Notebook checkpoints
 .ipynb_checkpoints/
 
 # Backup files
@@ -40,14 +47,13 @@ htmlcov/
 *.swp
 *.swo
 
-# ignore token cache
-app/spotify-listener-tracker/spotify_token_cache.json
+# Token cache files
+webapp/spotify_token_cache.json
+*.token
 
-# Ignore migrations directory
-migrate-artist-follows/
-
-# Ignore specific Python scripts
-src/main_account_extract.py
+# Temporary files
+tmp/
+temp/
 
 # ignore artist suggestions JSON file
 app/spotify-listener-tracker/artist_suggestions.json

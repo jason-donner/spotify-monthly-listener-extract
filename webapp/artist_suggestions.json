@@ -1,0 +1,59 @@
+[
+  {
+    "artist_name": "Youth Novel",
+    "spotify_url": "https://open.spotify.com/artist/0YxhqoWVBE2dzg1vAyE7JA",
+    "spotify_id": "0YxhqoWVBE2dzg1vAyE7JA",
+    "timestamp": "2025-06-24T15:09:11.842199",
+    "status": "processed",
+    "admin_approved": true,
+    "admin_action_date": "2025-06-24T16:17:49.041795",
+    "processed_date": "2025-06-24T18:59:07.256740"
+  },
+  {
+    "artist_name": "Brand New Test Artist",
+    "spotify_url": "https://open.spotify.com/artist/NewTestArtistID123",
+    "spotify_id": "NewTestArtistID123",
+    "timestamp": "2025-06-24T15:59:03.240619",
+    "status": "rejected",
+    "admin_approved": false,
+    "admin_action_date": "2025-06-24T16:17:30.884834"
+  },
+  {
+    "artist_name": "Another Brand New Test Artist",
+    "spotify_url": "https://open.spotify.com/artist/AnotherNewTestArtistID456",
+    "spotify_id": "AnotherNewTestArtistID456",
+    "timestamp": "2025-06-24T16:02:59.181588",
+    "status": "rejected",
+    "admin_approved": false,
+    "admin_action_date": "2025-06-24T16:17:38.790545"
+  },
+  {
+    "artist_name": "Test Admin Artist",
+    "spotify_url": "https://open.spotify.com/artist/TestAdminID123",
+    "spotify_id": "TestAdminID123",
+    "timestamp": "2025-06-24T16:15:41.293498",
+    "status": "rejected",
+    "admin_approved": false,
+    "admin_action_date": "2025-06-24T16:17:45.142304"
+  },
+  {
+    "artist_name": "The Appleseed Cast",
+    "spotify_url": "https://open.spotify.com/artist/0MkAzpDHUZpuDnWGUII4RN",
+    "spotify_id": "0MkAzpDHUZpuDnWGUII4RN",
+    "timestamp": "2025-06-24T16:20:16.428400",
+    "status": "processed",
+    "admin_approved": true,
+    "admin_action_date": "2025-06-24T16:20:22.581087",
+    "processed_date": "2025-06-24T18:59:07.256766"
+  },
+  {
+    "artist_name": "Elephant Gym",
+    "spotify_url": "https://open.spotify.com/artist/2rqNUPgkBgbhcRabUQ5C9g",
+    "spotify_id": "2rqNUPgkBgbhcRabUQ5C9g",
+    "timestamp": "2025-06-24T19:01:17.321364",
+    "status": "processed",
+    "admin_approved": true,
+    "admin_action_date": "2025-06-24T19:01:29.197627",
+    "processed_date": "2025-06-24T19:01:49.620808"
+  }
+]
