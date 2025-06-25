@@ -274,7 +274,7 @@ def main():
     
     # Use provided date or default to today
     target_date = args.date or datetime.now().strftime('%Y-%m-%d')
-    today_formatted = datetime.now().strftime('%Y%m%d')
+    today_formatted = datetime.now().strftime('%Y-%m-%d')  # Use consistent YYYY-MM-DD format
     
     print(f"Filtering artists added on: {target_date}")
     
