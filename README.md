@@ -6,6 +6,13 @@ A modern web-based system for tracking Spotify artists' monthly listener counts 
 
 ## 🎉 Recent Updates (June 2025)
 
+### Real-Time Progress Indicator (June 25, 2025)
+- **📊 Live Progress Bar** - Beautiful visual progress bar during scraping operations
+- **🎯 Artist Counter** - Shows "current / total" artists being processed in real-time
+- **👁️ Current Artist Display** - See exactly which artist is being processed
+- **⏱️ Phase Tracking** - Clear status updates (Starting, Scraping, Completed)
+- **🔄 Real-Time Updates** - Progress updates every 2 seconds with smooth animations
+
 ### Leaderboard Enhancement (June 25, 2025)
 - **📅 Current Month Focus** - Leaderboard now shows only current month data (e.g., "June 2025")
 - **🎯 Improved Date Display** - Clear month/year display instead of confusing date ranges
@@ -53,8 +60,9 @@ A modern web-based system for tracking Spotify artists' monthly listener counts 
 
 - **🎵 Web-based Artist Management** - Manage followed artists through a modern web interface
 - **📅 Current Month Leaderboard** - Track artist performance for the current calendar month (e.g., "June 2025")
+- **📊 Real-Time Progress Tracking** - Live progress bars and artist counters during scraping operations
 - **✨ Artist Suggestion System** - Users can suggest new artists to track
-- **👨‍💼 Admin Panel** - Review, approve, and manage artist suggestions
+- **👨‍💼 Admin Panel** - Review, approve, and manage artist suggestions with real-time feedback
 - **🔗 Direct Spotify Integration** - Follow artists directly from the web interface using OAuth
 - **🤖 Automated Scraping** - Collect monthly listener data automatically
 - **📊 Data Persistence** - JSON storage with master results tracking
@@ -280,6 +288,14 @@ Load Data → Display Charts → Search/Filter → Artist Details
   - "Today only" scraping shows detailed list of newly added artists
   - Full scraping shows appropriate detail level (detailed list for small batches, top performers for medium batches, statistics for large batches)
 - ✅ **Completion messages**: Admin panel displays context-aware artist count and performance statistics
+- ✅ **Real-time progress**: Live progress bar shows current artist being processed with accurate counters
+
+### Progress Indicator Issues
+- ✅ **Progress bar not showing**: Check that scraping script outputs "PROGRESS:" markers
+- ✅ **Progress stuck at 0%**: Verify scraping script is outputting progress updates
+- ✅ **No artist names showing**: Check progress parsing in job service logs
+- ✅ **Progress bar shows but no updates**: Ensure frontend is polling `/admin/scraping_status/` endpoint
+- ✅ **Progress percentage incorrect**: Verify total artist count is detected correctly from script output
 
 ### Web Interface Issues
 - ✅ Check Flask app logs in terminal

@@ -156,28 +156,59 @@ class JobService:
             # Update status to running
             update_job_status({'status': 'running'})
             
-            # Run the script
-            result = subprocess.run(
-                cmd,
-                cwd=os.path.dirname(scrape_script),
-                capture_output=True,
-                text=True,
-                timeout=self.scraping_timeout,
-                env=env
-            )
+            # Run the script with real-time progress tracking
+            progress_data = {'current': 0, 'total': 0, 'phase': 'Initializing'}
+            output_lines = []
+            error_lines = []
+            
+            try:
+                process = subprocess.Popen(
+                    cmd,
+                    cwd=os.path.dirname(scrape_script),
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    bufsize=1,
+                    universal_newlines=True,
+                    env=env
+                )
+                
+                # Read output line by line for progress tracking
+                for line in iter(process.stdout.readline, ''):
+                    if line:
+                        output_lines.append(line.rstrip())
+                        
+                        # Parse progress information from output
+                        parsed_progress = self._parse_progress_line(line.rstrip())
+                        if parsed_progress:
+                            progress_data.update(parsed_progress)
+                            update_job_status({
+                                'status': 'running',
+                                'progress': progress_data.copy()
+                            })
+                
+                # Wait for process to complete
+                return_code = process.wait(timeout=self.scraping_timeout)
+                
+            except subprocess.TimeoutExpired:
+                process.kill()
+                raise
+            
+            # Combine output
+            output = '\n'.join(output_lines)
             
             # Update job status with results
             final_status = {
-                'status': 'completed' if result.returncode == 0 else 'failed',
-                'output': result.stdout,
-                'error': result.stderr,
+                'status': 'completed' if return_code == 0 else 'failed',
+                'output': output,
+                'error': '\n'.join(error_lines) if error_lines else '',
                 'completed': True,
-                'return_code': result.returncode,
+                'return_code': return_code,
                 'completed_at': datetime.now().isoformat()
             }
             update_job_status(final_status)
             
-            logger.info(f"Scraping job {job_id} completed with return code: {result.returncode}")
+            logger.info(f"Scraping job {job_id} completed with return code: {return_code}")
         
         except subprocess.TimeoutExpired:
             update_job_status({
@@ -197,6 +228,84 @@ class JobService:
             })
             logger.error(f"Scraping job {job_id} error: {e}")
     
+    def _parse_progress_line(self, line: str) -> Optional[Dict[str, Any]]:
+        """
+        Parse a line of output for progress information.
+        
+        Expected formats:
+        - "PROGRESS: Starting scrape of 150 artists"
+        - "PROGRESS: Processing artist 45/150: Artist Name"
+        - "PROGRESS: Completed scraping 150 artists"
+        - "Skipping Artist Name - already scraped today"
+        
+        Returns:
+            Dictionary with progress data or None if no progress found
+        """
+        import re
+        
+        # Check for explicit progress markers
+        if line.startswith('PROGRESS:'):
+            progress_line = line[9:].strip()  # Remove "PROGRESS:" prefix
+            
+            # Pattern for starting: "Starting scrape of X artists"
+            start_match = re.search(r'Starting scrape of (\d+) artists', progress_line)
+            if start_match:
+                total = int(start_match.group(1))
+                return {
+                    'total': total,
+                    'current': 0,
+                    'phase': f'Starting to scrape {total} artists',
+                    'details': 'Initializing scraping process...'
+                }
+            
+            # Pattern for current progress: "Processing artist X/Y: Artist Name"
+            progress_match = re.search(r'Processing artist (\d+)/(\d+):\s*(.+)', progress_line)
+            if progress_match:
+                current = int(progress_match.group(1))
+                total = int(progress_match.group(2))
+                artist_name = progress_match.group(3).strip()
+                return {
+                    'current': current,
+                    'total': total,
+                    'phase': f'Scraping artists ({current}/{total})',
+                    'current_artist': artist_name,
+                    'details': f'Processing: {artist_name}'
+                }
+            
+            # Pattern for completion: "Completed scraping X artists"
+            completed_match = re.search(r'Completed scraping (\d+) artists', progress_line)
+            if completed_match:
+                count = int(completed_match.group(1))
+                return {
+                    'current': count,
+                    'total': count,
+                    'phase': 'Completed',
+                    'details': f'Successfully processed {count} artists'
+                }
+        
+        # Pattern for skipped artists
+        if 'Skipping' in line and 'already scraped today' in line:
+            # Extract artist name
+            artist_match = re.search(r'Skipping (.+?) - already scraped today', line)
+            if artist_match:
+                artist_name = artist_match.group(1).strip()
+                return {
+                    'details': f'Skipped: {artist_name} (already scraped)'
+                }
+        
+        # Pattern for legacy tqdm output fallback
+        tqdm_match = re.search(r'(\d+)%.*?(\d+)/(\d+)', line)
+        if tqdm_match:
+            current = int(tqdm_match.group(2))
+            total = int(tqdm_match.group(3))
+            return {
+                'current': current,
+                'total': total,
+                'phase': 'Scraping artists'
+            }
+        
+        return None
+
     def get_job_status(self, job_id: str) -> Optional[Dict[str, Any]]:
         """
         Get the status of a specific job.

@@ -1,5 +1,57 @@
 # Changelog
 
+## [2025-06-25] - Real-Time Progress Indicator
+
+### Added
+- **Real-Time Progress Bar**: Visual progress tracking during scraping operations in admin panel
+- **Live Artist Counter**: Shows current/total artists processed (e.g., "45/150")
+- **Current Artist Display**: Shows which specific artist is currently being processed
+- **Phase Tracking**: Clear status phases (Starting, Scraping, Completed)
+- **Progress Animations**: Smooth green gradient progress bar with percentage display
+
+### Technical Details
+#### Backend Changes (`webapp/app/services/job_service.py`)
+- Modified `_execute_scraping_job()` to use `subprocess.Popen` for real-time output capture
+- Added `_parse_progress_line()` method to parse progress markers from scraping output
+- Implemented line-by-line stdout processing for immediate progress updates
+- Added progress data structure: `{current, total, phase, details, current_artist}`
+
+#### Frontend Changes (`webapp/templates/admin.html`)
+- Added progress bar UI component with Bootstrap styling
+- Enhanced `updateScrapingUI()` function to handle progress data
+- Added progress elements: progressBar, progressLabel, progressCounter, progressDetails
+- Implemented conditional progress bar visibility (only shows when progress data available)
+
+#### Scraping Script Changes (`scraping/scrape.py`)
+- Added "PROGRESS:" prefixed output markers for reliable parsing
+- Enhanced artist processing output with current/total counters
+- Added structured progress messages for initialization and completion
+- Maintained backward compatibility with existing tqdm progress bars
+
+### Benefits
+1. **Better User Experience**: Users can see exactly what's happening during long scraping operations
+2. **Progress Transparency**: Clear visibility into scraping progress and current artist
+3. **Professional UI**: Modern progress indicators with smooth animations
+4. **Real-Time Feedback**: Updates every 2 seconds without blocking the interface
+5. **Error Prevention**: Users can see if scraping is stuck on a specific artist
+
+### Progress Output Format
+```
+PROGRESS: Starting scrape of 150 artists
+PROGRESS: Processing artist 1/150: Artist Name
+PROGRESS: Processing artist 2/150: Another Artist
+...
+PROGRESS: Completed scraping 150 artists
+```
+
+### UI Components
+- **Progress Bar**: Green gradient bar showing percentage completion
+- **Counter**: "45/150" format showing current position
+- **Phase Label**: "Starting to scrape 150 artists" or "Scraping artists (45/150)"
+- **Details**: "Processing: Artist Name" or "Successfully processed 150 artists"
+
+---
+
 ## [2025-06-25] - Leaderboard Current Month Enhancement
 
 ### Changed

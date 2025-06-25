@@ -416,6 +416,9 @@ def scrape_all(driver, urls, today, bar_format, existing_artist_ids, wait_time=0
     else:
         print(f"Scraping {len(urls_to_scrape)} artists")
     
+    # Output total for progress tracking
+    print(f"PROGRESS: Starting scrape of {len(urls_to_scrape)} artists")
+    
     if not urls_to_scrape:
         print(Fore.YELLOW + "No new artists to scrape - all artists already have data for today!")
         return results, failed_urls
@@ -425,6 +428,10 @@ def scrape_all(driver, urls, today, bar_format, existing_artist_ids, wait_time=0
               colour="#1DB954" if is_tty else None, disable=not is_tty, dynamic_ncols=is_tty, file=sys.stdout) as pbar:
         for i, url in enumerate(urls_to_scrape):
             try:
+                # Output progress for admin dashboard
+                artist_name = url.get('artist_name', 'Unknown') if isinstance(url, dict) else 'Unknown'
+                print(f"PROGRESS: Processing artist {i+1}/{len(urls_to_scrape)}: {artist_name}", flush=True)
+                
                 name, monthly = scrape_artist(driver, url)
                 artist_url = url['url'] if isinstance(url, dict) else url
                 artist_id = url.get('artist_id') if isinstance(url, dict) and url.get('artist_id') else extract_artist_id(artist_url)
@@ -508,6 +515,7 @@ def report(results, failed_urls):
     """
     print("\n" + "="*60)
     print(Fore.GREEN + f"Successfully scraped {len(results)} artists")
+    print(f"PROGRESS: Completed scraping {len(results)} artists")
     if failed_urls:
         print(Fore.RED + f"Failed to scrape {len(failed_urls)} artists")
         for url in failed_urls:
