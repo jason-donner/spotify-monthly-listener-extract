@@ -35,9 +35,23 @@ CHROMEDRIVER_PATH=C:\Windows\System32\chromedriver.exe
 ```
 
 ### 3. Install Dependencies
+
+The project has separate requirements for different components:
+
 ```bash
+# Create and activate virtual environment
 python -m venv .venv
 .venv\Scripts\activate  # Windows
+
+# Install main dependencies
+pip install -r requirements.txt
+
+# Install webapp dependencies
+cd webapp
+pip install -r requirements.txt
+
+# Install scraping dependencies
+cd ../scraping
 pip install -r requirements.txt
 ```
 
@@ -75,12 +89,14 @@ python app.py
 ### Data Collection
 1. **Manual Collection**: Run scripts individually
    ```bash
-   python src/get_artists.py    # Fetch followed artists
-   python src/scrape.py         # Scrape listener data
+   cd scraping
+   python get_artists.py    # Fetch followed artists
+   python scrape.py         # Scrape listener data
    ```
 
 2. **Automated Collection**: Use the batch file
    ```bash
+   cd scripts
    run_monthly_listener.bat
    ```
 
@@ -90,22 +106,45 @@ python app.py
 
 ```
 Spotify Monthly Listener Extract/
-├── 📁 app/
-│   └── 📁 spotify-listener-tracker/     # Web application
-│       ├── app.py                       # Flask application
-│       ├── templates/                   # HTML templates
-│       └── static/                      # CSS, images
-├── 📁 src/                              # Core scripts
+├── 📁 webapp/                           # Web application
+│   ├── app.py                           # Flask application
+│   ├── app/                             # App modules
+│   ├── templates/                       # HTML templates
+│   ├── static/                          # CSS, images
+│   └── requirements.txt                 # Web app dependencies
+├── 📁 scraping/                         # Core scraping scripts
 │   ├── get_artists.py                   # Fetch artist URLs
 │   ├── scrape.py                        # Scrape listener data
 │   ├── process_suggestions.py           # Process suggestions
-│   └── results/                         # Data files
+│   └── requirements.txt                 # Scraping dependencies
+├── 📁 scripts/                          # Utility scripts
+│   ├── run_monthly_listener.bat         # Automation script
+│   └── *.py                             # Various utility scripts
+├── 📁 data/
+│   └── results/                         # JSON data files
+├── 📁 docs/                             # Documentation
 ├── 📁 tests/                            # Test files
-├── run_monthly_listener.bat             # Automation script
-├── requirements.txt                     # Dependencies
-├── .env                                 # Environment variables
-└── 📄 Documentation files
+├── requirements.txt                     # Main dependencies
+└── .env                                 # Environment variables
 ```
+
+---
+
+## 📂 Project Structure Details
+
+### Core Components
+- **`webapp/`** - Flask web application with admin panel and user interface
+- **`scraping/`** - Python scripts for data collection and processing
+- **`scripts/`** - Utility scripts and automation tools
+- **`data/results/`** - JSON data files with artist and listener information
+- **`docs/`** - Documentation and guides
+- **`tests/`** - Unit tests for the application
+
+### Key Files
+- **`webapp/app.py`** - Main Flask application entry point
+- **`scraping/get_artists.py`** - Fetches followed artists from Spotify
+- **`scraping/scrape.py`** - Scrapes monthly listener data
+- **`scripts/run_monthly_listener.bat`** - Automated data collection script
 
 ---
 
@@ -168,7 +207,7 @@ Load Data → Display Charts → Search/Filter → Artist Details
 - ✅ Check Flask app logs in terminal
 - ✅ Verify all dependencies are installed
 - ✅ Check browser developer console for JavaScript errors
-- ✅ Ensure data files exist in `src/results/`
+- ✅ Ensure data files exist in `data/results/`
 
 ---
 
@@ -178,7 +217,7 @@ If you were using the old dual-account system, see `MIGRATION_GUIDE.md` for deta
 
 **Key Changes:**
 - ❌ No more main/scrape account separation
-- ❌ No more `spotify_follow_sync.py` script
+- ❌ `spotify_follow_sync.py` script is deprecated (but still present)
 - ✅ Single account for all operations
 - ✅ Web-based OAuth authentication
 - ✅ Simplified setup and configuration
