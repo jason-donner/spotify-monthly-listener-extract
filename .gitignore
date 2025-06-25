@@ -36,7 +36,6 @@ Thumbs.db
 htmlcov/
 .coverage
 *.cover
-*.pytest_cache/
 .pytest_cache/
 
 # Jupyter Notebook checkpoints
@@ -54,9 +53,3 @@ webapp/spotify_token_cache.json
 # Temporary files
 tmp/
 temp/
-
-# ignore artist suggestions JSON file
-app/spotify-listener-tracker/artist_suggestions.json
-
-# ignore artist blacklist JSON file
-app/spotify-listener-tracker/artist_blacklist.json
