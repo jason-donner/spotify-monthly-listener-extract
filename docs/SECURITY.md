@@ -23,7 +23,22 @@ cd webapp
 python app.py
 ```
 
+### Windows PowerShell
+```powershell
+# Set admin password (required)
+$env:ADMIN_PASSWORD = "your_secure_password_here"
+
+# Start the application
+cd webapp
+python app.py
+```
+
 **Important**: Never commit passwords to version control. Always use environment variables.
+
+### Common Setup Issues
+- **"Failed to fetch" Error**: Ensure `ADMIN_PASSWORD` is set before starting the app
+- **Admin Login Fails**: Restart the Flask app after setting the environment variable
+- **Routes Not Accessible**: All admin routes now require proper authentication
 
 ## Production Deployment Checklist
 - [ ] Set `FLASK_DEBUG=false` in production

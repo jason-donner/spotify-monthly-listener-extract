@@ -6,6 +6,12 @@ A modern web-based system for tracking Spotify artists' monthly listener counts 
 
 ## 🎉 Recent Updates (June 2025)
 
+### Critical Authentication Fix (June 25, 2025)
+- **🔐 Fixed "Failed to fetch" Error** - Resolved authentication issues in admin scraping endpoints
+- **🛡️ Enhanced Route Security** - Added proper `@admin_login_required` decorators to all admin endpoints
+- **⚙️ Environment Variable Support** - Fixed `ADMIN_PASSWORD` environment variable handling
+- **🚀 Stable Admin Panel** - All admin functionality now works reliably with proper authentication
+
 ### Admin Panel Improvements
 - **🚀 Streamlined "Follow & Track" Process** - One-click approval that follows artists and marks suggestions as processed
 - **🔧 Fixed Suggestion Tab Management** - Properly moves processed suggestions between tabs
