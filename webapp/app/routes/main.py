@@ -194,22 +194,25 @@ def create_main_routes(spotify_service, data_service):
         try:
             # Get artist history
             results = data_service.get_artist_history(artist_id)
-            results.sort(key=lambda x: x.get("date", ""), reverse=False)  # oldest first
             
             # Parse dates for template
             def parse_date(val):
                 if isinstance(val, datetime):
                     return val
                 if isinstance(val, str):
-                    for fmt in ("%Y-%m-%d", "%Y-%m-%dT%H:%M:%S"):
+                    for fmt in ("%Y%m%d", "%Y-%m-%d", "%Y-%m-%dT%H:%M:%S"):
                         try:
                             return datetime.strptime(val, fmt)
                         except Exception:
                             continue
                 return val
             
+            # Parse dates first, then sort
             for row in results:
                 row["date"] = parse_date(row.get("date"))
+            
+            # Sort by parsed dates (oldest first)
+            results.sort(key=lambda x: x.get("date") or datetime.min, reverse=False)
             
             # Get artist info and image
             artist_info = spotify_service.get_artist_info(artist_id)
@@ -234,7 +237,7 @@ def create_main_routes(spotify_service, data_service):
             )
         
         except Exception as e:
-            logger.error(f"Error in artist detail: {e}")
+            logger.error(f"Error in artist detail for artist_id {artist_id}: {e}")
             return render_template(
                 "artist.html",
                 results=[],
