@@ -56,6 +56,7 @@ tmp/
 temp/
 
 # Testing and debugging files (exclude temporary test files but keep legitimate tests)
+# Note: Keeps tests/ directory for unit tests, but excludes debugging/diagnostic files
 /test_*.py
 /debug_*.py
 *_test.py
