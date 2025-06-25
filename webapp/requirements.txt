@@ -5,3 +5,4 @@ pandas
 spotipy
 python-dotenv
 requests
+schedule

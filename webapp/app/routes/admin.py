@@ -21,7 +21,7 @@ def get_client_ip():
     """Get client IP address for logging"""
     return request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr)
 
-def create_admin_routes(spotify_service, data_service, job_service):
+def create_admin_routes(spotify_service, data_service, job_service, scheduler_service):
     """Create admin routes blueprint with injected services."""
     
     admin_bp = Blueprint('admin', __name__)
@@ -464,5 +464,65 @@ def create_admin_routes(spotify_service, data_service, job_service):
                 "success": False,
                 "message": f"Error: {str(e)}"
             })
+    
+    @admin_bp.route("/scheduler/status")
+    def admin_scheduler_status():
+        """Get scheduler status."""
+        try:
+            status = scheduler_service.get_status()
+            return jsonify({"success": True, "status": status})
+        
+        except Exception as e:
+            logger.error(f"Error getting scheduler status: {e}")
+            return jsonify({"success": False, "message": f"Error: {str(e)}"})
+    
+    @admin_bp.route("/scheduler/set_time", methods=["POST"])
+    def admin_set_schedule_time():
+        """Set the daily scraping schedule time."""
+        try:
+            data = request.get_json()
+            time_str = data.get("time")
+            
+            if not time_str:
+                return jsonify({"success": False, "message": "Time is required"})
+            
+            scheduler_service.set_schedule_time(time_str)
+            client_ip = get_client_ip()
+            admin_security_logger.info(f"Admin updated daily scraping schedule to {time_str} from IP: {client_ip}")
+            
+            return jsonify({
+                "success": True,
+                "message": f"Daily scraping scheduled for {time_str}",
+                "status": scheduler_service.get_status()
+            })
+        
+        except ValueError as e:
+            return jsonify({"success": False, "message": "Invalid time format. Use HH:MM (24-hour format)"})
+        except Exception as e:
+            logger.error(f"Error setting schedule time: {e}")
+            return jsonify({"success": False, "message": f"Error: {str(e)}"})
+    
+    @admin_bp.route("/scheduler/run_now", methods=["POST"])
+    def admin_run_scheduled_scrape_now():
+        """Trigger the scheduled scraping job immediately."""
+        try:
+            # Use the same logic as the scheduled job
+            job_id = job_service.create_scraping_job(headless=True, today_only=False)
+            
+            if job_service.start_scraping_job(job_id):
+                client_ip = get_client_ip()
+                admin_security_logger.info(f"Admin triggered immediate full scraping from IP: {client_ip}")
+                
+                return jsonify({
+                    "success": True,
+                    "message": "Full scraping started immediately",
+                    "job_id": job_id
+                })
+            else:
+                return jsonify({"success": False, "message": "Failed to start scraping job"})
+        
+        except Exception as e:
+            logger.error(f"Error running immediate scrape: {e}")
+            return jsonify({"success": False, "message": f"Error: {str(e)}"})
     
     return admin_bp

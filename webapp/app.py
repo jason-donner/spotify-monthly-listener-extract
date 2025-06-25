@@ -20,6 +20,7 @@ load_dotenv()
 # Import our modular components
 from app.config import Config
 from app.services import SpotifyService, DataService, JobService
+from app.services.scheduler_service import SchedulerService
 from app.routes.main import create_main_routes
 from app.routes.admin import create_admin_routes
 
@@ -104,14 +105,18 @@ def create_app():
         scraping_timeout=Config.SCRAPING_TIMEOUT
     )
     
+    # Initialize scheduler service
+    scheduler_service = SchedulerService(job_service)
+    
     # Store services in app context for access in routes
     app.spotify_service = spotify_service
     app.data_service = data_service
     app.job_service = job_service
+    app.scheduler_service = scheduler_service
     
     # Register blueprints
     main_bp = create_main_routes(spotify_service, data_service)
-    admin_bp = create_admin_routes(spotify_service, data_service, job_service)
+    admin_bp = create_admin_routes(spotify_service, data_service, job_service, scheduler_service)
     
     app.register_blueprint(main_bp)
     app.register_blueprint(admin_bp, url_prefix='/admin')
@@ -160,6 +165,9 @@ def create_app():
 
     # Clean up old job files on startup
     job_service.cleanup_old_jobs()
+    
+    # Start the scheduler service
+    scheduler_service.start_scheduler()
     
     return app
 

@@ -103,6 +103,54 @@
                 </div>
             </div>
             
+            <!-- Automated Scheduling Controls -->
+            <div class="card mb-4" style="background: rgba(20, 20, 30, 0.95); border: 1px solid rgba(255, 255, 255, 0.1);">
+                <div class="card-header" style="background: rgba(40, 40, 60, 0.8);">
+                    <h5 class="mb-0" style="color: #ffd700;">
+                        <i class="fas fa-clock"></i> Automated Daily Scraping
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <p class="text-light">Schedule automatic daily scraping to run at a specific time.</p>
+                            
+                            <!-- Scheduler Status -->
+                            <div class="alert alert-secondary" id="schedulerStatus" role="alert" style="background-color: rgba(108, 117, 125, 0.2); border-color: rgba(108, 117, 125, 0.5); color: #ffffff;">
+                                <i class="fas fa-info-circle" style="color: #6c757d;"></i> <strong>Status:</strong> <span id="schedulerStatusText">Loading...</span>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        <label for="scheduleTime" class="form-label text-light">Daily Run Time (24-hour format)</label>
+                                        <input type="time" class="form-control" id="scheduleTime" value="02:00" style="background: rgba(40, 40, 60, 0.8); border: 1px solid rgba(255, 255, 255, 0.3); color: white;">
+                                        <small class="text-white" style="opacity: 0.8;">Recommended: Early morning hours (e.g., 2:00 AM)</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        <label class="form-label text-light">Next Scheduled Run</label>
+                                        <div class="form-control" style="background: rgba(40, 40, 60, 0.5); border: 1px solid rgba(255, 255, 255, 0.3); color: #e9ecef;" id="nextRunTime">
+                                            Not scheduled
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <button id="updateScheduleBtn" class="btn btn-warning mb-2" onclick="updateSchedule()">
+                                <i class="fas fa-clock"></i> Update Schedule
+                            </button>
+                            <br>
+                            <button id="runNowBtn" class="btn btn-info" onclick="runScheduledScrapeNow()">
+                                <i class="fas fa-play-circle"></i> Run Full Scrape Now
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
             <!-- Filter tabs -->
             <ul class="nav nav-tabs mb-3" id="suggestionTabs" role="tablist">
                 <li class="nav-item" role="presentation">
@@ -873,6 +921,118 @@ function formatScrapingOutput(output) {
     
     return formattedOutput;
 }
+
+// Scheduler Management Functions
+function loadSchedulerStatus() {
+    fetch('/admin/scheduler/status')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const status = data.status;
+                const statusElement = document.getElementById('schedulerStatusText');
+                const nextRunElement = document.getElementById('nextRunTime');
+                const timeInput = document.getElementById('scheduleTime');
+                
+                if (status.running) {
+                    statusElement.innerHTML = `<span style="color: #28a745;">Running</span> - Daily scraping at ${status.schedule_time}`;
+                    nextRunElement.textContent = status.next_run ? new Date(status.next_run).toLocaleString() : 'Not scheduled';
+                    timeInput.value = status.schedule_time;
+                } else {
+                    statusElement.innerHTML = '<span style="color: #dc3545;">Stopped</span>';
+                    nextRunElement.textContent = 'Not scheduled';
+                }
+            } else {
+                document.getElementById('schedulerStatusText').textContent = 'Error loading status';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading scheduler status:', error);
+            document.getElementById('schedulerStatusText').textContent = 'Error loading status';
+        });
+}
+
+function updateSchedule() {
+    const timeInput = document.getElementById('scheduleTime');
+    const time = timeInput.value;
+    const btn = document.getElementById('updateScheduleBtn');
+    
+    if (!time) {
+        showToast('Error', 'Please select a time', 'danger');
+        return;
+    }
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+    
+    fetch('/admin/scheduler/set_time', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ time: time })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Success', data.message, 'success');
+            loadSchedulerStatus(); // Refresh status
+        } else {
+            showToast('Error', data.message, 'danger');
+        }
+    })
+    .catch(error => {
+        showToast('Error', 'Failed to update schedule', 'danger');
+        console.error('Error:', error);
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-clock"></i> Update Schedule';
+    });
+}
+
+function runScheduledScrapeNow() {
+    const btn = document.getElementById('runNowBtn');
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting...';
+    
+    fetch('/admin/scheduler/run_now', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Success', data.message, 'success');
+            
+            // Switch to scraping tab to show progress
+            const scrapingSection = document.querySelector('[href="#scraping"]');
+            if (scrapingSection) {
+                scrapingSection.click();
+            }
+        } else {
+            showToast('Error', data.message, 'danger');
+        }
+    })
+    .catch(error => {
+        showToast('Error', 'Failed to start scraping', 'danger');
+        console.error('Error:', error);
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-play-circle"></i> Run Full Scrape Now';
+    });
+}
+
+// Load scheduler status when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    loadSchedulerStatus();
+    
+    // Refresh scheduler status every 30 seconds
+    setInterval(loadSchedulerStatus, 30000);
+});
 
 // ...existing code...
 </script>
