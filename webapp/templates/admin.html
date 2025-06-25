@@ -104,8 +104,8 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-8">
-                            <p class="text-light">Process approved suggestions by adding them to the followed artists list and marking them as processed.</p>
-                            <p class="text-muted small">
+                            <p class="text-white">Process approved suggestions by adding them to the followed artists list and marking them as processed.</p>
+                            <p class="text-white small">
                                 <strong>What this does:</strong><br>
                                 • Adds approved artists to the tracking system<br>
                                 • Automatically follows artists marked "Follow on Spotify" (if authenticated)<br>
@@ -256,7 +256,7 @@ function handleUrlParams() {
 }
 
 function checkAuthStatus() {
-    fetch('/auth_status')
+    fetch('/admin/auth_status')
         .then(response => response.json())
         .then(data => {
             isAuthenticated = data.authenticated;
@@ -319,16 +319,16 @@ function updateAuthStatus() {
 }
 
 function loginWithSpotify() {
-    window.location.href = '/login';
+    window.location.href = '/admin/login';
 }
 
 function forceLoginWithSpotify() {
     // Add a parameter to force account selection
-    window.location.href = '/login?force=true';
+    window.location.href = '/admin/login?force=true';
 }
 
 function logout() {
-    window.location.href = '/logout';
+    window.location.href = '/admin/logout';
 }
 
 function loadSuggestions() {

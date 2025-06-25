@@ -18,6 +18,52 @@ def create_admin_routes(spotify_service, data_service, job_service):
         """Admin page to review and manage artist suggestions."""
         return render_template("admin.html")
     
+    @admin_bp.route("/login")
+    def login():
+        """Initiate Spotify OAuth login"""
+        # Check if force login is requested
+        force = request.args.get('force', 'false').lower() == 'true'
+        
+        try:
+            auth_url = spotify_service.get_auth_url(force_login=force)
+            return redirect(auth_url)
+        except Exception as e:
+            logger.error(f"Login error: {e}")
+            return redirect(url_for('admin.admin') + '?error=auth_failed')
+    
+    @admin_bp.route("/callback")
+    def callback():
+        """Handle Spotify OAuth callback"""
+        code = request.args.get('code')
+        if not code:
+            return redirect(url_for('admin.admin') + '?error=auth_cancelled')
+        
+        try:
+            success = spotify_service.handle_oauth_callback(code)
+            if success:
+                return redirect(url_for('admin.admin') + '?success=logged_in')
+            else:
+                return redirect(url_for('admin.admin') + '?error=auth_failed')
+        except Exception as e:
+            logger.error(f"OAuth callback error: {e}")
+            return redirect(url_for('admin.admin') + '?error=auth_failed')
+    
+    @admin_bp.route("/logout")
+    def logout():
+        """Clear Spotify authentication"""
+        spotify_service.logout()
+        return redirect(url_for('admin.admin') + '?success=logged_out')
+    
+    @admin_bp.route("/auth_status")
+    def auth_status():
+        """Check if user is authenticated with Spotify"""
+        try:
+            auth_info = spotify_service.get_auth_status()
+            return jsonify(auth_info)
+        except Exception as e:
+            logger.error(f"Auth status error: {e}")
+            return jsonify({"authenticated": False})
+    
     @admin_bp.route("/suggestions")
     def admin_suggestions():
         """API endpoint to get all suggestions for admin review."""

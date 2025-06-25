@@ -60,6 +60,75 @@ class SpotifyService:
         
         return spotipy.Spotify(auth=token_info['access_token'])
     
+    def get_auth_url(self, force_login=False):
+        """Get Spotify OAuth authorization URL."""
+        if force_login:
+            # Clear any existing session data
+            session.pop('spotify_token', None)
+            # Create OAuth with show_dialog=True to force account selection
+            sp_oauth = self.get_oauth(show_dialog=True)
+        else:
+            sp_oauth = self.get_oauth()
+        
+        return sp_oauth.get_authorize_url()
+    
+    def handle_oauth_callback(self, code):
+        """Handle OAuth callback and save token to session."""
+        try:
+            sp_oauth = self.get_oauth()
+            token_info = sp_oauth.get_access_token(code)
+            self.save_token_to_session(token_info)
+            return True
+        except Exception as e:
+            logger.error(f"OAuth callback error: {e}")
+            return False
+    
+    def logout(self):
+        """Clear Spotify authentication."""
+        session.pop('spotify_token', None)
+    
+    def get_auth_status(self):
+        """Check if user is authenticated with Spotify and return status."""
+        token_info = self.get_token_from_session()
+        
+        if not token_info:
+            return {"authenticated": False}
+        
+        sp_oauth = self.get_oauth()
+        
+        # Check if token is expired and refresh if needed
+        if sp_oauth.is_token_expired(token_info):
+            try:
+                token_info = sp_oauth.refresh_access_token(token_info['refresh_token'])
+                self.save_token_to_session(token_info)
+            except Exception as e:
+                logger.error(f"Token refresh failed: {e}")
+                session.pop('spotify_token', None)
+                return {"authenticated": False}
+        
+        # Test the token by making a simple API call
+        try:
+            sp = spotipy.Spotify(auth=token_info['access_token'])
+            user = sp.current_user()
+            
+            # Debug logging to see which account we're actually authenticated as
+            logger.info(f"Authenticated user ID: {user.get('id')}")
+            logger.info(f"Authenticated user display name: {user.get('display_name')}")
+            logger.info(f"User email: {user.get('email', 'Not available')}")
+            
+            return {
+                "authenticated": True,
+                "user": {
+                    "id": user.get('id'),
+                    "display_name": user.get('display_name'),
+                    "images": user.get('images', [])
+                }
+            }
+        except Exception as e:
+            logger.error(f"Auth status error: {e}")
+            session.pop('spotify_token', None)
+            return {"authenticated": False}
+    
     def fetch_artist_image(self, artist_id, bearer_token=None):
         """
         Fetch artist image from Spotify API with caching.
