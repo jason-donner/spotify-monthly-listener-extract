@@ -202,6 +202,38 @@ def create_admin_routes(spotify_service, data_service, job_service):
                         suggestion["admin_approved"] = True
                         suggestion["admin_action_date"] = datetime.now().isoformat()
                         admin_security_logger.info(f"Admin approved artist '{artist_name}' for tracking only from IP: {client_ip}")
+                    elif action == "process_track_only":
+                        # Immediately process for tracking (skip the "approved" intermediate state)
+                        suggestion["status"] = "processed"
+                        suggestion["admin_approved"] = True
+                        suggestion["admin_action_date"] = datetime.now().isoformat()
+                        suggestion["processed_date"] = datetime.now().isoformat()
+                        
+                        # Add to followed artists file
+                        artist_id = suggestion.get("spotify_id")
+                        if artist_id:
+                            followed_artists = data_service.load_followed_artists()
+                            
+                            # Check if already in list
+                            already_exists = any(
+                                followed.get("artist_id") == artist_id 
+                                for followed in followed_artists
+                            )
+                            
+                            if not already_exists:
+                                new_artist = {
+                                    "artist_name": artist_name,
+                                    "artist_id": artist_id,
+                                    "url": f"https://open.spotify.com/artist/{artist_id}",
+                                    "source": "admin_track_only",
+                                    "date_added": datetime.now().strftime("%Y-%m-%d"),
+                                    "removed": False
+                                }
+                                followed_artists.append(new_artist)
+                                data_service.save_followed_artists(followed_artists)
+                                logger.info(f"Added {artist_name} to followed artists file (track only)")
+                        
+                        admin_security_logger.info(f"Admin processed artist '{artist_name}' for tracking only (immediate) from IP: {client_ip}")
                     elif action == "reject":
                         suggestion["status"] = "rejected"
                         suggestion["admin_approved"] = False

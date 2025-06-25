@@ -129,12 +129,11 @@ export ADMIN_PASSWORD="your_secure_password_here"
 2. **OAuth Setup**: After login, click "Login with Spotify" to authenticate API access
 3. **Review Suggestions**: View pending, approved, and rejected suggestions
 4. **Process Suggestions**: 
-   - **🎵 Follow & Track** - Immediately follows artist on Spotify and adds to tracking (one-step process)
-   - **👁️ Track Only** - Adds to tracking without following on Spotify
+   - **🎵 Follow & Track** - Immediately follows artist on Spotify and adds to tracking (direct to processed)
+   - **👁️ Track Only** - Adds to tracking without following on Spotify (direct to processed)
    - **✗ Reject** - Rejects the suggestion
 5. **Tab Management**: Suggestions automatically move between tabs based on status:
    - **Pending Review** - New suggestions awaiting admin action
-   - **Approved** - Suggestions approved but not yet processed
    - **Processed** - Completed suggestions (followed/tracked)
    - **Rejected** - Declined suggestions
 
@@ -230,7 +229,7 @@ Spotify Monthly Listener Extract/
 
 ### 1. Artist Management
 ```
-User Suggestion → Admin Review → Approval → Follow on Spotify → Add to Tracking
+User Suggestion → Admin Review → Direct Processing (Follow & Track OR Track Only) → Processed
 ```
 
 ### 2. Data Collection

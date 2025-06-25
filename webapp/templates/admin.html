@@ -99,70 +99,6 @@
                 </div>
             </div>
             
-            <!-- Suggestion Processing Section -->
-            <div class="card mb-4" style="background: rgba(40, 40, 60, 0.95); border: 1px solid rgba(255, 193, 7, 0.3);">
-                <div class="card-header" style="background: rgba(255, 193, 7, 0.1); border-bottom: 1px solid rgba(255, 193, 7, 0.3);">
-                    <h5 class="mb-0" style="color: #ffc107;">
-                        <i class="fas fa-cogs"></i> Process Approved Suggestions
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-8">
-                            <p class="text-white">Process approved suggestions by adding them to the followed artists list and marking them as processed.</p>
-                            <p class="text-white small">
-                                <strong>What this does:</strong><br>
-                                • Adds approved artists to the tracking system<br>
-                                • Automatically follows artists marked "Follow on Spotify" (if authenticated)<br>
-                                • Moves processed suggestions from "Approved" to "Processed" tab<br>
-                                • Creates entries in the followed artists master list
-                            </p>
-                        </div>
-                        <div class="col-md-4 text-end">
-                            <button id="processBtn" class="btn btn-warning btn-lg" onclick="processSuggestions()">
-                                <i class="fas fa-cogs"></i> Process Suggestions
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- Processing Status -->
-                    <div id="processingStatus" style="display: none;" class="mt-3">
-                        <div class="alert alert-info" id="processingAlert">
-                            <div class="d-flex align-items-center">
-                                <div class="spinner-border spinner-border-sm me-2" role="status" id="processingSpinner">
-                                    <span class="visually-hidden">Loading...</span>
-                                </div>
-                                <span id="processingStatusText">Processing suggestions...</span>
-                            </div>
-                        </div>
-                        
-                        <!-- Processing Output -->
-                        <div id="processingOutput" style="display: none;">
-                            <div class="card" style="background: rgba(20, 20, 30, 0.95); border: 1px solid rgba(255, 255, 255, 0.1);">
-                                <div class="card-header">
-                                    <h6 class="mb-0 text-light">Processing Output</h6>
-                                </div>
-                                <div class="card-body">
-                                    <pre id="processingOutputText" class="text-light" style="max-height: 300px; overflow-y: auto; font-size: 0.8rem;"></pre>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Processing Error -->
-                        <div id="processingError" style="display: none;">
-                            <div class="card" style="background: rgba(20, 20, 30, 0.95); border: 1px solid rgba(220, 53, 69, 0.3);">
-                                <div class="card-header" style="background: rgba(220, 53, 69, 0.1);">
-                                    <h6 class="mb-0 text-danger">Processing Error</h6>
-                                </div>
-                                <div class="card-body">
-                                    <pre id="processingErrorText" class="text-danger" style="max-height: 200px; overflow-y: auto; font-size: 0.8rem;"></pre>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
             <!-- Filter tabs -->
             <ul class="nav nav-tabs mb-3" id="suggestionTabs" role="tablist">
                 <li class="nav-item" role="presentation">
@@ -171,18 +107,13 @@
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="approved-tab" data-bs-toggle="tab" data-bs-target="#approved" type="button" role="tab">
-                        Approved <span class="badge bg-success" id="approved-count">0</span>
+                    <button class="nav-link" id="processed-tab" data-bs-toggle="tab" data-bs-target="#processed" type="button" role="tab">
+                        Processed <span class="badge bg-success" id="processed-count">0</span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="rejected-tab" data-bs-toggle="tab" data-bs-target="#rejected" type="button" role="tab">
                         Rejected <span class="badge bg-danger" id="rejected-count">0</span>
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="processed-tab" data-bs-toggle="tab" data-bs-target="#processed" type="button" role="tab">
-                        Processed <span class="badge bg-secondary" id="processed-count">0</span>
                     </button>
                 </li>
             </ul>
@@ -192,14 +123,11 @@
                 <div class="tab-pane fade show active" id="pending" role="tabpanel">
                     <div id="pending-suggestions"></div>
                 </div>
-                <div class="tab-pane fade" id="approved" role="tabpanel">
-                    <div id="approved-suggestions"></div>
+                <div class="tab-pane fade" id="processed" role="tabpanel">
+                    <div id="processed-suggestions"></div>
                 </div>
                 <div class="tab-pane fade" id="rejected" role="tabpanel">
                     <div id="rejected-suggestions"></div>
-                </div>
-                <div class="tab-pane fade" id="processed" role="tabpanel">
-                    <div id="processed-suggestions"></div>
                 </div>
             </div>
             
@@ -368,13 +296,11 @@ function loadSuggestions() {
 }
 
 function renderSuggestions() {
-    const pending = suggestions.filter(s => !s.admin_approved && (!s.status || s.status === 'pending' || s.status === 'approved'));
-    const approved = suggestions.filter(s => s.admin_approved === true && s.status !== 'processed' && s.status !== 'rejected');
+    const pending = suggestions.filter(s => !s.admin_approved && (!s.status || s.status === 'pending'));
     const rejected = suggestions.filter(s => s.status === 'rejected');
     const processed = suggestions.filter(s => s.status === 'processed');
     
     document.getElementById('pending-suggestions').innerHTML = renderSuggestionList(pending, 'pending');
-    document.getElementById('approved-suggestions').innerHTML = renderSuggestionList(approved, 'approved');
     document.getElementById('rejected-suggestions').innerHTML = renderSuggestionList(rejected, 'rejected');
     document.getElementById('processed-suggestions').innerHTML = renderSuggestionList(processed, 'processed');
 }
@@ -440,13 +366,11 @@ function renderSuggestionList(suggestionList, type) {
 }
 
 function updateCounts() {
-    const pending = suggestions.filter(s => !s.admin_approved && (!s.status || s.status === 'pending' || s.status === 'approved')).length;
-    const approved = suggestions.filter(s => s.admin_approved === true && s.status !== 'processed' && s.status !== 'rejected').length;
+    const pending = suggestions.filter(s => !s.admin_approved && (!s.status || s.status === 'pending')).length;
     const rejected = suggestions.filter(s => s.status === 'rejected').length;
     const processed = suggestions.filter(s => s.status === 'processed').length;
     
     document.getElementById('pending-count').textContent = pending;
-    document.getElementById('approved-count').textContent = approved;
     document.getElementById('rejected-count').textContent = rejected;
     document.getElementById('processed-count').textContent = processed;
 }
@@ -456,7 +380,9 @@ function approveForFollow(suggestionId, artistName) {
 }
 
 function approveForTracking(suggestionId, artistName) {
-    adminAction(suggestionId, 'approve_track', `Approved ${artistName} for tracking only`);
+    if (confirm(`Add "${artistName}" to tracking without following on Spotify?`)) {
+        adminAction(suggestionId, 'process_track_only', `Added ${artistName} to tracking`);
+    }
 }
 
 function rejectSuggestion(suggestionId, artistName) {
@@ -942,87 +868,6 @@ function formatScrapingOutput(output) {
     );
     
     return formattedOutput;
-}
-
-// Processing functionality
-function processSuggestions() {
-    const btn = document.getElementById('processBtn');
-    const status = document.getElementById('processingStatus');
-    const alert = document.getElementById('processingAlert');
-    const statusText = document.getElementById('processingStatusText');
-    const spinner = document.getElementById('processingSpinner');
-    
-    // Disable button and show status
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-    status.style.display = 'block';
-    alert.className = 'alert alert-info';
-    statusText.textContent = 'Processing approved suggestions...';
-    spinner.style.display = 'inline-block';
-    
-    // Hide previous outputs
-    document.getElementById('processingOutput').style.display = 'none';
-    document.getElementById('processingError').style.display = 'none';
-    
-    fetch('/admin/process_suggestions', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        // Reset button
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-cogs"></i> Process Suggestions';
-        spinner.style.display = 'none';
-        
-        if (data.success) {
-            alert.className = 'alert alert-success';
-            statusText.textContent = 'Processing completed successfully!';
-            
-            // Show output if available
-            if (data.output && data.output.trim()) {
-                document.getElementById('processingOutputText').textContent = data.output;
-                document.getElementById('processingOutput').style.display = 'block';
-            }
-            
-            showToast('Success', data.message, 'success');
-            
-            // Reload suggestions to update the UI
-            setTimeout(() => {
-                loadSuggestions();
-            }, 1000);
-        } else {
-            alert.className = 'alert alert-danger';
-            statusText.textContent = 'Processing failed!';
-            
-            // Show error if available
-            if (data.error && data.error.trim()) {
-                document.getElementById('processingErrorText').textContent = data.error;
-                document.getElementById('processingError').style.display = 'block';
-            }
-            
-            // Show output if available (might contain useful info even on failure)
-            if (data.output && data.output.trim()) {
-                document.getElementById('processingOutputText').textContent = data.output;
-                document.getElementById('processingOutput').style.display = 'block';
-            }
-            
-            showToast('Error', data.message, 'danger');
-        }
-    })
-    .catch(error => {
-        // Reset button
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-cogs"></i> Process Suggestions';
-        spinner.style.display = 'none';
-        
-        alert.className = 'alert alert-danger';
-        statusText.textContent = 'Processing failed due to network error!';
-        
-        showToast('Error', 'Failed to process suggestions: ' + error.message, 'danger');
-    });
 }
 
 // ...existing code...
