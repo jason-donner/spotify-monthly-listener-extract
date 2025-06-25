@@ -54,3 +54,16 @@ webapp/spotify_token_cache.json
 # Temporary files
 tmp/
 temp/
+
+# Testing and debugging files (exclude temporary test files but keep legitimate tests)
+/test_*.py
+/debug_*.py
+*_test.py
+*_debug.py
+diagnostic*.py
+*diagnostic*.py
+
+# Chrome/WebDriver test files in scraping directory
+scraping/test_*.py
+scraping/chrome_diagnostic.py
+scraping/*_test.py
