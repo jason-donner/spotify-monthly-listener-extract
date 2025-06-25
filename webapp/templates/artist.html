@@ -97,13 +97,13 @@
                         <th>% Change</th>
                         <th>Monthly Listeners</th>
                     </tr>
-                    {% for row in results %}
+                    {% for row in results|reverse %}
                     <tr>
                         <td>{{ row.date | datetimeformat('%B %d, %Y') }}</td>
                         <td>
-                            {% if not loop.first %}
-                                {% set prev_idx = loop.index0 - 1 %}
-                                {% set prev = results[prev_idx] %}
+                            {% set original_idx = results|length - loop.index %}
+                            {% if original_idx > 0 %}
+                                {% set prev = results[original_idx - 1] %}
                                 {% set diff = row.monthly_listeners - prev.monthly_listeners %}
                                 {% if diff > 0 %}
                                     <span class="positive-change">+{{ "{:,}".format(diff) }}</span>
@@ -117,14 +117,18 @@
                             {% endif %}
                         </td>
                         <td>
-                            {% if not loop.first and prev.monthly_listeners != 0 %}
-                                {% set prev_idx = loop.index0 - 1 %}
-                                {% set prev = results[prev_idx] %}
-                                {% set pct = ((row.monthly_listeners - prev.monthly_listeners) / prev.monthly_listeners) * 100 %}
-                                {% if pct > 0 %}
-                                    <span class="positive-change">+{{ '%.2f'|format(pct) }}%</span>
-                                {% elif pct < 0 %}
-                                    <span class="negative-change">{{ '%.2f'|format(pct) }}%</span>
+                            {% set original_idx = results|length - loop.index %}
+                            {% if original_idx > 0 %}
+                                {% set prev = results[original_idx - 1] %}
+                                {% if prev.monthly_listeners != 0 %}
+                                    {% set pct = ((row.monthly_listeners - prev.monthly_listeners) / prev.monthly_listeners) * 100 %}
+                                    {% if pct > 0 %}
+                                        <span class="positive-change">+{{ '%.2f'|format(pct) }}%</span>
+                                    {% elif pct < 0 %}
+                                        <span class="negative-change">{{ '%.2f'|format(pct) }}%</span>
+                                    {% else %}
+                                        <span class="neutral-change">—</span>
+                                    {% endif %}
                                 {% else %}
                                     <span class="neutral-change">—</span>
                                 {% endif %}

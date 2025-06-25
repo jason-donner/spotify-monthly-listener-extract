@@ -105,5 +105,15 @@
     "admin_approved": true,
     "admin_action_date": "2025-06-25T00:24:45.000000",
     "processed_date": "2025-06-25T00:24:45.000000"
+  },
+  {
+    "artist_name": "It Looks Sad.",
+    "spotify_url": "https://open.spotify.com/artist/24M8W1AklCxyWTKjrJZDQ8",
+    "spotify_id": "24M8W1AklCxyWTKjrJZDQ8",
+    "timestamp": "2025-06-25T01:07:09.377131",
+    "status": "processed",
+    "admin_approved": true,
+    "admin_action_date": "2025-06-25T01:32:45.235464",
+    "processed_date": "2025-06-25T01:32:45.235487"
   }
 ]

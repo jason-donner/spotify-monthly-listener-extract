@@ -10,6 +10,7 @@ This is the main Flask application that ties together all the modular components
 from flask import Flask
 import os
 from dotenv import load_dotenv
+from datetime import timedelta
 
 # Load environment variables
 load_dotenv()
@@ -27,6 +28,10 @@ def create_app():
     # Load configuration
     app.config.from_object(Config)
     Config.validate()  # Validate required settings
+    
+    # Configure sessions for admin authentication
+    app.secret_key = os.getenv('SECRET_KEY', 'new-secret-key-2025-reset')  # Changed to invalidate old sessions
+    app.permanent_session_lifetime = timedelta(hours=24)  # Admin session lasts 24 hours
     
     # Initialize services
     spotify_service = SpotifyService(

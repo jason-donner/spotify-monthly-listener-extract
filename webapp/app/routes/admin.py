@@ -2,23 +2,84 @@
 Admin routes for the Spotify Listener Tracker app.
 """
 
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, session
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, session, current_app
 from datetime import datetime
 import logging
+import hashlib
 
 logger = logging.getLogger(__name__)
+
+# Simple admin password - change this to your preferred password
+ADMIN_PASSWORD = "spotify_admin_2025"  # Change this!
 
 def create_admin_routes(spotify_service, data_service, job_service):
     """Create admin routes blueprint with injected services."""
     
     admin_bp = Blueprint('admin', __name__)
     
+    def require_admin_auth():
+        """Check if user is authenticated as admin"""
+        return session.get('admin_authenticated') == True
+    
+    def admin_login_required(f):
+        """Decorator to require admin authentication"""
+        def decorated_function(*args, **kwargs):
+            if not require_admin_auth():
+                return redirect(url_for('admin.admin_login_page'))
+            return f(*args, **kwargs)
+        decorated_function.__name__ = f.__name__
+        return decorated_function
+    
+    @admin_bp.route("/admin_login")
+    def admin_login_page():
+        """Admin login page"""
+        return render_template("admin_login.html")
+    
+    @admin_bp.route("/admin_auth", methods=["POST"])
+    def admin_authenticate():
+        """Handle admin password submission"""
+        password = request.form.get('password')
+        if password == ADMIN_PASSWORD:
+            session['admin_authenticated'] = True
+            session.permanent = True  # Keep session active
+            return redirect(url_for('admin.admin'))
+        else:
+            return render_template("admin_login.html", error="Invalid password")
+    
+    @admin_bp.route("/logout")
+    def admin_logout():
+        """Logout from admin and redirect immediately to home page"""
+        session.clear()  # Clear entire session
+        return redirect('/')  # Direct redirect to home, no intermediate page
+    
+    @admin_bp.route("/debug_session")
+    def debug_session():
+        """Debug route to check session status"""
+        return jsonify({
+            "session_contents": dict(session),
+            "admin_authenticated": session.get('admin_authenticated'),
+            "require_admin_auth": require_admin_auth()
+        })
+    
+    @admin_bp.route("/check_admin_auth")
+    def check_admin_auth():
+        """API endpoint to check if user is admin authenticated"""
+        return jsonify({"admin_authenticated": require_admin_auth()})
+    
     @admin_bp.route("/")
+    @admin_login_required
     def admin():
         """Admin page to review and manage artist suggestions."""
+        # Check for force logout parameter
+        if request.args.get('force_logout') == 'true':
+            session.clear()
+            response = redirect(url_for('admin.admin_login_page'))
+            response.set_cookie(current_app.session_cookie_name, '', expires=0)
+            return response
         return render_template("admin.html")
     
     @admin_bp.route("/login")
+    @admin_login_required
     def login():
         """Initiate Spotify OAuth login"""
         # Check if force login is requested
@@ -48,9 +109,9 @@ def create_admin_routes(spotify_service, data_service, job_service):
             logger.error(f"OAuth callback error: {e}")
             return redirect(url_for('admin.admin') + '?error=auth_failed')
     
-    @admin_bp.route("/logout")
-    def logout():
-        """Clear Spotify authentication"""
+    @admin_bp.route("/spotify_logout")
+    def spotify_logout():
+        """Clear Spotify authentication only"""
         spotify_service.logout()
         return redirect(url_for('admin.admin') + '?success=logged_out')
     
@@ -65,6 +126,7 @@ def create_admin_routes(spotify_service, data_service, job_service):
             return jsonify({"authenticated": False})
     
     @admin_bp.route("/suggestions")
+    @admin_login_required
     def admin_suggestions():
         """API endpoint to get all suggestions for admin review."""
         try:
@@ -132,6 +194,7 @@ def create_admin_routes(spotify_service, data_service, job_service):
             return jsonify({"success": False, "message": f"Error: {str(e)}"})
     
     @admin_bp.route("/follow_artist", methods=["POST"])
+    @admin_login_required
     def admin_follow_artist():
         """Admin endpoint to immediately follow an artist on Spotify and process suggestion if provided."""
         try:
@@ -140,11 +203,15 @@ def create_admin_routes(spotify_service, data_service, job_service):
             artist_name = data.get("artist_name", "Unknown Artist")
             suggestion_id = data.get("suggestion_id")  # Optional - for processing suggestions
             
+            logger.info(f"FOLLOW_ARTIST REQUEST: artist_id={artist_id}, artist_name={artist_name}, suggestion_id={suggestion_id}")
+            
             if not artist_id:
+                logger.error("FOLLOW_ARTIST ERROR: No artist ID provided")
                 return jsonify({"success": False, "message": "Artist ID is required"})
 
             # Check if authenticated
             if not spotify_service.get_token_from_session():
+                logger.warning("FOLLOW_ARTIST ERROR: Not authenticated")
                 return jsonify({
                     "success": False,
                     "message": "Spotify authentication required. Please log in with Spotify to follow artists.",
@@ -158,8 +225,13 @@ def create_admin_routes(spotify_service, data_service, job_service):
 
             # Follow the artist
             success, error_message = spotify_service.follow_artist(artist_id)
+            logger.info(f"FOLLOW_ARTIST RESULT: success={success}, error_message={error_message}")
 
-            if not success:
+            # Check if the failure is due to already following (which is OK for our purposes)
+            already_following = not success and ("already" in error_message.lower() or "following" in error_message.lower())
+            
+            if not success and not already_following:
+                logger.error(f"FOLLOW_ARTIST FAILED: {error_message}")
                 if "Authentication" in error_message:
                     return jsonify({
                         "success": False,
@@ -168,6 +240,13 @@ def create_admin_routes(spotify_service, data_service, job_service):
                     })
                 else:
                     return jsonify({"success": False, "message": error_message})
+            
+            # Determine success message based on whether we followed or already following
+            if already_following:
+                logger.info(f"Artist {artist_name} already followed, proceeding with suggestion processing")
+                follow_status_msg = "already followed"
+            else:
+                follow_status_msg = "successfully followed"
 
             # Add to followed artists file
             followed_artists = data_service.load_followed_artists()
@@ -195,18 +274,23 @@ def create_admin_routes(spotify_service, data_service, job_service):
                     logger.error(f"Failed to update followed artists file for {artist_name}")
             
             # If this was from a suggestion, mark it as processed
-            success_message = f"Successfully followed {artist_name} on Spotify and added to tracking list!"
+            success_message = f"Artist {artist_name} {follow_status_msg} and added to tracking list!"
             if suggestion_id:
                 try:
                     # Load suggestions
                     suggestions = data_service.load_suggestions()
                     logger.info(f"Attempting to process suggestion with ID: {suggestion_id}")
+                    logger.info(f"Available suggestion timestamps: {[s.get('timestamp') for s in suggestions]}")
                     
                     # Find and update the suggestion
                     suggestion_found = False
                     for suggestion in suggestions:
-                        logger.debug(f"Checking suggestion with timestamp: {suggestion.get('timestamp')}")
-                        if suggestion.get('timestamp') == suggestion_id:
+                        current_timestamp = suggestion.get('timestamp')
+                        logger.debug(f"Checking suggestion with timestamp: {current_timestamp} (type: {type(current_timestamp)})")
+                        logger.debug(f"Looking for timestamp: {suggestion_id} (type: {type(suggestion_id)})")
+                        logger.debug(f"Timestamps match: {current_timestamp == suggestion_id}")
+                        
+                        if current_timestamp == suggestion_id:
                             suggestion['status'] = 'processed'
                             suggestion['admin_approved'] = True
                             suggestion['admin_action_date'] = datetime.now().isoformat()
@@ -217,12 +301,13 @@ def create_admin_routes(spotify_service, data_service, job_service):
                     
                     if suggestion_found:
                         if data_service.save_suggestions(suggestions):
-                            success_message = f"Successfully followed {artist_name} on Spotify, added to tracking, and marked suggestion as processed!"
+                            success_message = f"Artist {artist_name} {follow_status_msg}, added to tracking, and suggestion marked as processed!"
                             logger.info(f"Suggestion {suggestion_id} successfully saved as processed")
                         else:
                             logger.error(f"Failed to save processed suggestion {suggestion_id}")
                     else:
-                        logger.warning(f"Suggestion {suggestion_id} not found when trying to mark as processed. Available timestamps: {[s.get('timestamp') for s in suggestions]}")
+                        logger.warning(f"Suggestion {suggestion_id} not found when trying to mark as processed.")
+                        logger.warning(f"Available suggestion timestamps: {[s.get('timestamp') for s in suggestions]}")
                         
                 except Exception as e:
                     logger.error(f"Error processing suggestion {suggestion_id}: {e}")
@@ -230,7 +315,8 @@ def create_admin_routes(spotify_service, data_service, job_service):
             
             return jsonify({
                 "success": True, 
-                "message": success_message
+                "message": success_message,
+                "warning": already_following  # Flag to indicate this should be shown as warning
             })
         
         except Exception as e:

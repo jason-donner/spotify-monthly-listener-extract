@@ -13,7 +13,12 @@
 <div class="container mt-4" style="background: rgba(20, 20, 30, 0.95); border-radius: 12px; padding: 2rem; margin-top: 2rem;">
     <div class="row">
         <div class="col-12">
-            <h1 class="mb-4" style="color: #00ff7f; text-align: center;">🛠️ Admin Panel - Artist Suggestions</h1>
+            <h1 class="mb-4" style="color: #00ff7f; text-align: center;">
+                🛠️ Admin Panel - Artist Suggestions
+                <button onclick="adminLogout()" class="btn btn-sm btn-outline-secondary float-end" style="font-size: 0.8rem;">
+                    Logout
+                </button>
+            </h1>
             
             <!-- Spotify Authentication Status -->
             <div id="auth-status" class="alert" style="display: none;">
@@ -327,8 +332,22 @@ function forceLoginWithSpotify() {
     window.location.href = '/admin/login?force=true';
 }
 
+function adminLogout() {
+    // Invisible logout - use fetch to call logout endpoint, then redirect
+    fetch('/admin/logout', { method: 'GET' })
+        .then(() => {
+            // Redirect to home page without showing logout URL
+            window.location.href = '/';
+        })
+        .catch(() => {
+            // If fetch fails, still redirect to home
+            window.location.href = '/';
+        });
+}
+
 function logout() {
-    window.location.href = '/admin/logout';
+    // This is for Spotify logout (different from admin logout)
+    window.location.href = '/admin/spotify_logout';
 }
 
 function loadSuggestions() {
@@ -349,7 +368,7 @@ function loadSuggestions() {
 }
 
 function renderSuggestions() {
-    const pending = suggestions.filter(s => !s.admin_approved && (!s.status || s.status === 'pending'));
+    const pending = suggestions.filter(s => !s.admin_approved && (!s.status || s.status === 'pending' || s.status === 'approved'));
     const approved = suggestions.filter(s => s.admin_approved === true && s.status !== 'processed' && s.status !== 'rejected');
     const rejected = suggestions.filter(s => s.status === 'rejected');
     const processed = suggestions.filter(s => s.status === 'processed');
@@ -421,7 +440,7 @@ function renderSuggestionList(suggestionList, type) {
 }
 
 function updateCounts() {
-    const pending = suggestions.filter(s => !s.admin_approved && (!s.status || s.status === 'pending')).length;
+    const pending = suggestions.filter(s => !s.admin_approved && (!s.status || s.status === 'pending' || s.status === 'approved')).length;
     const approved = suggestions.filter(s => s.admin_approved === true && s.status !== 'processed' && s.status !== 'rejected').length;
     const rejected = suggestions.filter(s => s.status === 'rejected').length;
     const processed = suggestions.filter(s => s.status === 'processed').length;
@@ -484,6 +503,13 @@ function followArtistNow(artistId, artistName, timestamp = null) {
         button.innerHTML = '⏳ Following...';
         button.disabled = true;
         
+        // Debug logging
+        console.log('Processing suggestion:', {
+            artist_id: artistId,
+            artist_name: artistName,
+            suggestion_id: timestamp
+        });
+        
         fetch('/admin/follow_artist', {
             method: 'POST',
             headers: {
@@ -495,10 +521,19 @@ function followArtistNow(artistId, artistName, timestamp = null) {
                 suggestion_id: timestamp // Pass the suggestion ID for automatic processing
             })
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers);
+            return response.json();
+        })
         .then(data => {
+            console.log('Response data:', data);
             if (data.success) {
-                showToast('Success', data.message, 'success');
+                // Show warning for already followed artists, success for newly followed
+                const toastType = data.warning ? 'warning' : 'success';
+                const toastTitle = data.warning ? 'Already Followed' : 'Success';
+                console.log('Showing toast:', toastTitle, data.message, toastType);
+                showToast(toastTitle, data.message, toastType);
                 // Reload suggestions to reflect the changes
                 loadSuggestions();
             } else {
@@ -515,6 +550,7 @@ function followArtistNow(artistId, artistName, timestamp = null) {
             }
         })
         .catch(error => {
+            console.error('Fetch error:', error);
             button.innerHTML = originalText;
             button.disabled = false;
             showToast('Error', 'Failed to follow artist: ' + error.message, 'danger');
@@ -530,8 +566,25 @@ function showToast(title, message, type) {
     toastTitle.textContent = title;
     toastMessage.textContent = message;
     
-    // Remove existing classes and add new one
-    toast.className = `toast ${type === 'success' ? 'bg-success text-white' : type === 'danger' ? 'bg-danger text-white' : ''}`;
+    // Remove existing classes and add new one based on type
+    let toastClass = 'toast ';
+    switch(type) {
+        case 'success':
+            toastClass += 'bg-success text-white';
+            break;
+        case 'danger':
+            toastClass += 'bg-danger text-white';
+            break;
+        case 'warning':
+            toastClass += 'bg-warning text-dark';
+            break;
+        case 'info':
+            toastClass += 'bg-info text-white';
+            break;
+        default:
+            toastClass += 'bg-secondary text-white';
+    }
+    toast.className = toastClass;
     
     const bsToast = new bootstrap.Toast(toast);
     bsToast.show();
