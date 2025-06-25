@@ -392,15 +392,17 @@ def create_admin_routes(spotify_service, data_service, job_service, scheduler_se
             return jsonify({"success": False, "message": f"Error: {str(e)}"})
     
     @admin_bp.route("/run_scraping", methods=["POST"])
+    @admin_login_required
     def admin_run_scraping():
         """Admin endpoint to run the scraping script."""
         try:
             data = request.get_json()
             headless = data.get("headless", True)
             today_only = data.get("today_only", False)
+            allow_duplicates = data.get("allow_duplicates", False)
             
             # Create and start scraping job
-            job_id = job_service.create_scraping_job(headless=headless, today_only=today_only)
+            job_id = job_service.create_scraping_job(headless=headless, today_only=today_only, allow_duplicates=allow_duplicates)
             
             if job_service.start_scraping_job(job_id):
                 scraping_type = "filtered (today's artists only)" if today_only else "full"
@@ -420,6 +422,7 @@ def create_admin_routes(spotify_service, data_service, job_service, scheduler_se
             return jsonify({"success": False, "message": f"Error: {str(e)}"})
     
     @admin_bp.route("/scraping_status/<job_id>")
+    @admin_login_required
     def admin_scraping_status(job_id):
         """Get the status of a scraping job."""
         try:
@@ -438,6 +441,7 @@ def create_admin_routes(spotify_service, data_service, job_service, scheduler_se
             return jsonify({"success": False, "message": f"Error: {str(e)}"})
     
     @admin_bp.route("/scraping_jobs")
+    @admin_login_required
     def admin_scraping_jobs():
         """Get all scraping jobs."""
         try:

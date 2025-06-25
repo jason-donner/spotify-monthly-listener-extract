@@ -25,13 +25,14 @@ class JobService:
         self.scraping_timeout = scraping_timeout
         self.temp_dir = tempfile.gettempdir()
     
-    def create_scraping_job(self, headless: bool = True, today_only: bool = False) -> str:
+    def create_scraping_job(self, headless: bool = True, today_only: bool = False, allow_duplicates: bool = False) -> str:
         """
         Create a new scraping job.
         
         Args:
             headless: Whether to run browser in headless mode (applies to both scripts)
             today_only: Whether to scrape only today's artists
+            allow_duplicates: Whether to allow re-scraping artists already scraped today
         
         Returns:
             Job ID string
@@ -47,7 +48,8 @@ class JobService:
             'error': '',
             'completed': False,
             'today_only': today_only,
-            'headless': headless
+            'headless': headless,
+            'allow_duplicates': allow_duplicates
         }
         
         # Save initial job status to file
@@ -136,6 +138,10 @@ class JobService:
             # Add headless mode for both scripts
             if job_data.get('headless', True):
                 cmd.append("--headless")
+            
+            # Add allow duplicates flag for both scripts
+            if job_data.get('allow_duplicates', False):
+                cmd.append("--allow-duplicates")
             
             if job_data.get('today_only', False):
                 # Use today's date in YYYY-MM-DD format for filtered script

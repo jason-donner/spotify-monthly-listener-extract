@@ -268,6 +268,7 @@ def main():
     parser.add_argument('--headless', action='store_true', help="Run Chrome in headless mode")
     parser.add_argument('--output', help="Output JSON file for results")
     parser.add_argument('--no-prompt', action='store_true', help="Skip login confirmation prompt")
+    parser.add_argument('--allow-duplicates', action='store_true', help="Allow scraping artists already scraped today (bypass duplicate protection)")
     
     args = parser.parse_args()
     
@@ -284,8 +285,12 @@ def main():
         print(Fore.YELLOW + f"No artists found for date: {target_date}")
         return
     
-    # Load existing listener data to avoid duplicates
-    existing_artist_ids = load_existing_listeners(target_date)
+    # Load existing listener data to avoid duplicates (unless bypassed)
+    if args.allow_duplicates:
+        print("Duplicate protection disabled - will scrape all filtered artists")
+        existing_artist_ids = set()
+    else:
+        existing_artist_ids = load_existing_listeners(target_date)
     
     # Setup driver
     driver = setup_driver(chromedriver_path=args.chromedriver, headless=args.headless)

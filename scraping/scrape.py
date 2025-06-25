@@ -139,7 +139,8 @@ def setup_driver(chromedriver_path=None, headless=False, max_retries=3):
             chrome_options.add_argument("--disable-ipc-flooding-protection")
             
             # Session management
-            chrome_options.add_argument("--remote-debugging-port=9222")
+            if not headless:
+                chrome_options.add_argument("--remote-debugging-port=9222")
             chrome_options.add_argument("--disable-web-security")
             chrome_options.add_argument("--disable-features=VizDisplayCompositor")
             chrome_options.add_argument("--no-first-run")
@@ -162,27 +163,66 @@ def setup_driver(chromedriver_path=None, headless=False, max_retries=3):
                 chrome_options.add_argument("--headless=new")  # Use new headless mode
                 chrome_options.add_argument("--disable-extensions")
                 chrome_options.add_argument("--disable-plugins")
+                chrome_options.add_argument("--disable-web-security")
+                chrome_options.add_argument("--disable-features=VizDisplayCompositor")
+                chrome_options.add_argument("--disable-popup-blocking")
+                chrome_options.add_argument("--disable-notifications")
             
             # Set page load strategy
             chrome_options.page_load_strategy = 'normal'
             
-            # Create driver - try auto-installation first
+            # Create driver with improved error handling
             print("Creating Chrome WebDriver...")
             
             if chromedriver_path and os.path.exists(chromedriver_path):
                 # Use specified ChromeDriver path
+                print(f"Using specified ChromeDriver: {chromedriver_path}")
                 service = Service(chromedriver_path)
                 driver = webdriver.Chrome(service=service, options=chrome_options)
             else:
-                # Try auto-installer first
+                # Try multiple methods to get a working ChromeDriver
+                driver = None
+                
+                # Method 1: Try Selenium's built-in WebDriver manager (most reliable)
                 try:
-                    import chromedriver_autoinstaller
-                    chromedriver_autoinstaller.install()  # This installs compatible ChromeDriver
+                    print("Trying Selenium's built-in WebDriver management...")
                     driver = webdriver.Chrome(options=chrome_options)
-                except ImportError:
-                    # Fallback to Selenium's auto-management
-                    print("Auto-installer not available, trying Selenium auto-management...")
-                    driver = webdriver.Chrome(options=chrome_options)
+                    print("✓ Successfully created driver with Selenium auto-management")
+                except Exception as e:
+                    print(f"Selenium auto-management failed: {e}")
+                
+                # Method 2: Try auto-installer as fallback (if Selenium failed)
+                if not driver:
+                    try:
+                        print("Trying chromedriver-autoinstaller...")
+                        import chromedriver_autoinstaller
+                        
+                        # Set a timeout for the download
+                        import socket
+                        original_timeout = socket.getdefaulttimeout()
+                        socket.setdefaulttimeout(10)  # 10 second timeout
+                        
+                        try:
+                            chromedriver_path_installed = chromedriver_autoinstaller.install()
+                            print(f"✓ ChromeDriver installed at: {chromedriver_path_installed}")
+                            driver = webdriver.Chrome(options=chrome_options)
+                            print("✓ Successfully created driver with auto-installer")
+                        finally:
+                            socket.setdefaulttimeout(original_timeout)
+                            
+                    except (ImportError, Exception) as e:
+                        print(f"Auto-installer failed: {e}")
+                
+                # Method 3: Try with explicit service (last resort)
+                if not driver:
+                    try:
+                        print("Trying explicit service creation...")
+                        service = Service()
+                        driver = webdriver.Chrome(service=service, options=chrome_options)
+                        print("✓ Successfully created driver with explicit service")
+                    except Exception as e:
+                        print(f"Explicit service failed: {e}")
+                        raise Exception("All ChromeDriver setup methods failed")
             
             # Set timeouts
             driver.set_page_load_timeout(30)
@@ -195,16 +235,41 @@ def setup_driver(chromedriver_path=None, headless=False, max_retries=3):
             return driver
             
         except Exception as e:
+            error_msg = str(e)
             print(Fore.RED + f"Failed to create driver (attempt {attempt + 1}/{max_retries}): {e}")
+            
             if attempt == max_retries - 1:
-                print(Fore.RED + "All driver creation attempts failed. Please try:")
-                print("1. Update Chrome to the latest version")
-                print("2. Install/update ChromeDriver:")
-                print("   - Download from https://chromedriver.chromium.org/")
-                print("   - Or install: pip install chromedriver-autoinstaller")
-                print("3. Restart your computer to clear any stuck processes")
-                print("4. Try running the script with --headless flag")
-                print("5. Run chrome_diagnostic.py for detailed troubleshooting")
+                print(Fore.RED + "All driver creation attempts failed.")
+                
+                # Provide specific guidance based on the error
+                if "WinError 10054" in error_msg or "connection" in error_msg.lower():
+                    print(Fore.YELLOW + "\n🌐 Network Connection Issue Detected:")
+                    print("1. Check your internet connection and firewall settings")
+                    print("2. Try running the script again in a few minutes")
+                    print("3. If using corporate network, contact IT about Selenium WebDriver access")
+                    print("4. Alternative: Download ChromeDriver manually:")
+                    print("   - Go to https://chromedriver.chromium.org/")
+                    print("   - Download the version matching your Chrome browser")
+                    print("   - Save it to your PATH or specify with --chromedriver argument")
+                elif "chrome" in error_msg.lower():
+                    print(Fore.YELLOW + "\n🔧 Chrome Browser Issue:")
+                    print("1. Make sure Google Chrome is installed and updated")
+                    print("2. Close all Chrome windows and try again")
+                    print("3. Try running with --headless flag")
+                    print("4. Restart your computer to clear stuck processes")
+                elif "permission" in error_msg.lower():
+                    print(Fore.YELLOW + "\n🔒 Permission Issue:")
+                    print("1. Run the script as Administrator")
+                    print("2. Check if antivirus is blocking Selenium")
+                    print("3. Try running from a different directory")
+                else:
+                    print(Fore.YELLOW + "\n🛠️ General Troubleshooting:")
+                    print("1. Update Chrome to the latest version")
+                    print("2. Restart your computer")
+                    print("3. Try running with --headless flag")
+                    print("4. Check Windows Event Viewer for more details")
+                
+                print(f"\n📋 For detailed diagnosis, run: python chrome_diagnostic.py")
                 raise
             time.sleep(2)
     

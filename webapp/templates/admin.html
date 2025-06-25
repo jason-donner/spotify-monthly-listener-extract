@@ -57,6 +57,13 @@
                                 </label>
                                 <small class="text-white d-block" style="opacity: 0.8;">Recommended for daily updates after adding new artists</small>
                             </div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="allowDuplicatesMode">
+                                <label class="form-check-label text-light" for="allowDuplicatesMode">
+                                    <strong>Allow Duplicates</strong> - Re-scrape artists already scraped today
+                                </label>
+                                <small class="text-white d-block" style="opacity: 0.8;">Enable to get fresh data for all artists, even if already scraped today</small>
+                            </div>
                         </div>
                         <div class="col-md-4 text-end">
                             <button id="runScrapingBtn" class="btn btn-success btn-lg" onclick="runScraping()">
@@ -575,6 +582,7 @@ let scrapingStatusInterval = null;
 function runScraping() {
     const headless = document.getElementById('headlessMode').checked;
     const todayOnly = document.getElementById('todayOnlyMode').checked;
+    const allowDuplicates = document.getElementById('allowDuplicatesMode').checked;
     const btn = document.getElementById('runScrapingBtn');
     const status = document.getElementById('scrapingStatus');
     const alert = document.getElementById('scrapingAlert');
@@ -586,7 +594,18 @@ function runScraping() {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting...';
     status.style.display = 'block';
     alert.className = 'alert alert-info';
-    statusText.textContent = todayOnly ? 'Starting scraping for today\'s artists...' : 'Starting full scraping...';
+    
+    let statusMessage = 'Starting scraping...';
+    if (todayOnly && !allowDuplicates) {
+        statusMessage = 'Starting scraping for today\'s new artists...';
+    } else if (todayOnly && allowDuplicates) {
+        statusMessage = 'Starting scraping for today\'s artists (including duplicates)...';
+    } else if (!todayOnly && allowDuplicates) {
+        statusMessage = 'Starting full scraping (including duplicates)...';
+    } else {
+        statusMessage = 'Starting full scraping for new artists...';
+    }
+    statusText.textContent = statusMessage;
     spinner.style.display = 'inline-block';
     
     // Hide previous outputs
@@ -600,7 +619,8 @@ function runScraping() {
         },
         body: JSON.stringify({
             headless: headless,
-            today_only: todayOnly
+            today_only: todayOnly,
+            allow_duplicates: allowDuplicates
         })
     })
     .then(response => response.json())
