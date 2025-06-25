@@ -40,16 +40,13 @@
                     <div class="row">
                         <div class="col-md-8">
                             <p class="text-light">Run the monthly listener scraping script to update artist data from Spotify.</p>
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" id="headlessMode" checked>
-                                <label class="form-check-label text-light" for="headlessMode">
-                                    Run in headless mode (no browser window)
-                                </label>
+                            <div class="alert alert-info" role="alert" style="background-color: rgba(13, 202, 240, 0.1); border-color: rgba(13, 202, 240, 0.3);">
+                                <i class="fas fa-info-circle"></i> <strong>Duplicate Protection:</strong> The scraper automatically prevents duplicate entries for the same artist on the same date.
                             </div>
                             <div class="form-check mb-3">
                                 <input class="form-check-input" type="checkbox" id="todayOnlyMode" checked>
                                 <label class="form-check-label text-light" for="todayOnlyMode">
-                                    <strong>Today only</strong> - Only scrape artists added today (avoids duplicates)
+                                    <strong>Today only</strong> - Only scrape artists added today (recommended)
                                 </label>
                                 <small class="text-white d-block" style="opacity: 0.8;">Recommended for daily updates after adding new artists</small>
                             </div>
@@ -521,7 +518,6 @@ let currentScrapingJobId = null;
 let scrapingStatusInterval = null;
 
 function runScraping() {
-    const headless = document.getElementById('headlessMode').checked;
     const todayOnly = document.getElementById('todayOnlyMode').checked;
     const btn = document.getElementById('runScrapingBtn');
     const status = document.getElementById('scrapingStatus');
@@ -547,7 +543,6 @@ function runScraping() {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            headless: headless,
             today_only: todayOnly
         })
     })

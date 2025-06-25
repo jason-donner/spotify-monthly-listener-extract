@@ -396,11 +396,10 @@ def create_admin_routes(spotify_service, data_service, job_service):
         """Admin endpoint to run the scraping script."""
         try:
             data = request.get_json()
-            headless = data.get("headless", True)
             today_only = data.get("today_only", False)
             
             # Create and start scraping job
-            job_id = job_service.create_scraping_job(headless=headless, today_only=today_only)
+            job_id = job_service.create_scraping_job(today_only=today_only)
             
             if job_service.start_scraping_job(job_id):
                 scraping_type = "filtered (today's artists only)" if today_only else "full"
