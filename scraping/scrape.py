@@ -94,6 +94,32 @@ def load_urls(input_path=None):
         sys.exit(1)
 
 
+def load_existing_listeners(target_date):
+    """
+    Load existing monthly listener entries for the target date to avoid duplicates.
+    """
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    results_dir = os.path.join(script_dir, "..", "data", "results")
+    master_listeners_file = os.path.join(results_dir, 'spotify-monthly-listeners-master.json')
+
+    existing_artist_ids = set()
+    
+    if os.path.exists(master_listeners_file):
+        with open(master_listeners_file, 'r', encoding='utf-8') as f:
+            listeners_data = json.load(f)
+        
+        for entry in listeners_data:
+            if entry.get('date') == target_date:
+                artist_id = entry.get('artist_id')
+                if artist_id:
+                    existing_artist_ids.add(artist_id)
+    
+    if existing_artist_ids:
+        print(f"Found {len(existing_artist_ids)} artists already scraped for {target_date}")
+    
+    return existing_artist_ids
+
+
 def scrape_artist(driver, url, wait_time=7):
     """
     Scrape the artist name and monthly listeners from a Spotify artist page.
@@ -129,16 +155,39 @@ def extract_artist_id(url):
     return match.group(1) if match else None
 
 
-def scrape_all(driver, urls, today, bar_format, wait_time=0.2):
+def scrape_all(driver, urls, today, bar_format, existing_artist_ids, wait_time=0.2):
     """
     Scrape all artist URLs, returning a list of results and a list of failed URLs.
+    Skips artists that already have data for today to prevent duplicates.
     """
     results = []
     failed_urls = []
+    skipped_count = 0
+    
+    # Filter out artists that already have data for today
+    urls_to_scrape = []
+    for url in urls:
+        artist_id = url.get('artist_id') if isinstance(url, dict) and url.get('artist_id') else extract_artist_id(url['url'] if isinstance(url, dict) else url)
+        if artist_id in existing_artist_ids:
+            skipped_count += 1
+            artist_name = url.get('artist_name', 'Unknown') if isinstance(url, dict) else 'Unknown'
+            print(f"Skipping {artist_name} - already scraped today")
+        else:
+            urls_to_scrape.append(url)
+    
+    if skipped_count > 0:
+        print(f"Scraping {len(urls_to_scrape)} artists (skipped {skipped_count} duplicates)")
+    else:
+        print(f"Scraping {len(urls_to_scrape)} artists")
+    
+    if not urls_to_scrape:
+        print(Fore.YELLOW + "No new artists to scrape - all artists already have data for today!")
+        return results, failed_urls
+    
     is_tty = sys.stdout.isatty()
-    with tqdm(total=len(urls), desc="Scraping artists", bar_format=bar_format if is_tty else None,
+    with tqdm(total=len(urls_to_scrape), desc="Scraping artists", bar_format=bar_format if is_tty else None,
               colour="#1DB954" if is_tty else None, disable=not is_tty, dynamic_ncols=is_tty, file=sys.stdout) as pbar:
-        for url in urls:
+        for url in urls_to_scrape:
             name, monthly = scrape_artist(driver, url)
             artist_url = url['url'] if isinstance(url, dict) else url
             artist_id = url.get('artist_id') if isinstance(url, dict) and url.get('artist_id') else extract_artist_id(artist_url)
@@ -219,7 +268,11 @@ def report(results, failed_urls):
     """
     Print a summary report with smart detailed output based on result count.
     """
-    print(Style.BRIGHT + f"\nScraping complete. {len(results)} artists scraped successfully.")
+    if len(results) == 0:
+        print(Style.BRIGHT + f"\nScraping complete. No new artists were scraped.")
+        print(Fore.YELLOW + "This may be because all artists already have data for today.")
+    else:
+        print(Style.BRIGHT + f"\nScraping complete. {len(results)} artists scraped successfully.")
     
     if results:
         # Smart detailed output based on result count
@@ -280,6 +333,7 @@ def parse_args():
     # parser.add_argument('--headless', action='store_true', help="Run Chrome in headless mode")  # REMOVE THIS LINE
     parser.add_argument('--output', help="Output JSON file for results")
     parser.add_argument('--no-prompt', action='store_true', help="Skip login confirmation prompt")
+    parser.add_argument('--allow-duplicates', action='store_true', help="Allow scraping artists already scraped today (bypass duplicate protection)")
     return parser.parse_args()
 
 
@@ -287,6 +341,14 @@ def main():
     args = parse_args()
     today = now()
     urls = load_urls(args.input)
+    
+    # Load existing listeners to prevent duplicates (unless bypassed)
+    if args.allow_duplicates:
+        print("Duplicate protection disabled - will scrape all artists")
+        existing_artist_ids = set()
+    else:
+        existing_artist_ids = load_existing_listeners(today)
+    
     driver = setup_driver(chromedriver_path=args.chromedriver)  # Remove headless param
     driver.get("https://open.spotify.com")
     time.sleep(3)  # Wait for session/cookies to initialize
@@ -297,7 +359,7 @@ def main():
 
     bar_format = "{l_bar}{bar}| {n_fmt}/{total_fmt} artists | Elapsed: {elapsed} | ETA: {remaining}"
     try:
-        results, failed_urls = scrape_all(driver, urls, today, bar_format)
+        results, failed_urls = scrape_all(driver, urls, today, bar_format, existing_artist_ids)
         if failed_urls:
             print(Fore.YELLOW + f"\nRetrying {len(failed_urls)} failed URLs...")
             retry_results, still_failed = retry_failed(driver, failed_urls, today)
