@@ -18,6 +18,7 @@ data/results/*.backup.*
 # Ignore log files
 *.log
 scraping/*.log
+webapp/logs/
 scripts/*.log
 
 # Ignore Python bytecode

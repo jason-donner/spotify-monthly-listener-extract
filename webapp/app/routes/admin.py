@@ -9,12 +9,17 @@ import hashlib
 import os
 
 logger = logging.getLogger(__name__)
+admin_security_logger = logging.getLogger('admin_security')
 
 # Admin password from environment variable (required)
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD')
 
 if not ADMIN_PASSWORD:
     logger.warning("ADMIN_PASSWORD environment variable not set! Admin login will not work.")
+
+def get_client_ip():
+    """Get client IP address for logging"""
+    return request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr)
 
 def create_admin_routes(spotify_service, data_service, job_service):
     """Create admin routes blueprint with injected services."""
@@ -37,21 +42,36 @@ def create_admin_routes(spotify_service, data_service, job_service):
     @admin_bp.route("/admin_login")
     def admin_login_page():
         """Admin login page"""
+        client_ip = get_client_ip()
+        admin_security_logger.info(f"Admin login page accessed from IP: {client_ip}")
         return render_template("admin_login.html")
     
     @admin_bp.route("/admin_auth", methods=["POST"])
     def admin_authenticate():
         """Handle admin password submission"""
+        client_ip = get_client_ip()
         password = request.form.get('password')
+        
         if password == ADMIN_PASSWORD:
             session['admin_authenticated'] = True
             session.permanent = True  # Keep session active
+            admin_security_logger.info(f"SUCCESSFUL admin login from IP: {client_ip}")
+            logger.info(f"Admin authenticated successfully from {client_ip}")
             return redirect(url_for('admin.admin'))
         else:
+            admin_security_logger.warning(f"FAILED admin login attempt from IP: {client_ip} - Invalid password")
+            logger.warning(f"Failed admin login attempt from {client_ip}")
             return render_template("admin_login.html", error="Invalid password")
     
     @admin_bp.route("/logout")
     def admin_logout():
+        """Admin logout"""
+        client_ip = get_client_ip()
+        if session.get('admin_authenticated'):
+            admin_security_logger.info(f"Admin logout from IP: {client_ip}")
+            logger.info(f"Admin logged out from {client_ip}")
+        session.pop('admin_authenticated', None)
+        return redirect(url_for('admin.admin_login_page'))
         """Logout from admin and redirect immediately to home page"""
         session.clear()  # Clear entire session
         return redirect('/')  # Direct redirect to home, no intermediate page
@@ -74,11 +94,15 @@ def create_admin_routes(spotify_service, data_service, job_service):
     @admin_login_required
     def admin():
         """Admin page to review and manage artist suggestions."""
+        client_ip = get_client_ip()
+        admin_security_logger.info(f"Admin panel accessed from IP: {client_ip}")
+        
         # Check for force logout parameter
         if request.args.get('force_logout') == 'true':
             session.clear()
             response = redirect(url_for('admin.admin_login_page'))
             response.set_cookie(current_app.session_cookie_name, '', expires=0)
+            admin_security_logger.info(f"Forced logout executed from IP: {client_ip}")
             return response
         return render_template("admin.html")
     
@@ -158,6 +182,7 @@ def create_admin_routes(spotify_service, data_service, job_service):
             suggestion_id = data.get("suggestion_id")  # Using timestamp as ID
             action = data.get("action")  # "approve_follow", "approve_track", "reject"
             
+            client_ip = get_client_ip()
             suggestions = data_service.load_suggestions()
             
             # Find the suggestion to update
@@ -165,19 +190,23 @@ def create_admin_routes(spotify_service, data_service, job_service):
             for suggestion in suggestions:
                 if suggestion.get("timestamp") == suggestion_id:
                     suggestion_found = True
+                    artist_name = suggestion.get("artist_name", "Unknown")
                     
                     if action == "approve_follow":
                         suggestion["status"] = "approved_for_follow"
                         suggestion["admin_approved"] = True
                         suggestion["admin_action_date"] = datetime.now().isoformat()
+                        admin_security_logger.info(f"Admin approved artist '{artist_name}' for follow from IP: {client_ip}")
                     elif action == "approve_track":
                         suggestion["status"] = "approved_for_tracking"
                         suggestion["admin_approved"] = True
                         suggestion["admin_action_date"] = datetime.now().isoformat()
+                        admin_security_logger.info(f"Admin approved artist '{artist_name}' for tracking only from IP: {client_ip}")
                     elif action == "reject":
                         suggestion["status"] = "rejected"
                         suggestion["admin_approved"] = False
                         suggestion["admin_action_date"] = datetime.now().isoformat()
+                        admin_security_logger.info(f"Admin rejected artist '{artist_name}' from IP: {client_ip}")
                     
                     break
             
@@ -207,7 +236,9 @@ def create_admin_routes(spotify_service, data_service, job_service):
             artist_name = data.get("artist_name", "Unknown Artist")
             suggestion_id = data.get("suggestion_id")  # Optional - for processing suggestions
             
+            client_ip = get_client_ip()
             logger.info(f"FOLLOW_ARTIST REQUEST: artist_id={artist_id}, artist_name={artist_name}, suggestion_id={suggestion_id}")
+            admin_security_logger.info(f"Admin initiated follow for artist '{artist_name}' (ID: {artist_id}) from IP: {client_ip}")
             
             if not artist_id:
                 logger.error("FOLLOW_ARTIST ERROR: No artist ID provided")
@@ -216,6 +247,7 @@ def create_admin_routes(spotify_service, data_service, job_service):
             # Check if authenticated
             if not spotify_service.get_token_from_session():
                 logger.warning("FOLLOW_ARTIST ERROR: Not authenticated")
+                admin_security_logger.warning(f"Admin follow attempt without Spotify auth from IP: {client_ip}")
                 return jsonify({
                     "success": False,
                     "message": "Spotify authentication required. Please log in with Spotify to follow artists.",

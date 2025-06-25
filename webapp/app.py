@@ -9,6 +9,8 @@ This is the main Flask application that ties together all the modular components
 
 from flask import Flask
 import os
+import logging
+import logging.handlers
 from dotenv import load_dotenv
 from datetime import timedelta
 
@@ -21,8 +23,58 @@ from app.services import SpotifyService, DataService, JobService
 from app.routes.main import create_main_routes
 from app.routes.admin import create_admin_routes
 
+def setup_logging():
+    """Configure centralized logging for the application"""
+    log_level = logging.DEBUG if os.environ.get('FLASK_DEBUG', 'false').lower() == 'true' else logging.INFO
+    
+    # Create logs directory if it doesn't exist
+    log_dir = os.path.join(os.path.dirname(__file__), 'logs')
+    os.makedirs(log_dir, exist_ok=True)
+    
+    # Configure root logger
+    logging.basicConfig(
+        level=log_level,
+        format='%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    
+    # Create file handler with rotation
+    file_handler = logging.handlers.RotatingFileHandler(
+        os.path.join(log_dir, 'app.log'),
+        maxBytes=10*1024*1024,  # 10MB
+        backupCount=5
+    )
+    file_handler.setLevel(log_level)
+    file_handler.setFormatter(logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s'
+    ))
+    
+    # Create admin-specific log file for security monitoring
+    admin_handler = logging.handlers.RotatingFileHandler(
+        os.path.join(log_dir, 'admin.log'),
+        maxBytes=5*1024*1024,  # 5MB
+        backupCount=3
+    )
+    admin_handler.setLevel(logging.INFO)
+    admin_handler.setFormatter(logging.Formatter(
+        '%(asctime)s - ADMIN - %(levelname)s - %(message)s'
+    ))
+    
+    # Add handlers to root logger
+    logging.getLogger().addHandler(file_handler)
+    
+    # Create admin logger for security events
+    admin_logger = logging.getLogger('admin_security')
+    admin_logger.addHandler(admin_handler)
+    admin_logger.setLevel(logging.INFO)
+    
+    logging.info("Logging system initialized")
+
 def create_app():
     """Application factory function"""
+    # Setup logging first
+    setup_logging()
+    
     app = Flask(__name__)
     
     # Load configuration

@@ -14,6 +14,7 @@ A modern web-based system for tracking Spotify artists' monthly listener counts 
 - **📝 Improved Logging** - Added detailed debug logging for suggestion processing
 - **🎨 Modern Admin Login** - Beautiful Spotify-themed login page with improved UX
 - **🔒 Secure Authentication** - Environment variable-based password management
+- **🛡️ Security Logging** - Comprehensive admin activity and authentication logging
 
 ### Search & Discovery Enhancements  
 - **🎵 Top Tracks Preview** - Added artist top tracks preview on search page
@@ -31,6 +32,7 @@ A modern web-based system for tracking Spotify artists' monthly listener counts 
 - **🧹 Code Cleanup** - Removed redundant buttons and streamlined JavaScript
 - **📊 Better State Management** - Enhanced frontend filtering and tab management
 - **🎯 Consistent Data Flow** - Unified suggestion processing workflow
+- **📝 Centralized Logging** - Structured logging with file rotation and admin security monitoring
 
 ---
 
@@ -268,6 +270,13 @@ Load Data → Display Charts → Search/Filter → Artist Details
 - ✅ Check browser developer console for JavaScript errors
 - ✅ Ensure data files exist in `data/results/`
 - ✅ **Top tracks not loading**: Check Spotify API credentials and rate limits
+
+### Logging and Monitoring
+- ✅ **Application logs**: Check `webapp/logs/app.log` for general application issues
+- ✅ **Admin security logs**: Check `webapp/logs/admin.log` for authentication and admin activity
+- ✅ **Failed login attempts**: Monitor admin.log for security violations
+- ✅ **Performance issues**: Review app.log with timestamps for slow operations
+- ✅ **Log rotation**: Logs automatically rotate at 10MB (app.log) and 5MB (admin.log)
 
 ---
 
