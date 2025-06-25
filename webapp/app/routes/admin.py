@@ -6,11 +6,12 @@ from flask import Blueprint, render_template, request, jsonify, redirect, url_fo
 from datetime import datetime
 import logging
 import hashlib
+import os
 
 logger = logging.getLogger(__name__)
 
-# Simple admin password - change this to your preferred password
-ADMIN_PASSWORD = "spotify_admin_2025"  # Change this!
+# Get admin password from environment variable, fallback to default for development
+ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'spotify_admin_2025')
 
 def create_admin_routes(spotify_service, data_service, job_service):
     """Create admin routes blueprint with injected services."""

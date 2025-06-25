@@ -2,116 +2,145 @@
 
 {% block title %}Admin Login{% endblock %}
 
-<!-- DEBUG: Template updated 2025-01-17 @ 12:00 PM -->
 {% block content %}
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-5 col-md-7 col-sm-9">
-            <div class="card" style="background: rgba(20, 20, 30, 0.95); border: 1px solid rgba(0, 255, 127, 0.3); border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 255, 127, 0.1);">
-                <div class="card-header text-center" style="background: rgba(0, 255, 127, 0.1); border-bottom: 1px solid rgba(0, 255, 127, 0.3); border-radius: 12px 12px 0 0; padding: 2rem 1.5rem 1.5rem;">
-                    <div style="margin-bottom: 1rem;">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#00ff7f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                            <circle cx="12" cy="12" r="3"/>
-                        </svg>
-                    </div>
-                    <h3 style="color: #00ff7f; margin: 0; font-weight: 600;">Admin Access Required</h3>
-                    <p style="color: #87ceeb; margin: 0.75rem 0 0 0; font-size: 0.95rem; line-height: 1.4;">
-                        Enter your admin credentials to access the<br>artist management panel
-                    </p>
-                </div>
-                <div class="card-body" style="padding: 2rem;">
-                    {% if error %}
-                    <div class="alert alert-danger" style="background: rgba(220, 53, 69, 0.15); border: 1px solid rgba(220, 53, 69, 0.3); color: #ff6b86; margin-bottom: 1.5rem;">
-                        <i class="fas fa-exclamation-triangle me-2"></i>{{ error }}
-                    </div>
-                    {% endif %}
-                    
-                    <form method="post" action="{{ url_for('admin.admin_authenticate') }}">
-                        <div class="mb-3">
-                            <label for="password" class="form-label" style="color: #87ceeb; font-weight: 500; margin-bottom: 0.75rem;">Admin Password</label>
-                            <div class="input-group">
-                                <span class="input-group-text" style="background: rgba(60, 60, 80, 0.8); border: 1px solid rgba(0, 255, 127, 0.3); border-right: none; color: #00ff7f;">
-                                    <i class="fas fa-lock"></i>
-                                </span>
-                                <input type="password" class="form-control" id="password" name="password" required 
-                                       style="background: rgba(60, 60, 80, 0.8); border: 1px solid rgba(0, 255, 127, 0.3); border-left: none; color: #fff; font-size: 1rem;"
-                                       placeholder="Enter admin password" autocomplete="current-password">
-                            </div>
-                        </div>
-                        <div class="mb-4">
-                            <button type="submit" class="btn btn-lg w-100" style="background: linear-gradient(135deg, rgba(0, 255, 127, 0.8), rgba(0, 255, 127, 0.9)); border: 1px solid #00ff7f; color: #000; font-weight: 600; font-size: 1rem; border-radius: 8px; transition: all 0.3s ease;">
-                                <i class="fas fa-shield-alt me-2"></i>Access Admin Panel
-                            </button>
-                        </div>
-                    </form>
-                    
-                    <div class="text-center" style="color: #87ceeb; font-size: 0.9rem; line-height: 1.5;">
-                        <div style="padding: 1.5rem 1rem; background: rgba(0, 123, 255, 0.05); border-radius: 8px; border: 1px solid rgba(0, 123, 255, 0.1); margin-bottom: 1.5rem;">
-                            <p style="margin: 0; font-size: 0.85rem;">
-                                <i class="fas fa-info-circle me-2" style="color: #00ff7f;"></i>
-                                This area is for authorized administrators only.<br>
-                                Manage artist suggestions, run scraping jobs, and moderate content.
-                            </p>
-                        </div>
-                        <a href="/" style="color: #00ff7f; text-decoration: none; font-weight: 500; transition: color 0.3s ease;">
-                            <i class="fas fa-arrow-left me-2"></i>Back to Home
-                        </a>
-                    </div>
-                </div>
-            </div>
+<div class="admin-login-page">
+    <div class="login-form">
+        <h2>Admin Login</h2>
+        
+        {% if error %}
+        <div class="error-message">
+            {{ error }}
         </div>
+        {% endif %}
+        
+        <form method="post" action="{{ url_for('admin.admin_authenticate') }}">
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            
+            <div class="form-group">
+                <button type="submit">Login</button>
+            </div>
+        </form>
+        
+        <a href="/" class="back-link">← Back to Home</a>
     </div>
 </div>
 
 <style>
-.form-control:focus {
-    background: rgba(60, 60, 80, 0.9) !important;
-    border-color: rgba(0, 255, 127, 0.6) !important;
-    box-shadow: 0 0 0 0.2rem rgba(0, 255, 127, 0.25) !important;
-    color: #fff !important;
+/* Hide global elements */
+.global-title,
+.search-bar-global {
+    display: none !important;
 }
 
-.input-group-text:focus-within {
-    border-color: rgba(0, 255, 127, 0.6) !important;
+/* Override any global form styles */
+.admin-login-page form {
+    display: block !important;
+    margin: 0 !important;
+    justify-content: initial !important;
 }
 
-.btn:hover {
-    background: linear-gradient(135deg, rgba(0, 255, 127, 0.9), rgba(0, 255, 127, 1)) !important;
-    border-color: #00ff7f !important;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0, 255, 127, 0.3);
+/* Simple login page styling */
+.admin-login-page {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+    background: #191414;
 }
 
-.btn:active {
-    transform: translateY(0);
-    box-shadow: 0 2px 10px rgba(0, 255, 127, 0.3);
+.login-form {
+    background: #121212;
+    padding: 40px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    width: 100%;
+    max-width: 400px;
+    border: 1px solid #282828;
 }
 
-a:hover {
-    color: #26ff8a !important;
+.login-form h2 {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #1DB954;
+    font-size: 24px;
+    font-weight: 700;
 }
 
-.card {
-    backdrop-filter: blur(10px);
+.form-group {
+    margin-bottom: 20px;
 }
 
-@media (max-width: 576px) {
-    .card-header {
-        padding: 1.5rem 1rem 1rem !important;
-    }
-    
-    .card-body {
-        padding: 1.5rem !important;
-    }
-    
-    .card-header h3 {
-        font-size: 1.4rem !important;
-    }
-    
-    .card-header p {
-        font-size: 0.9rem !important;
-    }
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #B3B3B3;
+    font-weight: 500;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #535353;
+    border-radius: 4px;
+    font-size: 16px;
+    box-sizing: border-box;
+    background: #2A2A2A;
+    color: #FFFFFF;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #1DB954;
+    box-shadow: 0 0 0 2px rgba(29, 185, 84, 0.25);
+}
+
+button[type="submit"] {
+    width: 100% !important;
+    padding: 12px !important;
+    background: #1DB954 !important;
+    color: #000000 !important;
+    border: none !important;
+    border-radius: 4px !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    cursor: pointer !important;
+    margin: 0 !important;
+    display: block !important;
+    box-sizing: border-box !important;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+button[type="submit"]:hover {
+    background: #1ED760 !important;
+    transform: scale(1.04);
+}
+
+.error-message {
+    background: #E22134;
+    color: #FFFFFF;
+    padding: 12px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    border: 1px solid #FF4757;
+}
+
+.back-link {
+    display: block;
+    text-align: center;
+    color: #1DB954;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.back-link:hover {
+    color: #1ED760;
+    text-decoration: underline;
 }
 </style>
 {% endblock %}
