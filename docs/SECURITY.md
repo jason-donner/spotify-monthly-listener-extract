@@ -1,10 +1,29 @@
 # Security Guidelines
 
+## Admin Authentication
+- **🔒 Environment Variable Password**: Admin password is stored securely as `ADMIN_PASSWORD` environment variable
+- **🚫 No Hardcoded Passwords**: Passwords are never stored in source code
+- **🎨 Secure Login Interface**: Modern, clean admin login page with proper form handling
+- **⚠️ Production Warning**: Always use strong passwords in production environments
+
 ## Environment Variables
 - ✅ All secrets moved to `.env` files
 - ✅ `.env` files are git-ignored
 - ✅ Strong Flask secret key implemented
 - ✅ Debug mode controlled by environment variable
+- ✅ Admin password secured via `ADMIN_PASSWORD` environment variable
+
+## Setting Up Admin Access
+```bash
+# Set admin password (required)
+export ADMIN_PASSWORD="your_secure_password_here"
+
+# Start the application
+cd webapp
+python app.py
+```
+
+**Important**: Never commit passwords to version control. Always use environment variables.
 
 ## Production Deployment Checklist
 - [ ] Set `FLASK_DEBUG=false` in production

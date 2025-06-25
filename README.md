@@ -12,6 +12,8 @@ A modern web-based system for tracking Spotify artists' monthly listener counts 
 - **📊 Enhanced Filtering Logic** - Accurate categorization of pending, approved, and processed suggestions
 - **🐛 Bug Fixes** - Resolved issues with stuck suggestions in "Pending Review"
 - **📝 Improved Logging** - Added detailed debug logging for suggestion processing
+- **🎨 Modern Admin Login** - Beautiful Spotify-themed login page with improved UX
+- **🔒 Secure Authentication** - Environment variable-based password management
 
 ### Search & Discovery Enhancements  
 - **🎵 Top Tracks Preview** - Added artist top tracks preview on search page
@@ -94,9 +96,20 @@ cd webapp
 python app.py
 ```
 
-### 6. Access the Application
+### 6. Set Admin Password (Required for Admin Access)
+Set your admin password as an environment variable:
+```powershell
+# Windows PowerShell
+$env:ADMIN_PASSWORD = "your_secure_password_here"
+
+# Linux/Mac
+export ADMIN_PASSWORD="your_secure_password_here"
+```
+
+### 7. Access the Application
 - **Main App**: http://localhost:5000
-- **Admin Panel**: http://localhost:5000/admin
+- **Admin Login**: http://localhost:5000/admin_login
+- **Admin Panel**: http://localhost:5000/admin (requires login)
 
 ---
 
@@ -109,13 +122,14 @@ python app.py
 4. **Suggest Artists**: Submit new artists for tracking
 
 ### Admin Panel
-1. **Login**: Click "Login with Spotify" to authenticate
-2. **Review Suggestions**: View pending, approved, and rejected suggestions
-3. **Process Suggestions**: 
+1. **Login**: Visit `/admin_login` and enter your admin password
+2. **OAuth Setup**: After login, click "Login with Spotify" to authenticate API access
+3. **Review Suggestions**: View pending, approved, and rejected suggestions
+4. **Process Suggestions**: 
    - **🎵 Follow & Track** - Immediately follows artist on Spotify and adds to tracking (one-step process)
    - **👁️ Track Only** - Adds to tracking without following on Spotify
    - **✗ Reject** - Rejects the suggestion
-4. **Tab Management**: Suggestions automatically move between tabs based on status:
+5. **Tab Management**: Suggestions automatically move between tabs based on status:
    - **Pending Review** - New suggestions awaiting admin action
    - **Approved** - Suggestions approved but not yet processed
    - **Processed** - Completed suggestions (followed/tracked)

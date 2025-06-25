@@ -10,8 +10,11 @@ import os
 
 logger = logging.getLogger(__name__)
 
-# Get admin password from environment variable, fallback to default for development
-ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'spotify_admin_2025')
+# Admin password from environment variable (required)
+ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD')
+
+if not ADMIN_PASSWORD:
+    logger.warning("ADMIN_PASSWORD environment variable not set! Admin login will not work.")
 
 def create_admin_routes(spotify_service, data_service, job_service):
     """Create admin routes blueprint with injected services."""
