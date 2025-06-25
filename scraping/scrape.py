@@ -68,7 +68,7 @@ def load_urls(input_path=None):
     Load the list of artist URLs from the specified JSON file or the master artist file.
     """
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    results_dir = os.path.join(script_dir, "results")
+    results_dir = os.path.join(script_dir, "..", "data", "results")
     master_artist_file = os.path.join(results_dir, 'spotify-followed-artists-master.json')
 
     if input_path:
@@ -175,7 +175,7 @@ def save_results(results, today, output_path=None):
     Save the scraped results to a JSON file in src/results.
     """
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    results_dir = os.path.join(script_dir, "results")
+    results_dir = os.path.join(script_dir, "..", "data", "results")
     if not output_path:
         output_path = os.path.join(results_dir, f"spotify-monthly-listeners-{today}.json")
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -189,7 +189,7 @@ def append_to_master(results, master_path=None):
     Append new results to the master JSON file in src/results.
     """
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    results_dir = os.path.join(script_dir, "results")
+    results_dir = os.path.join(script_dir, "..", "data", "results")
     if not master_path:
         master_path = os.path.join(results_dir, 'spotify-monthly-listeners-master.json')
     if os.path.exists(master_path):

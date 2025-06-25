@@ -61,8 +61,9 @@
     "spotify_url": "https://open.spotify.com/artist/507WKf85fzZkH5W2c61m10",
     "spotify_id": "507WKf85fzZkH5W2c61m10",
     "timestamp": "2025-06-24T22:26:01.224432",
-    "status": "approved_for_follow",
+    "status": "processed",
     "admin_approved": true,
-    "admin_action_date": "2025-06-24T22:26:23.070248"
+    "admin_action_date": "2025-06-24T22:26:23.070248",
+    "processed_date": "2025-06-24T22:45:56.432009"
   }
 ]

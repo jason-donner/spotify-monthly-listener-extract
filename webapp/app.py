@@ -111,4 +111,6 @@ app = create_app()
 
 if __name__ == "__main__":
     print("Starting Spotify Monthly Listener Tracker...")
-    app.run(debug=True, host="127.0.0.1", port=5000)
+    # Only enable debug mode in development
+    debug_mode = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
+    app.run(debug=debug_mode, host="127.0.0.1", port=5000)

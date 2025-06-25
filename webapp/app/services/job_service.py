@@ -120,7 +120,7 @@ class JobService:
             env['CHROMEDRIVER_PATH'] = self.chromedriver_path
             
             # Choose the appropriate scraping script
-            script_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "src")
+            script_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "scraping")
             
             if job_data.get('today_only', False):
                 scrape_script = os.path.join(script_dir, "scrape_filtered.py")
@@ -268,14 +268,14 @@ class JobService:
         """
         try:
             # Path to the suggestion processing script
-            script_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "src")
+            script_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "scraping")
             process_script = os.path.join(script_dir, "process_suggestions.py")
             
             # Set environment variables for the subprocess
             env = os.environ.copy()
             env['SPOTIPY_CLIENT_ID'] = os.getenv('SPOTIPY_CLIENT_ID', '')
             env['SPOTIPY_CLIENT_SECRET'] = os.getenv('SPOTIPY_CLIENT_SECRET', '')
-            env['SPOTIPY_REDIRECT_URI'] = os.getenv('SPOTIPY_REDIRECT_URI', 'http://127.0.0.1:5000/callback')
+            env['SPOTIPY_REDIRECT_URI'] = os.getenv('SPOTIPY_REDIRECT_URI', 'http://127.0.0.1:5000/admin/callback')
             
             logger.info(f"Running process suggestions script: {process_script}")
             

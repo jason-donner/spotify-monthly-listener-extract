@@ -8,12 +8,18 @@ if not artist_ids:
     print("No artist IDs loaded. Check your JSON file and loader function.")
     exit(1)
 
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
 # Authenticate with Spotify
 sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
     scope="user-follow-modify user-follow-read",
-    client_id="5e36297fe74744de9fd4a7cf6c3a9941",
-    client_secret="703744d10ba54d779b199134a85333bc",
-    redirect_uri="http://127.0.0.1:5000/callback"
+    client_id=os.getenv("SPOTIPY_CLIENT_ID"),
+    client_secret=os.getenv("SPOTIPY_CLIENT_SECRET"),
+    redirect_uri=os.getenv("SPOTIPY_REDIRECT_URI", "http://127.0.0.1:5000/admin/callback")
 ))
 
 # Follow artists in batches of 50 (API limit)

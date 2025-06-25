@@ -74,7 +74,7 @@ def load_artists_by_date(target_date=None):
     If target_date is None, loads all artists.
     """
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    results_dir = os.path.join(script_dir, "results")
+    results_dir = os.path.join(script_dir, "..", "data", "results")
     master_artist_file = os.path.join(results_dir, 'spotify-followed-artists-master.json')
 
     if not os.path.exists(master_artist_file):
@@ -102,7 +102,7 @@ def load_existing_listeners(target_date):
     Load existing monthly listener entries for the target date to avoid duplicates.
     """
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    results_dir = os.path.join(script_dir, "results")
+    results_dir = os.path.join(script_dir, "..", "data", "results")
     master_listeners_file = os.path.join(results_dir, 'spotify-monthly-listeners-master.json')
 
     existing_artist_ids = set()
@@ -215,7 +215,7 @@ def save_results(results, today, output_path=None):
     Save the scraping results to a dated JSON file.
     """
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    results_dir = os.path.join(script_dir, "results")
+    results_dir = os.path.join(script_dir, "..", "data", "results")
     
     if output_path:
         output_file = output_path
@@ -233,7 +233,7 @@ def append_to_master(results):
     Append results to the master monthly listeners file.
     """
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    results_dir = os.path.join(script_dir, "results")
+    results_dir = os.path.join(script_dir, "..", "data", "results")
     master_path = os.path.join(results_dir, 'spotify-monthly-listeners-master.json')
     
     master = []

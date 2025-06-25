@@ -29,7 +29,7 @@ Create a `.env` file in the project root:
 ```env
 SPOTIPY_CLIENT_ID=your_spotify_app_client_id
 SPOTIPY_CLIENT_SECRET=your_spotify_app_client_secret
-SPOTIPY_REDIRECT_URI=http://127.0.0.1:5000/callback
+SPOTIPY_REDIRECT_URI=http://127.0.0.1:5000/admin/callback
 FLASK_SECRET_KEY=your-secret-key-for-sessions
 CHROMEDRIVER_PATH=C:\Windows\System32\chromedriver.exe
 ```
@@ -43,12 +43,12 @@ pip install -r requirements.txt
 
 ### 4. Configure Spotify App
 In your Spotify Developer Dashboard:
-1. Set redirect URI to: `http://127.0.0.1:5000/callback`
+1. Set redirect URI to: `http://127.0.0.1:5000/admin/callback`
 2. Add scopes: `user-follow-read user-follow-modify`
 
 ### 5. Start the Web Interface
 ```bash
-cd app/spotify-listener-tracker
+cd webapp
 python app.py
 ```
 

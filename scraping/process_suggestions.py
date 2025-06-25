@@ -36,8 +36,7 @@ def load_suggestions():
     suggestions_file = os.path.join(
         os.path.dirname(__file__), 
         "..", 
-        "app", 
-        "spotify-listener-tracker", 
+        "webapp", 
         "artist_suggestions.json"
     )
     
@@ -58,6 +57,8 @@ def load_followed_artists():
     """Load the current followed artists master list."""
     followed_file = os.path.join(
         os.path.dirname(__file__), 
+        "..", 
+        "data", 
         "results", 
         "spotify-followed-artists-master.json"
     )
@@ -77,6 +78,8 @@ def save_followed_artists(artists):
     """Save the updated followed artists list."""
     followed_file = os.path.join(
         os.path.dirname(__file__), 
+        "..", 
+        "data", 
         "results", 
         "spotify-followed-artists-master.json"
     )
@@ -103,8 +106,7 @@ def update_suggestions_status(suggestions_to_update):
     suggestions_file = os.path.join(
         os.path.dirname(__file__), 
         "..", 
-        "app", 
-        "spotify-listener-tracker", 
+        "webapp", 
         "artist_suggestions.json"
     )
     
