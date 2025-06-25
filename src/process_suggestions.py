@@ -170,12 +170,16 @@ def process_suggestions(auto_follow=False):
     new_artists_added = 0
     already_followed = 0
     followed_count = 0
+    suggestions_to_process = []  # Track all suggestions we process (including already followed ones)
     
     for suggestion in suggestions:
         artist_name = suggestion.get('artist_name', '')
         artist_id = suggestion.get('spotify_id', '')
         artist_url = suggestion.get('spotify_url', '')
         should_follow = suggestion.get('status') == 'approved_for_follow'
+        
+        # Add to list of suggestions to mark as processed
+        suggestions_to_process.append(suggestion)
         
         # Skip if already in followed list
         if (artist_id and artist_id in followed_ids) or (artist_name.lower() in followed_names):
@@ -205,12 +209,16 @@ def process_suggestions(auto_follow=False):
         new_artists_added += 1
         logging.info(f"Added '{artist_name}' to tracking list (follow: {should_follow and new_artist['auto_followed']})")
     
+    # Save followed artists if we added new ones
     if new_artists_added > 0:
         save_followed_artists(followed_artists)
-        update_suggestions_status(suggestions)
+    
+    # Always mark processed suggestions (even if already followed)
+    if suggestions_to_process:
+        update_suggestions_status(suggestions_to_process)
         logging.info(f"Processing complete: {new_artists_added} new artists added, {followed_count} followed on Spotify, {already_followed} already in list")
     else:
-        logging.info("No new artists to add")
+        logging.info("No suggestions to process")
 
 def main():
     """Main function."""

@@ -916,6 +916,7 @@ def admin_run_scraping():
     import threading
     import uuid
     from datetime import datetime
+    import tempfile
     
     try:
         data = request.get_json()
@@ -925,11 +926,11 @@ def admin_run_scraping():
         # Generate a unique job ID for this scraping run
         job_id = str(uuid.uuid4())
         
-        # Store job status in session (in production, you'd use Redis or a database)
-        if 'scraping_jobs' not in session:
-            session['scraping_jobs'] = {}
+        # Create job status file in temp directory
+        job_file = os.path.join(tempfile.gettempdir(), f"scraping_job_{job_id}.json")
         
-        session['scraping_jobs'][job_id] = {
+        initial_job_data = {
+            'job_id': job_id,
             'status': 'starting',
             'started_at': datetime.now().isoformat(),
             'output': '',
@@ -937,9 +938,31 @@ def admin_run_scraping():
             'completed': False,
             'today_only': today_only
         }
-        session.modified = True
+        
+        # Save initial job status to file
+        try:
+            with open(job_file, 'w', encoding='utf-8') as f:
+                json.dump(initial_job_data, f)
+        except Exception as e:
+            print(f"Error creating job file: {e}")
         
         def run_scraping():
+            def update_job_status(updates):
+                """Helper function to update job status file"""
+                try:
+                    if os.path.exists(job_file):
+                        with open(job_file, 'r', encoding='utf-8') as f:
+                            job_data = json.load(f)
+                    else:
+                        job_data = initial_job_data.copy()
+                    
+                    job_data.update(updates)
+                    
+                    with open(job_file, 'w', encoding='utf-8') as f:
+                        json.dump(job_data, f)
+                except Exception as e:
+                    print(f"Error updating job status: {e}")
+            
             try:
                 # Set environment variables from our .env file for the subprocess
                 env = os.environ.copy()
@@ -971,8 +994,7 @@ def admin_run_scraping():
                 print(f"DEBUG: Using CHROMEDRIVER_PATH: {env.get('CHROMEDRIVER_PATH')}")
                 
                 # Update status to running
-                session['scraping_jobs'][job_id]['status'] = 'running'
-                session.modified = True
+                update_job_status({'status': 'running'})
                 
                 # Run the script with updated environment
                 result = subprocess.run(
@@ -985,36 +1007,34 @@ def admin_run_scraping():
                 )
                 
                 # Update job status with results
-                session['scraping_jobs'][job_id].update({
+                final_status = {
                     'status': 'completed' if result.returncode == 0 else 'failed',
                     'output': result.stdout,
                     'error': result.stderr,
                     'completed': True,
                     'return_code': result.returncode,
                     'completed_at': datetime.now().isoformat()
-                })
-                session.modified = True
+                }
+                update_job_status(final_status)
                 
                 print(f"DEBUG: Scraping completed with return code: {result.returncode}")
                 
             except subprocess.TimeoutExpired:
-                session['scraping_jobs'][job_id].update({
+                update_job_status({
                     'status': 'timeout',
                     'error': 'Scraping script timed out after 30 minutes',
                     'completed': True,
                     'completed_at': datetime.now().isoformat()
                 })
-                session.modified = True
                 print("DEBUG: Scraping timed out")
                 
             except Exception as e:
-                session['scraping_jobs'][job_id].update({
+                update_job_status({
                     'status': 'error',
                     'error': str(e),
                     'completed': True,
                     'completed_at': datetime.now().isoformat()
                 })
-                session.modified = True
                 print(f"DEBUG: Scraping error: {e}")
         
         # Start scraping in background thread
@@ -1036,26 +1056,50 @@ def admin_run_scraping():
 @app.route("/admin/scraping_status/<job_id>")
 def admin_scraping_status(job_id):
     """Get the status of a scraping job."""
+    import tempfile
+    
     try:
-        jobs = session.get('scraping_jobs', {})
-        job = jobs.get(job_id)
+        job_file = os.path.join(tempfile.gettempdir(), f"scraping_job_{job_id}.json")
         
-        if not job:
+        if not os.path.exists(job_file):
             return jsonify({"success": False, "message": "Job not found"})
         
-        return jsonify({
-            "success": True,
-            "job": job
-        })
+        try:
+            with open(job_file, 'r', encoding='utf-8') as f:
+                job_data = json.load(f)
+            
+            return jsonify({
+                "success": True,
+                "job": job_data
+            })
+        except Exception as e:
+            return jsonify({"success": False, "message": f"Error reading job file: {str(e)}"})
         
     except Exception as e:
         return jsonify({"success": False, "message": f"Error: {str(e)}"})
 
 @app.route("/admin/scraping_jobs")
 def admin_scraping_jobs():
-    """Get all scraping jobs for the current session."""
+    """Get all scraping jobs."""
+    import tempfile
+    import glob
+    
     try:
-        jobs = session.get('scraping_jobs', {})
+        job_pattern = os.path.join(tempfile.gettempdir(), "scraping_job_*.json")
+        job_files = glob.glob(job_pattern)
+        
+        jobs = {}
+        for job_file in job_files:
+            try:
+                with open(job_file, 'r', encoding='utf-8') as f:
+                    job_data = json.load(f)
+                    job_id = job_data.get('job_id')
+                    if job_id:
+                        jobs[job_id] = job_data
+            except Exception as e:
+                print(f"Error reading job file {job_file}: {e}")
+                continue
+        
         return jsonify({
             "success": True,
             "jobs": jobs
@@ -1063,6 +1107,92 @@ def admin_scraping_jobs():
         
     except Exception as e:
         return jsonify({"success": False, "message": f"Error: {str(e)}"})
+
+@app.route("/admin/process_suggestions", methods=["POST"])
+def admin_process_suggestions():
+    """Admin endpoint to process approved suggestions and add them to the followed artists list."""
+    import subprocess
+    from datetime import datetime
+    
+    try:
+        # Path to the suggestion processing script
+        process_script = os.path.join(os.path.dirname(__file__), "..", "..", "src", "process_suggestions.py")
+        
+        # Set environment variables for the subprocess
+        env = os.environ.copy()
+        # Make sure Spotify credentials are available to the subprocess
+        env['SPOTIPY_CLIENT_ID'] = os.getenv('SPOTIPY_CLIENT_ID', '')
+        env['SPOTIPY_CLIENT_SECRET'] = os.getenv('SPOTIPY_CLIENT_SECRET', '')
+        env['SPOTIPY_REDIRECT_URI'] = os.getenv('SPOTIPY_REDIRECT_URI', 'http://127.0.0.1:5000/callback')
+        
+        print(f"DEBUG: Running process suggestions script: {process_script}")
+        
+        # Run the processing script
+        result = subprocess.run(
+            [sys.executable, process_script],
+            cwd=os.path.dirname(process_script),
+            capture_output=True,
+            text=True,
+            timeout=300,  # 5 minute timeout
+            env=env
+        )
+        
+        print(f"DEBUG: Process suggestions completed with return code: {result.returncode}")
+        print(f"DEBUG: Output: {result.stdout}")
+        if result.stderr:
+            print(f"DEBUG: Error: {result.stderr}")
+        
+        if result.returncode == 0:
+            return jsonify({
+                "success": True,
+                "message": "Successfully processed approved suggestions!",
+                "output": result.stdout
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "message": f"Processing failed with return code {result.returncode}",
+                "error": result.stderr,
+                "output": result.stdout
+            })
+        
+    except subprocess.TimeoutExpired:
+        return jsonify({
+            "success": False,
+            "message": "Processing timed out after 5 minutes"
+        })
+    except Exception as e:
+        print(f"Error processing suggestions: {e}")
+        return jsonify({
+            "success": False,
+            "message": f"Error: {str(e)}"
+        })
+
+def cleanup_old_job_files():
+    """Clean up job files older than 24 hours"""
+    import tempfile
+    import glob
+    import time
+    
+    try:
+        job_pattern = os.path.join(tempfile.gettempdir(), "scraping_job_*.json")
+        job_files = glob.glob(job_pattern)
+        
+        current_time = time.time()
+        
+        for job_file in job_files:
+            try:
+                # Check if file is older than 24 hours (86400 seconds)
+                if current_time - os.path.getmtime(job_file) > 86400:
+                    os.remove(job_file)
+                    print(f"Cleaned up old job file: {job_file}")
+            except Exception as e:
+                print(f"Error cleaning up job file {job_file}: {e}")
+    except Exception as e:
+        print(f"Error during job file cleanup: {e}")
+
+# Clean up old job files on startup
+cleanup_old_job_files()
 
 if __name__ == "__main__":
     print("Starting Spotify Monthly Listener Tracker...")
