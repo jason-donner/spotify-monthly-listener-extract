@@ -121,23 +121,19 @@ Enterprise-grade deployment with AWS App Runner:
 **Benefits:**
 - 🚀 **Simple**: Deploy directly from GitHub
 - 🏢 **Enterprise-grade**: 99.9% uptime on AWS infrastructure  
-- 💰 **Cost-effective**: ~$46/month for production workload
+- 💰 **Cost-effective**: ~$6-16/month for production workload
 - 🔄 **Auto-scaling**: Handles traffic spikes automatically
 - 📊 **Monitoring**: Built-in CloudWatch integration
+- 🔒 **Secure**: AWS Secrets Manager integration
 
 ### Other Options
 
-#### 🎯 Railway (Simple & Fast)
-1. Visit [railway.app](https://railway.app) and sign up
-2. Connect your GitHub repository  
-3. Set environment variables in Railway dashboard
-4. Deploy automatically!
-
-#### 🔧 Heroku (Reliable - $7/month)
-1. Install Heroku CLI
-2. `heroku create your-app-name`
-3. Set config vars with `heroku config:set`
-4. `git push heroku main`
+#### 🐳 Docker (Any Platform)
+1. Build: `docker build -t spotify-tracker .`
+2. Deploy to any Docker platform:
+   - DigitalOcean App Platform (~$5/month)
+   - Google Cloud Run (pay-per-use)
+   - Azure Container Instances (pay-per-use)
 
 #### 🐳 Docker (Any platform)
 1. `docker build -t spotify-tracker .`

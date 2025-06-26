@@ -7,7 +7,7 @@ echo "🎵 Spotify Monthly Listener Extract - Production Setup"
 echo "=================================================="
 
 # Check if running in production environment
-if [[ "$RAILWAY_ENVIRONMENT" == "production" ]] || [[ "$HEROKU_APP_NAME" != "" ]] || [[ "$VERCEL" == "1" ]]; then
+if [[ "$PORT" != "" ]] || [[ "$AWS_REGION" != "" ]] || [[ "$HEROKU_APP_NAME" != "" ]]; then
     echo "✅ Production environment detected"
     
     # Create necessary directories

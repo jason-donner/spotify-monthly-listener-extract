@@ -45,5 +45,5 @@ class ProductionConfig:
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
     LOG_TO_STDOUT = os.environ.get('LOG_TO_STDOUT', 'true').lower() == 'true'
 
-# For Railway and other platforms that expect a specific variable name
+# Default production configuration
 Config = ProductionConfig

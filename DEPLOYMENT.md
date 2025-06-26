@@ -1,111 +1,81 @@
 # 🚀 Deploy Your Spotify Monthly Listener Extract App
 
-## Quick Deployment Options
+## 🎯 AWS App Runner Deployment (Recommended)
 
-### � Option 1: AWS App Runner (Recommended - Enterprise Grade)
+AWS App Runner provides enterprise-grade hosting with secure secret management:
 
-AWS App Runner provides the best balance of simplicity, performance, and scalability:
-
-#### Why AWS App Runner?
+### Why AWS App Runner?
 - **🚀 Simple Deployment**: Deploy directly from GitHub with zero configuration
 - **🏢 Enterprise-grade**: Built on AWS infrastructure with 99.9% uptime
-- **💰 Cost-effective**: ~$46/month for 1 vCPU, 2GB RAM
+- **💰 Cost-effective**: ~$6-16/month for typical usage
 - **🔄 Auto-scaling**: Automatically handles traffic spikes
-- **🔐 Built-in security**: HTTPS, VPC, IAM integration
+- **🔐 Built-in security**: HTTPS, VPC, IAM integration, AWS Secrets Manager
 - **📊 Monitoring**: CloudWatch integration for logs and metrics
 
-#### Quick Deploy Steps:
-1. **Run the deployment script**:
-   ```powershell
-   # For Windows
-   .\aws\deploy-apprunner.ps1
-   
-   # For Mac/Linux  
-   ./aws/deploy-apprunner.sh
-   ```
-2. **Follow the AWS Console setup** (script provides exact steps)
-3. **Update Spotify Developer App** with the provided redirect URI
-4. **Your app is live!** 🎉
+### Quick Deploy Steps:
 
-**📖 Full AWS Guide**: See `AWS_DEPLOYMENT_GUIDE.md` for detailed options including ECS, Lambda, and Elastic Beanstalk.
+#### 1. Run the Secure Deployment Script
+```powershell
+cd "C:\Users\Jason\Spotify Monthly Listener Extract\aws"
+.\deploy-apprunner.ps1
+```
 
----
+This script:
+- ✅ Creates secrets in AWS Secrets Manager
+- ✅ Generates IAM roles with proper permissions
+- ✅ Provides step-by-step deployment instructions
+- ✅ Ensures no sensitive data is exposed
 
-### 🎯 Option 2: Railway (Simple & Fast)
+#### 2. Create App Runner Service
+1. Go to [AWS App Runner Console](https://console.aws.amazon.com/apprunner/)
+2. Follow the generated instructions from the script
+3. Use the secure IAM role created by the script
 
-### 🎯 Option 2: Railway (Simple & Fast)
+#### 3. Configure Spotify OAuth
+Update your Spotify Developer App with the redirect URI provided by the script.
 
-Railway is perfect for quick deployments with minimal setup:
+#### 4. Your App is Live! 🎉
 
-#### Steps:
-1. **Create Railway Account**: Visit [railway.app](https://railway.app) and sign up
-2. **Connect GitHub**: Link your GitHub account to Railway
-3. **Deploy from GitHub**: 
-   - Click "New Project" → "Deploy from GitHub repo"
-   - Select your repository
-   - Railway auto-detects it's a Python app
-4. **Set Environment Variables** in Railway dashboard:
-   ```
-   FLASK_SECRET_KEY=your-super-secret-key-here
-   ADMIN_PASSWORD=your-admin-password
-   SPOTIPY_CLIENT_ID=your-spotify-client-id
-   SPOTIPY_CLIENT_SECRET=your-spotify-client-secret
-   SPOTIPY_REDIRECT_URI=https://your-app-name.railway.app/admin/callback
-   PORT=8080
-   ```
-5. **Deploy**: Railway automatically deploys and gives you a public URL
-
-#### 💰 Cost: Free tier with 512MB RAM, $5/month for 1GB+
+**📖 Detailed Guide**: See `AWS_QUICK_START.md` for complete instructions.
 
 ---
 
-### 🔧 Option 2: Heroku (Reliable but Paid)
+## 🔧 Alternative: Docker Deployment
 
-#### Steps:
-1. **Install Heroku CLI**: Download from [heroku.com](https://heroku.com)
-2. **Login**: `heroku login`
-3. **Create app**: `heroku create your-app-name`
-4. **Set environment variables**:
-   ```bash
-   heroku config:set FLASK_SECRET_KEY=your-secret-key
-   heroku config:set ADMIN_PASSWORD=your-admin-password
-   heroku config:set SPOTIPY_CLIENT_ID=your-spotify-client-id
-   heroku config:set SPOTIPY_CLIENT_SECRET=your-spotify-client-secret
-   heroku config:set SPOTIPY_REDIRECT_URI=https://your-app-name.herokuapp.com/admin/callback
-   ```
-5. **Deploy**: `git push heroku main`
+For other platforms, use the included Dockerfile:
 
-#### 💰 Cost: $7/month minimum (no free tier)
+### Supported Platforms:
+- **DigitalOcean App Platform** (~$5/month)
+- **Google Cloud Run** (pay-per-use)
+- **AWS ECS/Fargate** (variable pricing)
+- **Azure Container Instances** (pay-per-use)
 
----
-
-### 🐳 Option 3: Docker (Any Platform)
-
-I've included Docker support for maximum flexibility:
-
-#### Steps:
+### Steps:
 1. **Build**: `docker build -t spotify-tracker .`
-2. **Run**: `docker run -p 8080:8080 --env-file .env spotify-tracker`
-3. **Deploy** to any Docker-compatible platform:
-   - **DigitalOcean App Platform** ($5/month)
-   - **Google Cloud Run** (pay-per-use)
-   - **AWS ECS/Fargate** (variable pricing)
+2. **Run locally**: `docker run -p 8080:8080 --env-file .env spotify-tracker`
+3. **Deploy** to your chosen platform
 
 ---
 
-## 🔐 Security Checklist
+## 🔐 Security Features
 
-Before going live, ensure:
+### AWS Secrets Manager Integration
+- All sensitive credentials stored securely in AWS
+- Application loads secrets at runtime
+- Zero sensitive data in repository
+- Automatic encryption at rest and in transit
 
-- [ ] **Change default admin password** in environment variables
-- [ ] **Generate new Flask secret key**: 
-  ```python
-  import secrets
-  print(secrets.token_hex(32))
-  ```
-- [ ] **Set up Spotify app** in [Spotify Developer Dashboard](https://developer.spotify.com/dashboard/)
-- [ ] **Update redirect URI** to your deployed domain
-- [ ] **Enable HTTPS** (most platforms do this automatically)
+### IAM Best Practices
+- Least-privilege access permissions
+- Service-specific roles
+- No hardcoded credentials
+
+### Production Security Checklist
+- [ ] **Secrets in AWS Secrets Manager** (handled by deployment script)
+- [ ] **Unique service names** (auto-generated)
+- [ ] **HTTPS enabled** (automatic with App Runner)
+- [ ] **Spotify OAuth configured** with correct redirect URI
+- [ ] **IAM roles properly configured** (handled by script)
 
 ---
 
@@ -114,46 +84,60 @@ Before going live, ensure:
 1. Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard/)
 2. Create a new app
 3. Add your deployment URL + `/admin/callback` to redirect URIs:
-   - `https://your-app-name.railway.app/admin/callback`
-   - `https://your-app-name.herokuapp.com/admin/callback`
-4. Copy Client ID and Client Secret to environment variables
+   - Example: `https://spotify-listener-extract-7342.us-east-1.awsapprunner.com/admin/callback`
+4. Client ID and Secret are handled securely by the deployment script
 
 ---
 
-## 🌐 Custom Domain (Optional)
+## 📊 Monitoring & Management
 
-Most platforms support custom domains:
+### AWS CloudWatch Integration
+- **Application logs** automatically sent to CloudWatch
+- **Metrics** for performance monitoring
+- **Alarms** can be set up for error rates or response times
 
-### Railway:
-- Go to project settings → Custom Domain
-- Add your domain (e.g., `spotifytracker.yourdomain.com`)
-- Update DNS records as instructed
+### Updating Secrets
+```powershell
+# Update any secret value
+aws secretsmanager update-secret --secret-id "spotify-listener-extract/{service-name}" --secret-string '{...}'
 
-### Heroku:
-- `heroku domains:add yourdomain.com`
-- Update DNS to point to Heroku
+# Restart service to pick up changes
+aws apprunner start-deployment --service-arn "{your-service-arn}"
+```
+
+### Health Monitoring
+- Built-in health checks in App Runner
+- Automatic restart on failures
+- Load balancing across instances
 
 ---
 
-## 📊 Monitoring & Maintenance
+## � Cost Breakdown
 
-After deployment:
+### AWS App Runner
+- **Base cost**: ~$5-15/month for light usage
+- **Secrets Manager**: ~$0.40/month per secret
+- **Data transfer**: Minimal for typical usage
+- **Total**: ~$6-16/month
 
-1. **Monitor logs** through your platform's dashboard
-2. **Set up alerts** for errors or downtime
-3. **Regular backups** of your data files
-4. **Update dependencies** monthly for security
+### Scaling Costs
+- Automatically scales based on traffic
+- Pay only for what you use
+- No upfront costs or commitments
 
 ---
 
 ## 🚀 Go Live!
 
-Choose your platform and follow the steps above. Your Spotify Monthly Listener Extract app will be publicly accessible with:
+Your deployed Spotify Monthly Listener Extract app includes:
 
 - 🔍 **Public search** for artists and monthly listeners
 - 💡 **Suggestion system** for users to recommend new artists
 - 🔐 **Secure admin panel** for managing data and scraping
 - 📊 **Beautiful leaderboards** and analytics
 - 🎵 **Spotify integration** for automatic following
+- 🔒 **Enterprise-grade security** with AWS Secrets Manager
 
-**Need help?** All platforms have excellent documentation and support!
+**Ready to deploy?** Run the deployment script and follow the generated instructions!
+
+**Need help?** Check `AWS_QUICK_START.md` for step-by-step guidance.
