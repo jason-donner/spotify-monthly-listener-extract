@@ -51,6 +51,12 @@ htmlcov/
 webapp/spotify_token_cache.json
 *.token
 
+# Artist suggestions and blacklist files (user-submitted data)
+webapp/artist_suggestions.json
+webapp/artist_blacklist.json
+webapp/artist_blacklist_clean.json
+webapp/artist_suggestions_clean.json
+
 # Temporary files
 tmp/
 temp/
