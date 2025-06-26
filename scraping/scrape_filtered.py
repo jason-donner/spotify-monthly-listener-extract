@@ -23,7 +23,7 @@ import re
 import argparse
 
 # Initialize colorama for colored console output
-init(autoreset=True)
+init(autoreset=True, convert=True, strip=False)
 load_dotenv()
 
 
@@ -313,17 +313,17 @@ def main():
             print(Style.BRIGHT + f"\nFiltered scraping complete. {len(results)} new artists scraped successfully.")
             
             # Print detailed list of newly scraped artists
-            print(Fore.GREEN + "\n✅ Successfully scraped new artists:")
+            print(Fore.GREEN + "\n[SUCCESS] Successfully scraped new artists:")
             for result in results:
                 listeners_formatted = format_listener_count(result['monthly_listeners'])
-                print(Fore.GREEN + f"  • {result['artist_name']} - {listeners_formatted} monthly listeners")
+                print(Fore.GREEN + f"  * {result['artist_name']} - {listeners_formatted} monthly listeners")
         else:
             print(Fore.YELLOW + "\nNo new data to save - all artists already scraped today or failed.")
         
         if failed_urls:
-            print(Fore.RED + f"\n❌ {len(failed_urls)} artists failed to scrape:")
+            print(Fore.RED + f"\n[ERROR] {len(failed_urls)} artists failed to scrape:")
             for artist in failed_urls:
-                print(Fore.RED + f"  • {artist.get('artist_name', 'Unknown')} - {artist.get('url', 'No URL')}")
+                print(Fore.RED + f"  * {artist.get('artist_name', 'Unknown')} - {artist.get('url', 'No URL')}")
     
     finally:
         driver.quit()

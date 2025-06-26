@@ -25,7 +25,7 @@ import re
 import argparse
 
 # Initialize colorama for colored console output
-init(autoreset=True)
+init(autoreset=True, convert=True, strip=False)
 load_dotenv()
 
 
