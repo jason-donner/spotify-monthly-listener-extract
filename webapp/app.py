@@ -81,6 +81,7 @@ def create_app():
     # Load configuration
     app.config.from_object(Config)
     Config.validate()  # Validate required settings
+    Config.init_app(app)  # Initialize app-specific config
     
     # Configure sessions for admin authentication
     app.secret_key = os.getenv('SECRET_KEY', 'new-secret-key-2025-reset')  # Changed to invalidate old sessions
@@ -178,4 +179,7 @@ if __name__ == "__main__":
     print("Starting Spotify Monthly Listener Tracker...")
     # Only enable debug mode in development
     debug_mode = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
-    app.run(debug=debug_mode, host="127.0.0.1", port=5000)
+    # Use environment-specific host and port
+    host = os.getenv('HOST', '127.0.0.1')
+    port = int(os.getenv('PORT', 5000))
+    app.run(debug=debug_mode, host=host, port=port)
