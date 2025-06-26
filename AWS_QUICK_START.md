@@ -12,6 +12,7 @@ aws configure  # If not already configured
 
 ✅ **Git repository on GitHub (main branch)**
 ```powershell
+cd "C:\Users\Jason\Spotify Monthly Listener Extract"
 git status  # Ensure you're on main branch
 git push origin main  # Ensure latest code is pushed
 ```
@@ -24,7 +25,7 @@ git push origin main  # Ensure latest code is pushed
 
 ### Step 1: Run Deployment Script
 ```powershell
-cd aws
+cd "C:\Users\Jason\Spotify Monthly Listener Extract\aws"
 .\deploy-apprunner.ps1
 ```
 
