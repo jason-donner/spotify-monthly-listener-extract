@@ -1,103 +1,144 @@
-# 🚀 AWS Quick Start - 10 Minutes to Live App
+# AWS App Runner Quick Start - Secure Deployment
+
+Deploy the Spotify Monthly Listener Extract app to AWS App Runner with enterprise-grade security using AWS Secrets Manager.
 
 ## Prerequisites
-- ✅ AWS Account
-- ✅ GitHub repository with your code
-- ✅ Spotify Developer App
-- ✅ **Merge your feature branch to main first** (see Step 0 below)
 
-## Step 0: Merge to Main Branch (1 minute)
-
-Since your working app is in a feature branch, merge it to main first:
-
-```bash
-# Check current branch and status
-git status
-
-# Switch to main branch
-git checkout main
-
-# Merge your feature branch (replace 'your-feature-branch' with actual name)
-git merge your-feature-branch-name
-
-# Push to GitHub
-git push origin main
+✅ **AWS CLI installed and configured**
+```powershell
+aws --version
+aws configure  # If not already configured
 ```
 
-## Step 1: Run Deployment Script (2 minutes)
-
-### Windows:
+✅ **Git repository on GitHub (main branch)**
 ```powershell
-# Navigate to your project directory first
-cd "C:\Users\Jason\Spotify Monthly Listener Extract"
+git status  # Ensure you're on main branch
+git push origin main  # Ensure latest code is pushed
+```
+
+✅ **Spotify Developer Account**
+- Visit: https://developer.spotify.com/dashboard/
+- Create app and note Client ID/Secret
+
+## 🚀 One-Click Secure Deployment
+
+### Step 1: Run Deployment Script
+```powershell
 cd aws
 .\deploy-apprunner.ps1
 ```
 
-**Or in one command:**
+**What this does:**
+- ✅ Generates secure Flask secret key
+- ✅ Prompts for your credentials (secure input)
+- ✅ Creates/updates AWS Secrets Manager secret
+- ✅ Creates IAM role with least-privilege permissions
+- ✅ Generates deployment configuration
+- ✅ No sensitive data touches your repository
+
+### Step 2: Complete App Runner Setup
+
+1. **Open AWS Console**
+   - Go to: https://console.aws.amazon.com/apprunner/
+
+2. **Create Service**
+   - Click **"Create service"**
+   - Source: **Repository**
+   - Connect to GitHub
+   - Repository: **spotify-monthly-listener-extract**
+   - Branch: **main**
+   - Configuration: **Use configuration file (apprunner.yaml)**
+
+3. **Security Configuration**
+   - Service name: Use name from script output
+   - **Instance role**: Select `AppRunnerInstanceRole-{service-name}`
+   
+4. **Environment Variables** (non-sensitive only):
+   ```
+   AWS_REGION=us-east-1
+   AWS_SECRET_NAME={from-script-output}
+   PORT=8080
+   FLASK_DEBUG=false
+   ```
+
+5. **Deploy**
+   - Click **"Create & deploy"**
+   - Wait 5-10 minutes for deployment
+
+### Step 3: Configure Spotify OAuth
+
+1. **Get your App Runner URL** from AWS console
+2. **Update Spotify App**:
+   - Go to: https://developer.spotify.com/dashboard/
+   - Select your app → **Edit Settings**
+   - Add Redirect URI: `https://{your-url}/admin/callback`
+
+### Step 4: Test Deployment
+
+- **App URL**: `https://{your-service-name}.us-east-1.awsapprunner.com`
+- **Admin Login**: `https://{your-service-name}.us-east-1.awsapprunner.com/admin_login`
+
+## 🔒 Security Features
+
+### ✅ AWS Secrets Manager Integration
+- Sensitive credentials stored securely in AWS
+- Application loads secrets at runtime
+- Zero sensitive data in repository
+- Automatic encryption at rest and in transit
+
+### ✅ IAM Best Practices
+- Least-privilege access (only read specific secret)
+- Service-specific roles
+- No hardcoded credentials
+
+### ✅ Production Ready
+- Proper logging and monitoring
+- Scalable architecture
+- Health checks included
+
+## 📊 Monitoring & Management
+
+### View Logs
+1. AWS App Runner Console → Your Service → **Logs** tab
+2. CloudWatch integration for advanced monitoring
+
+### Update Secrets
 ```powershell
-cd "C:\Users\Jason\Spotify Monthly Listener Extract\aws"
-.\deploy-apprunner.ps1
+# Update any secret value
+aws secretsmanager update-secret --secret-id "spotify-listener-extract/{service-name}" --secret-string '{...}'
+
+# Restart service to pick up changes
+aws apprunner start-deployment --service-arn "{your-service-arn}"
 ```
 
-### Mac/Linux:
-```bash
-cd aws
-chmod +x deploy-apprunner.sh
-./deploy-apprunner.sh
-```
+## 💰 Cost Estimate
 
-The script will:
-- ✅ Check AWS CLI configuration
-- ✅ Generate secure Flask secret key
-- ✅ Collect your Spotify credentials
-- ✅ Provide exact AWS Console steps
-- ✅ Save configuration for future reference
+- **App Runner**: ~$5-15/month (light usage)
+- **Secrets Manager**: ~$0.40/month per secret
+- **Total**: ~$6-16/month
 
-## Step 2: AWS Console Setup (5 minutes)
+## 🆘 Troubleshooting
 
-1. **Go to**: [AWS App Runner Console](https://console.aws.amazon.com/apprunner/)
-2. **Click**: "Create service"
-3. **Select**: Source code repository → GitHub
-4. **Repository**: Your GitHub repo URL
-5. **Branch**: main
-6. **Configuration**: Use configuration file (apprunner.yaml)
-7. **Service name**: Use the name from the script
-8. **Environment variables**: Copy from script output
-9. **Click**: "Create & deploy"
+**Build Issues:**
+- Check Dockerfile and requirements.txt
+- View build logs in App Runner console
 
-## Step 3: Spotify Setup (2 minutes)
+**Secret Access Issues:**
+- Verify IAM role is attached
+- Check AWS region consistency
+- Confirm secret name matches
 
-1. **Go to**: [Spotify Developer Dashboard](https://developer.spotify.com/dashboard/)
-2. **Select**: Your app
-3. **Edit Settings** → Redirect URIs
-4. **Add**: The redirect URI from the script
-5. **Save**
+**Spotify OAuth Issues:**
+- Verify exact redirect URI in Spotify app
+- Check case sensitivity
 
-## Step 4: Test Your App (1 minute)
+## 📚 Full Documentation
 
-1. **Public app**: `https://your-service-name.region.awsapprunner.com`
-2. **Admin login**: `https://your-service-name.region.awsapprunner.com/admin_login`
-3. **Test suggestion**: Submit an artist from the public interface
-4. **Test admin**: Login and approve the suggestion
+For detailed documentation, see: `DEPLOYMENT_GUIDE.md`
 
-## 🎉 You're Live!
+---
 
-Your Spotify Monthly Listener Extract app is now:
-- ✅ **Publicly accessible** for users to search and suggest artists
-- ✅ **Securely managed** through your admin panel
-- ✅ **Auto-scaling** to handle traffic
-- ✅ **Monitored** through CloudWatch
-- ✅ **HTTPS secured** with automatic certificates
-
-## 💰 Monthly Cost
-- **~$46/month** for 1 vCPU, 2GB RAM
-- **First month often free** with AWS credits
-- **Scales with usage** - pay only for what you use
-
-## 🛠️ Next Steps
-- **Custom domain**: Add your own domain in CloudFront
-- **Monitoring**: Set up CloudWatch alarms
+**Ready to deploy?** Run the script and follow the steps above! 🚀
 - **Backups**: Configure S3 data backups
 - **Scaling**: Upgrade resources as needed
 
