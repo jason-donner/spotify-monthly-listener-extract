@@ -110,6 +110,63 @@ If you encounter issues after migration:
 3. Restart the Flask app
 4. Try the authentication flow again
 
+## 🚀 Auto-Follow System Migration (June 2025)
+
+### New Feature Overview
+The system now automatically follows suggested artists, eliminating most manual admin work.
+
+### Migration for Existing Installations
+
+#### Step 1: Update to Latest Code
+```bash
+git pull origin main
+```
+
+#### Step 2: Fix Stuck Suggestions
+If you have suggestions that were approved before the auto-follow system:
+
+**Option A: Use Admin Panel**
+1. Go to Admin Panel → Maintenance section
+2. Click "Fix Stuck Suggestions"
+3. Confirm the action
+
+**Option B: Use Command Line**
+```bash
+python scripts/fix_stuck_suggestions.py
+```
+
+#### Step 3: Verify Migration
+1. Check Admin Panel → Processed tab
+2. Ensure all approved suggestions show "Already Followed" badge
+3. Verify artists appear in followed artists list
+
+### What the Migration Does
+- ✅ Identifies approved suggestions missing follow data
+- ✅ Adds `already_followed: true` and `admin_action_date` fields
+- ✅ Adds artists to followed artists database
+- ✅ Preserves all original suggestion data
+
+### Before Migration
+```json
+{
+  "artist_name": "Example Artist",
+  "status": "approved",
+  "timestamp": "2025-06-25T10:00:00"
+  // Missing follow data
+}
+```
+
+### After Migration
+```json
+{
+  "artist_name": "Example Artist", 
+  "status": "approved",
+  "timestamp": "2025-06-25T10:00:00",
+  "already_followed": true,
+  "admin_action_date": "2025-06-25T22:00:00"
+}
+```
+
 ## Need Help?
 If you encounter issues during migration, check:
 1. The Flask app logs for error messages

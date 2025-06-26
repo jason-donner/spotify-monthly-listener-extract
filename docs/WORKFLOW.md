@@ -2,9 +2,31 @@
 
 ## Overview
 
-This workflow automates the extraction of monthly listener counts for Spotify artists using Python scripts and Selenium. It ensures your scraping account follows all artists your main account does, guaranteeing a complete and up-to-date artist list.
+This workflow automates the extraction of monthly listener counts for Spotify artists using Python scripts and Selenium. The system now features automated artist suggestion processing with **auto-follow capabilities**, making artist management seamless and efficient.
 
 ---
+
+## 🚀 New Auto-Follow Workflow (June 2025)
+
+### Public User Experience
+1. **Artist Suggestion**: Users visit the web app and suggest new artists
+2. **Auto-Processing**: System automatically:
+   - ✅ Approves the suggestion (if not blacklisted)
+   - 🎵 Follows the artist on Spotify (if authenticated)
+   - 📝 Adds artist to tracking database
+   - ✨ Provides immediate feedback to user
+
+### Admin Experience
+1. **Review**: Admin can see all suggestions in organized tabs:
+   - **Pending**: Manual review needed (rare, mostly for blacklisted artists)
+   - **Processed**: Auto-followed and ready for scraping
+   - **Rejected**: Manually rejected suggestions
+2. **Manual Actions**: Admin can still manually follow/reject if needed
+3. **Maintenance**: Built-in tools to fix any data issues
+
+---
+
+## Traditional Workflow (Still Available)
 
 ## Prerequisites
 

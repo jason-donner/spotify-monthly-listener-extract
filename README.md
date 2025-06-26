@@ -67,6 +67,25 @@ A modern web-based system for tracking Spotify artists' monthly listener counts 
 - **🎯 Consistent Data Flow** - Unified suggestion processing workflow
 - **📝 Centralized Logging** - Structured logging with file rotation and admin security monitoring
 
+### Auto-Follow System (June 25, 2025)
+- **🤖 Automatic Artist Following** - Suggestions are now auto-approved AND auto-followed on Spotify
+- **⚡ Instant Processing** - Users see immediate results when suggesting artists
+- **🔗 Smart Integration** - Seamlessly integrates with Spotify API when authenticated
+- **🛡️ Graceful Fallback** - Still works without Spotify auth, provides clear feedback
+- **📝 Enhanced User Feedback** - Detailed messages about what actions were taken
+
+### Data Migration & Maintenance (June 25, 2025)
+- **🔧 Stuck Suggestion Fix** - Built-in tools to repair suggestions stuck in limbo
+- **🛠️ Admin Maintenance Panel** - New maintenance section in admin panel for data fixes
+- **📋 Migration Scripts** - Automated scripts to handle data upgrades and fixes
+- **🔍 Data Integrity Tools** - Proactive detection and resolution of data issues
+
+### Unicode Encoding Fixes (June 25, 2025)
+- **🪟 Windows Compatibility** - Fixed Unicode encoding errors in scraping output
+- **🔧 Enhanced Colorama** - Better terminal output handling across platforms
+- **✅ Cross-Platform Support** - Works reliably on Windows, Mac, and Linux
+- **🎨 ASCII-Safe Display** - Replaced Unicode symbols with ASCII-compatible alternatives
+
 ---
 
 ## 🌟 Features

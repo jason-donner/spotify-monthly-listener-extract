@@ -1,30 +1,21 @@
 # Quick Start Guide
 
+## 🚀 New User Experience (Auto-Follow System)
+
+### For End Users
+1. **Visit the Web App**: Go to http://localhost:5000
+2. **Suggest Artists**: Use the suggestion form to add new artists
+3. **Instant Results**: Artists are automatically approved and followed
+4. **No Waiting**: Start seeing data in the next scraping run
+
+### For Admins
+1. **Set Up Admin Access**: Configure password and Spotify authentication
+2. **Monitor**: Use admin panel to review processed suggestions
+3. **Maintain**: Minimal manual intervention needed
+
+---
+
 ## Setting Up Admin Access
-
-### Windows (PowerShell)
-```powershell
-# Set the admin password
-$env:ADMIN_PASSWORD = "your_secure_password_here"
-
-# Navigate to webapp directory
-cd "c:\path\to\your\project\webapp"
-
-# Start the application
-python app.py
-```
-
-### Linux/Mac (Bash)
-```bash
-# Set the admin password
-export ADMIN_PASSWORD="your_secure_password_here"
-
-# Navigate to webapp directory
-cd /path/to/your/project/webapp
-
-# Start the application
-python app.py
-```
 
 ### Using a .env File (Recommended)
 Create a `.env` file in the `webapp` directory:
@@ -32,6 +23,11 @@ Create a `.env` file in the `webapp` directory:
 ADMIN_PASSWORD=your_secure_password_here
 FLASK_DEBUG=false
 FLASK_SECRET_KEY=your_secret_key_here
+
+# Spotify API credentials
+SPOTIPY_CLIENT_ID=your_spotify_app_client_id
+SPOTIPY_CLIENT_SECRET=your_spotify_app_client_secret
+SPOTIPY_REDIRECT_URI=http://127.0.0.1:5000/admin/callback
 ```
 
 Then start the app:

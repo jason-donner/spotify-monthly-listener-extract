@@ -636,4 +636,93 @@ def create_admin_routes(spotify_service, data_service, job_service, scheduler_se
             logger.error(f"Error removing from blacklist: {e}")
             return jsonify({"success": False, "message": f"Error: {str(e)}"})
 
+    @admin_bp.route("/fix_stuck_suggestions", methods=["POST"])
+    @admin_login_required
+    def fix_stuck_suggestions():
+        """Admin endpoint to fix suggestions stuck in limbo (approved but not followed)."""
+        try:
+            client_ip = get_client_ip()
+            admin_security_logger.info(f"Admin initiated stuck suggestions fix from IP: {client_ip}")
+            
+            # Load suggestions
+            suggestions = data_service.load_suggestions()
+            followed_artists = data_service.load_followed_artists()
+            
+            # Find stuck suggestions (approved but not marked as followed)
+            stuck_suggestions = []
+            for suggestion in suggestions:
+                if (suggestion.get("status") == "approved" and 
+                    not suggestion.get("already_followed") and 
+                    not suggestion.get("admin_action_date")):
+                    stuck_suggestions.append(suggestion)
+            
+            if not stuck_suggestions:
+                return jsonify({
+                    "success": True,
+                    "message": "No stuck suggestions found - all approved suggestions are properly processed!",
+                    "fixed_count": 0
+                })
+            
+            # Get existing followed artist IDs for duplicate checking
+            existing_artist_ids = {artist.get("artist_id") for artist in followed_artists if artist.get("artist_id")}
+            
+            # Process each stuck suggestion
+            fixed_count = 0
+            added_to_followed = 0
+            
+            for suggestion in stuck_suggestions:
+                artist_name = suggestion.get("artist_name", "Unknown")
+                spotify_id = suggestion.get("spotify_id")
+                spotify_url = suggestion.get("spotify_url")
+                
+                # Mark suggestion as properly processed
+                suggestion["already_followed"] = True
+                suggestion["admin_action_date"] = datetime.now().isoformat()
+                fixed_count += 1
+                
+                # Add to followed artists if not already there
+                if spotify_id and spotify_id not in existing_artist_ids:
+                    new_artist = {
+                        "artist_name": artist_name,
+                        "artist_id": spotify_id,
+                        "url": spotify_url if spotify_url else f"https://open.spotify.com/artist/{spotify_id}",
+                        "source": "admin_fix",
+                        "date_added": datetime.now().strftime("%Y-%m-%d"),
+                        "removed": False
+                    }
+                    followed_artists.append(new_artist)
+                    existing_artist_ids.add(spotify_id)
+                    added_to_followed += 1
+                    logger.info(f"Fixed stuck suggestion: {artist_name} - added to followed artists")
+            
+            # Save updated files
+            if not data_service.save_suggestions(suggestions):
+                return jsonify({
+                    "success": False,
+                    "message": "Failed to save updated suggestions"
+                })
+            
+            if not data_service.save_followed_artists(followed_artists):
+                return jsonify({
+                    "success": False,
+                    "message": "Failed to save updated followed artists"
+                })
+            
+            logger.info(f"Fixed {fixed_count} stuck suggestions, added {added_to_followed} to followed list")
+            admin_security_logger.info(f"Admin fixed {fixed_count} stuck suggestions from IP: {client_ip}")
+            
+            return jsonify({
+                "success": True,
+                "message": f"Fixed {fixed_count} stuck suggestion(s) and added {added_to_followed} artist(s) to followed list",
+                "fixed_count": fixed_count,
+                "added_count": added_to_followed
+            })
+            
+        except Exception as e:
+            logger.error(f"Error fixing stuck suggestions: {e}")
+            return jsonify({
+                "success": False,
+                "message": f"Error fixing stuck suggestions: {str(e)}"
+            })
+
     return admin_bp

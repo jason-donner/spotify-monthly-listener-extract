@@ -183,6 +183,31 @@
                 </div>
             </div>
             
+            <!-- Maintenance Controls Section -->
+            <div class="card mb-4" style="background: rgba(40, 20, 60, 0.95); border: 1px solid rgba(138, 43, 226, 0.3);">
+                <div class="card-header" style="background: rgba(138, 43, 226, 0.1); border-bottom: 1px solid rgba(138, 43, 226, 0.3);">
+                    <h5 class="mb-0" style="color: #da70d6;">
+                        <i class="fas fa-tools"></i> Maintenance & Data Fixes
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <p class="text-light">Administrative tools for fixing data issues and maintenance tasks.</p>
+                            
+                            <div class="alert alert-info" role="alert" style="background-color: rgba(13, 202, 240, 0.2); border-color: rgba(13, 202, 240, 0.5); color: #ffffff; border-width: 2px;">
+                                <i class="fas fa-info-circle" style="color: #0dcaf0;"></i> <strong style="color: #ffffff;">Fix Stuck Suggestions:</strong> <span style="color: #e9ecef;">Repairs suggestions that are approved but not marked as followed (migration issues).</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <button id="fixStuckSuggestionsBtn" class="btn btn-warning" onclick="fixStuckSuggestions()">
+                                <i class="fas fa-wrench"></i> Fix Stuck Suggestions
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
             <!-- Filter tabs -->
             <ul class="nav nav-tabs mb-3" id="suggestionTabs" role="tablist">
                 <li class="nav-item" role="presentation">
@@ -1477,6 +1502,43 @@ function selectBlacklistArtist(name, id) {
     }
 }
 
-// ...existing code...
+// Fix stuck suggestions
+function fixStuckSuggestions() {
+    const btn = document.getElementById('fixStuckSuggestionsBtn');
+    
+    if (!confirm('Fix suggestions that are approved but stuck in limbo?\n\nThis will mark them as properly processed and add them to the followed artists list.')) {
+        return;
+    }
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Fixing...';
+    
+    fetch('/admin/fix_stuck_suggestions', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (data.fixed_count > 0) {
+                showToast('Success', data.message, 'success');
+                loadSuggestions(); // Reload to update UI
+            } else {
+                showToast('Info', data.message, 'info');
+            }
+        } else {
+            showToast('Error', data.message, 'danger');
+        }
+    })
+    .catch(error => {
+        showToast('Error', 'Failed to fix stuck suggestions: ' + error.message, 'danger');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-wrench"></i> Fix Stuck Suggestions';
+    });
+}
 </script>
 {% endblock %}
