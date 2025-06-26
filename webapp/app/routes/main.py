@@ -360,12 +360,78 @@ def create_main_routes(spotify_service, data_service):
                 "status": "approved"  # Auto-approve everything not blacklisted
             }
             
+            # Try to auto-follow the artist if Spotify is authenticated
+            auto_follow_success = False
+            auto_follow_message = ""
+            
+            if spotify_id and spotify_service.get_token_from_session():
+                try:
+                    # Attempt to follow the artist automatically
+                    follow_success, follow_error = spotify_service.follow_artist(spotify_id)
+                    
+                    if follow_success:
+                        auto_follow_success = True
+                        auto_follow_message = "Artist automatically followed on Spotify"
+                        
+                        # Add to followed artists file
+                        followed_artists = data_service.load_followed_artists()
+                        
+                        # Check if already in list
+                        already_exists = any(
+                            followed.get("artist_id") == spotify_id 
+                            for followed in followed_artists
+                        )
+                        
+                        if not already_exists:
+                            new_artist = {
+                                "artist_name": artist_name,
+                                "artist_id": spotify_id,
+                                "url": spotify_url if spotify_url else f"https://open.spotify.com/artist/{spotify_id}",
+                                "source": "auto_follow",
+                                "date_added": datetime.now().strftime("%Y-%m-%d"),
+                                "removed": False
+                            }
+                            followed_artists.append(new_artist)
+                            data_service.save_followed_artists(followed_artists)
+                            logger.info(f"Auto-followed and added {artist_name} to followed artists")
+                        
+                        # Update suggestion with follow info
+                        new_suggestion["already_followed"] = True
+                        new_suggestion["admin_action_date"] = datetime.now().isoformat()
+                        
+                    elif follow_error and ("already" in follow_error.lower() or "following" in follow_error.lower()):
+                        # Already following - this is fine
+                        auto_follow_success = True
+                        auto_follow_message = "Artist was already followed on Spotify"
+                        new_suggestion["already_followed"] = True
+                        
+                    else:
+                        # Follow failed but we'll still approve the suggestion
+                        auto_follow_message = f"Auto-follow failed: {follow_error}, but suggestion was approved"
+                        logger.warning(f"Auto-follow failed for {artist_name}: {follow_error}")
+                        
+                except Exception as e:
+                    logger.error(f"Error during auto-follow for {artist_name}: {e}")
+                    auto_follow_message = "Auto-follow failed due to error, but suggestion was approved"
+            else:
+                if not spotify_id:
+                    auto_follow_message = "No Spotify ID available for auto-follow"
+                else:
+                    auto_follow_message = "Spotify not authenticated - suggestion approved but not auto-followed"
+            
             suggestions.append(new_suggestion)
             
             if data_service.save_suggestions(suggestions):
+                success_message = "Artist suggestion approved and added to the queue!"
+                if auto_follow_success:
+                    success_message += f" {auto_follow_message}."
+                elif auto_follow_message:
+                    success_message += f" Note: {auto_follow_message}."
+                    
                 return jsonify({
                     "success": True, 
-                    "message": "Artist suggestion approved and added to the queue!"
+                    "message": success_message,
+                    "auto_followed": auto_follow_success
                 })
             else:
                 return jsonify({
