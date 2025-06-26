@@ -21,6 +21,30 @@ venv.bak/
 .DS_Store
 Thumbs.db
 
+# Documentation and deployment files
+*.md
+docs/
+aws/
+*.txt
+!requirements.txt
+
+# Git files
+.git
+.gitignore
+
+# Data files (large datasets)
+data/results/*.json
+data/temp/
+
+# Logs
+*.log
+logs/
+
+# Scripts not needed in container
+scripts/
+.DS_Store
+Thumbs.db
+
 # Logs
 *.log
 logs/

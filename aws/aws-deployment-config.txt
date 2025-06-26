@@ -1,19 +1,19 @@
 ﻿AWS App Runner Deployment Configuration
 =======================================
-Generated: 06/26/2025 15:34:04
+Generated: 06/26/2025 16:17:25
 
 SERVICE CONFIGURATION:
-- Service Name: spotify-listener-extract-2356
+- Service Name: spotify-listener-extract-1773
 - Region: us-east-1
-- App URL: https://spotify-listener-extract-2356.us-east-1.awsapprunner.com
-- Admin URL: https://spotify-listener-extract-2356.us-east-1.awsapprunner.com/admin_login
-- Redirect URI: https://spotify-listener-extract-2356.us-east-1.awsapprunner.com/admin/callback
-- Secrets Manager Secret: spotify-listener-extract/spotify-listener-extract-2356
-- IAM Role: AppRunnerInstanceRole-spotify-listener-extract-2356
+- App URL: https://spotify-listener-extract-1773.us-east-1.awsapprunner.com
+- Admin URL: https://spotify-listener-extract-1773.us-east-1.awsapprunner.com/admin_login
+- Redirect URI: https://spotify-listener-extract-1773.us-east-1.awsapprunner.com/admin/callback
+- Secrets Manager Secret: spotify-listener-extract/spotify-listener-extract-1773
+- IAM Role: AppRunnerInstanceRole-spotify-listener-extract-1773
 
 ENVIRONMENT VARIABLES FOR APP RUNNER:
 AWS_REGION=us-east-1
-AWS_SECRET_NAME=spotify-listener-extract/spotify-listener-extract-2356
+AWS_SECRET_NAME=spotify-listener-extract/spotify-listener-extract-1773
 PORT=8080
 FLASK_DEBUG=false
 
