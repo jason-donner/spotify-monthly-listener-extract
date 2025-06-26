@@ -11,11 +11,82 @@ from flask import Flask
 import os
 import logging
 import logging.handlers
+import json
 from dotenv import load_dotenv
 from datetime import timedelta
 
 # Load environment variables
 load_dotenv()
+
+# Import AWS SDK for Secrets Manager (only if running in production)
+try:
+    import boto3
+    from botocore.exceptions import ClientError, NoCredentialsError
+    AWS_AVAILABLE = True
+except ImportError:
+    AWS_AVAILABLE = False
+
+def load_secrets_from_aws():
+    """Load secrets from AWS Secrets Manager if available and configured"""
+    if not AWS_AVAILABLE:
+        return {}
+    
+    secret_name = os.environ.get('AWS_SECRET_NAME')
+    region = os.environ.get('AWS_REGION', 'us-east-1')
+    
+    if not secret_name:
+        return {}
+    
+    try:
+        # Create a Secrets Manager client
+        session = boto3.session.Session()
+        client = session.client(
+            service_name='secretsmanager',
+            region_name=region
+        )
+        
+        # Retrieve the secret
+        response = client.get_secret_value(SecretId=secret_name)
+        secret_string = response['SecretString']
+        secrets = json.loads(secret_string)
+        
+        print(f"Successfully loaded {len(secrets)} secrets from AWS Secrets Manager")
+        return secrets
+    
+    except ClientError as e:
+        print(f"Error retrieving secrets from AWS Secrets Manager: {e}")
+        return {}
+    except NoCredentialsError:
+        print("AWS credentials not found. Using environment variables.")
+        return {}
+    except Exception as e:
+        print(f"Unexpected error loading secrets: {e}")
+        return {}
+
+def configure_environment():
+    """Configure environment variables from AWS Secrets Manager or local .env"""
+    # Load secrets from AWS if available
+    aws_secrets = load_secrets_from_aws()
+    
+    # Set environment variables from AWS secrets (they take precedence)
+    for key, value in aws_secrets.items():
+        os.environ[key] = value
+    
+    # Validate required environment variables
+    required_vars = [
+        'FLASK_SECRET_KEY',
+        'ADMIN_PASSWORD',
+        'SPOTIPY_CLIENT_ID',
+        'SPOTIPY_CLIENT_SECRET',
+        'SPOTIPY_REDIRECT_URI'
+    ]
+    
+    missing_vars = [var for var in required_vars if not os.environ.get(var)]
+    if missing_vars:
+        raise RuntimeError(f"Missing required environment variables: {', '.join(missing_vars)}")
+
+# Configure environment before importing other modules
+configure_environment()
 
 # Import our modular components
 from app.config import Config

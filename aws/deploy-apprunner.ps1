@@ -1,8 +1,10 @@
 # AWS App Runner Deployment Script for Spotify Monthly Listener Extract
-# This script helps you deploy your Flask app to AWS App Runner
+# This script helps you deploy your Flask app to AWS App Runner with secure secret management
 
 Write-Host "AWS App Runner Deployment Script" -ForegroundColor Green
 Write-Host "================================" -ForegroundColor Green
+Write-Host "This script will create/update secrets in AWS Secrets Manager" -ForegroundColor Cyan
+Write-Host "and configure your App Runner deployment securely." -ForegroundColor Cyan
 Write-Host ""
 
 # Check if AWS CLI is installed
@@ -71,6 +73,7 @@ $ServiceName = "spotify-listener-extract-$(Get-Random -Minimum 1000 -Maximum 999
 $RedirectUri = "https://$ServiceName.us-east-1.awsapprunner.com/admin/callback"
 $AppUrl = "https://$ServiceName.us-east-1.awsapprunner.com"
 $AdminUrl = "$AppUrl/admin_login"
+$SecretName = "spotify-listener-extract/$ServiceName"
 
 Write-Host ""
 Write-Host "Deployment Configuration Generated:" -ForegroundColor Green
@@ -79,7 +82,86 @@ Write-Host "Service Name: $ServiceName" -ForegroundColor White
 Write-Host "App URL: $AppUrl" -ForegroundColor White
 Write-Host "Admin URL: $AdminUrl" -ForegroundColor White
 Write-Host "Redirect URI: $RedirectUri" -ForegroundColor White
+Write-Host "Secrets Name: $SecretName" -ForegroundColor White
 Write-Host ""
+
+# Create secrets JSON for AWS Secrets Manager
+$SecretsJson = @{
+    "FLASK_SECRET_KEY" = $FlaskSecretKey
+    "ADMIN_PASSWORD" = $AdminPasswordText
+    "SPOTIPY_CLIENT_ID" = $SpotifyClientId
+    "SPOTIPY_CLIENT_SECRET" = $SpotifyClientSecretText
+    "SPOTIPY_REDIRECT_URI" = $RedirectUri
+} | ConvertTo-Json
+
+Write-Host "Creating/updating secrets in AWS Secrets Manager..." -ForegroundColor Cyan
+
+# Check if secret already exists
+try {
+    $ExistingSecret = aws secretsmanager describe-secret --secret-id $SecretName 2>$null | ConvertFrom-Json
+    Write-Host "Secret already exists, updating..." -ForegroundColor Yellow
+    
+    # Update existing secret
+    aws secretsmanager update-secret --secret-id $SecretName --secret-string $SecretsJson | Out-Null
+    Write-Host "Secret updated successfully" -ForegroundColor Green
+} catch {
+    Write-Host "Creating new secret..." -ForegroundColor Yellow
+    
+    # Create new secret
+    try {
+        aws secretsmanager create-secret --name $SecretName --description "Secrets for Spotify Monthly Listener Extract App Runner service" --secret-string $SecretsJson | Out-Null
+        Write-Host "Secret created successfully" -ForegroundColor Green
+    } catch {
+        Write-Host "Failed to create secret. Error:" -ForegroundColor Red
+        Write-Host $_.Exception.Message -ForegroundColor Red
+        exit 1
+    }
+}
+
+# Create IAM role for App Runner (if it doesn't exist)
+$RoleName = "AppRunnerInstanceRole-$ServiceName"
+Write-Host ""
+Write-Host "Creating IAM role for App Runner..." -ForegroundColor Cyan
+
+$TrustPolicyDocument = @{
+    "Version" = "2012-10-17"
+    "Statement" = @(
+        @{
+            "Effect" = "Allow"
+            "Principal" = @{
+                "Service" = "tasks.apprunner.amazonaws.com"
+            }
+            "Action" = "sts:AssumeRole"
+        }
+    )
+} | ConvertTo-Json -Depth 10
+
+$PolicyDocument = @{
+    "Version" = "2012-10-17"
+    "Statement" = @(
+        @{
+            "Effect" = "Allow"
+            "Action" = @(
+                "secretsmanager:GetSecretValue"
+            )
+            "Resource" = "arn:aws:secretsmanager:us-east-1:${awsAccountId}:secret:${SecretName}*"
+        }
+    )
+} | ConvertTo-Json -Depth 10
+
+try {
+    # Create IAM role
+    aws iam create-role --role-name $RoleName --assume-role-policy-document $TrustPolicyDocument | Out-Null
+    Write-Host "IAM role created: $RoleName" -ForegroundColor Green
+    
+    # Create and attach policy
+    $PolicyName = "SecretsManagerAccess-$ServiceName"
+    aws iam put-role-policy --role-name $RoleName --policy-name $PolicyName --policy-document $PolicyDocument | Out-Null
+    Write-Host "IAM policy attached: $PolicyName" -ForegroundColor Green
+} catch {
+    Write-Host "IAM role might already exist or there was an error:" -ForegroundColor Yellow
+    Write-Host $_.Exception.Message -ForegroundColor Yellow
+}
 
 # Create configuration content
 $ConfigLines = @(
@@ -93,28 +175,36 @@ $ConfigLines = @(
     "- App URL: $AppUrl"
     "- Admin URL: $AdminUrl"
     "- Redirect URI: $RedirectUri"
+    "- Secrets Manager Secret: $SecretName"
+    "- IAM Role: $RoleName"
     ""
-    "ENVIRONMENT VARIABLES FOR AWS:"
-    "FLASK_SECRET_KEY=$FlaskSecretKey"
-    "ADMIN_PASSWORD=$AdminPasswordText"
-    "SPOTIPY_CLIENT_ID=$SpotifyClientId"
-    "SPOTIPY_CLIENT_SECRET=$SpotifyClientSecretText"
-    "SPOTIPY_REDIRECT_URI=$RedirectUri"
+    "ENVIRONMENT VARIABLES FOR APP RUNNER:"
+    "AWS_REGION=us-east-1"
+    "AWS_SECRET_NAME=$SecretName"
     "PORT=8080"
     "FLASK_DEBUG=false"
+    ""
+    "SECRETS (stored securely in AWS Secrets Manager):"
+    "- FLASK_SECRET_KEY"
+    "- ADMIN_PASSWORD" 
+    "- SPOTIPY_CLIENT_ID"
+    "- SPOTIPY_CLIENT_SECRET"
+    "- SPOTIPY_REDIRECT_URI"
     ""
     "NEXT STEPS:"
     "1. Complete App Runner setup in AWS Console"
     "2. Update Spotify Developer App with redirect URI"
     "3. Test deployment"
     ""
-    "AWS CONSOLE LINK:"
-    "https://console.aws.amazon.com/apprunner/"
+    "AWS CONSOLE LINKS:"
+    "- App Runner: https://console.aws.amazon.com/apprunner/"
+    "- Secrets Manager: https://console.aws.amazon.com/secretsmanager/"
 )
 
 # Save configuration
 $ConfigLines -join "`r`n" | Out-File -FilePath "aws-deployment-config.txt" -Encoding UTF8
 
+Write-Host ""
 Write-Host "Next Steps:" -ForegroundColor Cyan
 Write-Host "===========" -ForegroundColor Cyan
 Write-Host ""
@@ -128,9 +218,13 @@ Write-Host "   - Connect to GitHub" -ForegroundColor White
 Write-Host "   - Select your repository" -ForegroundColor White
 Write-Host "   - Branch: main" -ForegroundColor White
 Write-Host "   - Configuration: Use configuration file (apprunner.yaml)" -ForegroundColor White
+Write-Host "   - Instance role: $RoleName" -ForegroundColor Green
 Write-Host ""
-Write-Host "3. Configure Environment Variables:" -ForegroundColor Yellow
-Write-Host "   Copy the environment variables from aws-deployment-config.txt" -ForegroundColor White
+Write-Host "3. Configure Environment Variables (non-sensitive only):" -ForegroundColor Yellow
+Write-Host "   AWS_REGION=us-east-1" -ForegroundColor White
+Write-Host "   AWS_SECRET_NAME=$SecretName" -ForegroundColor White
+Write-Host "   PORT=8080" -ForegroundColor White
+Write-Host "   FLASK_DEBUG=false" -ForegroundColor White
 Write-Host ""
 Write-Host "4. Update Spotify Developer App:" -ForegroundColor Yellow
 Write-Host "   - Go to: https://developer.spotify.com/dashboard/" -ForegroundColor Blue
@@ -139,9 +233,11 @@ Write-Host "   - Edit Settings > Redirect URIs" -ForegroundColor White
 Write-Host "   - Add: $RedirectUri" -ForegroundColor Green
 Write-Host ""
 Write-Host "Configuration saved to: aws-deployment-config.txt" -ForegroundColor Blue
+Write-Host "Secrets securely stored in AWS Secrets Manager: $SecretName" -ForegroundColor Green
 Write-Host ""
 Write-Host "Ready for deployment! Follow the instructions above." -ForegroundColor Green
 
 # Clear sensitive variables
 $AdminPasswordText = $null
 $SpotifyClientSecretText = $null
+$SecretsJson = $null
