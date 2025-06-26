@@ -106,11 +106,30 @@ Your Spotify Monthly Listener Extract app is ready for public deployment! Users 
 - 📊 **Browse leaderboards** and artist performance
 - 🎵 **Preview top tracks** for each artist
 
-### Quick Deploy Options
+### 🏆 AWS Deployment (Recommended)
+Enterprise-grade deployment with AWS App Runner:
 
-#### 🎯 Railway (Recommended - Free tier available)
+**Quick Deploy:**
+```powershell
+# Windows
+.\aws\deploy-apprunner.ps1
+
+# Mac/Linux  
+./aws/deploy-apprunner.sh
+```
+
+**Benefits:**
+- 🚀 **Simple**: Deploy directly from GitHub
+- 🏢 **Enterprise-grade**: 99.9% uptime on AWS infrastructure  
+- 💰 **Cost-effective**: ~$46/month for production workload
+- 🔄 **Auto-scaling**: Handles traffic spikes automatically
+- 📊 **Monitoring**: Built-in CloudWatch integration
+
+### Other Options
+
+#### 🎯 Railway (Simple & Fast)
 1. Visit [railway.app](https://railway.app) and sign up
-2. Connect your GitHub repository
+2. Connect your GitHub repository  
 3. Set environment variables in Railway dashboard
 4. Deploy automatically!
 
@@ -122,7 +141,7 @@ Your Spotify Monthly Listener Extract app is ready for public deployment! Users 
 
 #### 🐳 Docker (Any platform)
 1. `docker build -t spotify-tracker .`
-2. Deploy to DigitalOcean, AWS, or any Docker platform
+2. Deploy to DigitalOcean, GCP, or any Docker platform
 
 ### 📋 Pre-Deployment Checklist
 - [ ] Set up Spotify Developer App
@@ -131,7 +150,10 @@ Your Spotify Monthly Listener Extract app is ready for public deployment! Users 
 - [ ] Update redirect URI to production domain
 - [ ] Review security settings
 
-**📖 Full deployment guide**: See `DEPLOYMENT.md` for detailed instructions
+**📖 Full deployment guides**: 
+- `AWS_DEPLOYMENT_GUIDE.md` - Complete AWS options
+- `AWS_QUICK_START.md` - 10-minute AWS setup
+- `DEPLOYMENT.md` - All platform options
 
 ---
 

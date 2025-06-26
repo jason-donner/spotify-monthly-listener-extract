@@ -1,0 +1,22 @@
+version: 1.0
+runtime: docker
+build:
+  commands:
+    build:
+      - echo "Building Spotify Monthly Listener Extract for AWS App Runner..."
+      - echo "Build completed successfully"
+run:
+  runtime-version: latest
+  command: gunicorn app:app --workers 2 --threads 2 --timeout 60 --bind 0.0.0.0:8080 --access-logfile - --error-logfile -
+  network:
+    port: 8080
+    env:
+      - FLASK_SECRET_KEY
+      - ADMIN_PASSWORD
+      - SPOTIPY_CLIENT_ID
+      - SPOTIPY_CLIENT_SECRET
+      - SPOTIPY_REDIRECT_URI
+      - PORT=8080
+      - FLASK_DEBUG=false
+      - LOG_LEVEL=INFO
+      - LOG_TO_STDOUT=true

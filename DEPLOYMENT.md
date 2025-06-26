@@ -2,9 +2,40 @@
 
 ## Quick Deployment Options
 
-### 🎯 Option 1: Railway (Recommended - Free Tier Available)
+### � Option 1: AWS App Runner (Recommended - Enterprise Grade)
 
-Railway is the fastest way to deploy your Flask app with zero configuration:
+AWS App Runner provides the best balance of simplicity, performance, and scalability:
+
+#### Why AWS App Runner?
+- **🚀 Simple Deployment**: Deploy directly from GitHub with zero configuration
+- **🏢 Enterprise-grade**: Built on AWS infrastructure with 99.9% uptime
+- **💰 Cost-effective**: ~$46/month for 1 vCPU, 2GB RAM
+- **🔄 Auto-scaling**: Automatically handles traffic spikes
+- **🔐 Built-in security**: HTTPS, VPC, IAM integration
+- **📊 Monitoring**: CloudWatch integration for logs and metrics
+
+#### Quick Deploy Steps:
+1. **Run the deployment script**:
+   ```powershell
+   # For Windows
+   .\aws\deploy-apprunner.ps1
+   
+   # For Mac/Linux  
+   ./aws/deploy-apprunner.sh
+   ```
+2. **Follow the AWS Console setup** (script provides exact steps)
+3. **Update Spotify Developer App** with the provided redirect URI
+4. **Your app is live!** 🎉
+
+**📖 Full AWS Guide**: See `AWS_DEPLOYMENT_GUIDE.md` for detailed options including ECS, Lambda, and Elastic Beanstalk.
+
+---
+
+### 🎯 Option 2: Railway (Simple & Fast)
+
+### 🎯 Option 2: Railway (Simple & Fast)
+
+Railway is perfect for quick deployments with minimal setup:
 
 #### Steps:
 1. **Create Railway Account**: Visit [railway.app](https://railway.app) and sign up

@@ -1,0 +1,240 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Spotify Monthly Listener Extract - Complete AWS Infrastructure'
+
+Parameters:
+  AppName:
+    Type: String
+    Default: spotify-tracker
+    Description: Name of the application
+  
+  Environment:
+    Type: String
+    Default: production
+    AllowedValues: [development, staging, production]
+    Description: Environment name
+  
+  DomainName:
+    Type: String
+    Default: ""
+    Description: Custom domain name (optional)
+  
+  FlaskSecretKey:
+    Type: String
+    NoEcho: true
+    Description: Flask secret key for session management
+  
+  AdminPassword:
+    Type: String
+    NoEcho: true
+    Description: Admin panel password
+  
+  SpotifyClientId:
+    Type: String
+    Description: Spotify API Client ID
+  
+  SpotifyClientSecret:
+    Type: String
+    NoEcho: true
+    Description: Spotify API Client Secret
+
+Conditions:
+  HasCustomDomain: !Not [!Equals [!Ref DomainName, ""]]
+
+Resources:
+  # S3 Bucket for data storage
+  DataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${AppName}-${Environment}-data'
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldVersions
+            Status: Enabled
+            NoncurrentVersionExpirationInDays: 30
+
+  # Secrets Manager for secure credential storage
+  AppSecrets:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub '${AppName}-${Environment}-secrets'
+      Description: 'Spotify Monthly Listener Extract application secrets'
+      SecretString: !Sub |
+        {
+          "FLASK_SECRET_KEY": "${FlaskSecretKey}",
+          "ADMIN_PASSWORD": "${AdminPassword}",
+          "SPOTIPY_CLIENT_ID": "${SpotifyClientId}",
+          "SPOTIPY_CLIENT_SECRET": "${SpotifyClientSecret}",
+          "SPOTIPY_REDIRECT_URI": "https://${AppName}-${Environment}.${AWS::Region}.awsapprunner.com/admin/callback"
+        }
+
+  # IAM Role for App Runner
+  AppRunnerInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${AppName}-${Environment}-apprunner-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: tasks.apprunner.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+      Policies:
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                Resource: !Sub '${DataBucket}/*'
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource: !Ref DataBucket
+        - PolicyName: SecretsAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Ref AppSecrets
+
+  # App Runner Service
+  AppRunnerService:
+    Type: AWS::AppRunner::Service
+    Properties:
+      ServiceName: !Sub '${AppName}-${Environment}'
+      SourceConfiguration:
+        AutoDeploymentsEnabled: true
+        CodeRepository:
+          RepositoryUrl: 'https://github.com/YOUR_USERNAME/YOUR_REPO'
+          SourceCodeVersion:
+            Type: BRANCH
+            Value: main
+          CodeConfiguration:
+            ConfigurationSource: CONFIGURATION_FILE
+            CodeConfigurationValues:
+              Runtime: DOCKER
+              BuildCommand: 'echo "Building application..."'
+              StartCommand: 'gunicorn app:app --workers 2 --threads 2 --timeout 60 --bind 0.0.0.0:8080'
+              RuntimeEnvironmentVariables:
+                PORT: '8080'
+                FLASK_DEBUG: 'false'
+                LOG_LEVEL: 'INFO'
+                AWS_DEFAULT_REGION: !Ref AWS::Region
+                S3_BUCKET: !Ref DataBucket
+      InstanceConfiguration:
+        Cpu: '1 vCPU'
+        Memory: '2 GB'
+        InstanceRoleArn: !GetAtt AppRunnerInstanceRole.Arn
+      HealthCheckConfiguration:
+        Protocol: HTTP
+        Path: /
+        Interval: 10
+        Timeout: 5
+        HealthyThreshold: 1
+        UnhealthyThreshold: 5
+
+  # CloudWatch Log Group
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/apprunner/${AppName}-${Environment}'
+      RetentionInDays: 30
+
+  # CloudWatch Dashboard
+  Dashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: !Sub '${AppName}-${Environment}'
+      DashboardBody: !Sub |
+        {
+          "widgets": [
+            {
+              "type": "metric",
+              "properties": {
+                "metrics": [
+                  ["AWS/AppRunner", "RequestCount", "ServiceName", "${AppName}-${Environment}"],
+                  [".", "ResponseTime", ".", "."],
+                  [".", "ActiveInstances", ".", "."]
+                ],
+                "period": 300,
+                "stat": "Average",
+                "region": "${AWS::Region}",
+                "title": "App Runner Metrics"
+              }
+            }
+          ]
+        }
+
+  # CloudFront Distribution (if custom domain is provided)
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Condition: HasCustomDomain
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Aliases:
+          - !Ref DomainName
+        Origins:
+          - DomainName: !GetAtt AppRunnerService.ServiceUrl
+            Id: AppRunnerOrigin
+            CustomOriginConfig:
+              HTTPPort: 443
+              HTTPSPort: 443
+              OriginProtocolPolicy: https-only
+        DefaultCacheBehavior:
+          TargetOriginId: AppRunnerOrigin
+          ViewerProtocolPolicy: redirect-to-https
+          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad  # CachingDisabled
+        PriceClass: PriceClass_100
+        ViewerCertificate:
+          AcmCertificateArn: !Ref SSLCertificate
+          SslSupportMethod: sni-only
+
+  # SSL Certificate (if custom domain is provided)
+  SSLCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Condition: HasCustomDomain
+    Properties:
+      DomainName: !Ref DomainName
+      ValidationMethod: DNS
+
+Outputs:
+  ServiceUrl:
+    Description: 'App Runner Service URL'
+    Value: !Sub 'https://${AppRunnerService.ServiceUrl}'
+    Export:
+      Name: !Sub '${AWS::StackName}-ServiceUrl'
+  
+  CustomDomainUrl:
+    Condition: HasCustomDomain
+    Description: 'Custom Domain URL'
+    Value: !Sub 'https://${DomainName}'
+    Export:
+      Name: !Sub '${AWS::StackName}-CustomDomainUrl'
+  
+  DataBucket:
+    Description: 'S3 Bucket for data storage'
+    Value: !Ref DataBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-DataBucket'
+  
+  SecretsArn:
+    Description: 'Secrets Manager ARN'
+    Value: !Ref AppSecrets
+    Export:
+      Name: !Sub '${AWS::StackName}-SecretsArn'
