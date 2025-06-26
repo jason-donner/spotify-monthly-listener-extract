@@ -45,6 +45,26 @@ The Spotify Monthly Listener Extract system includes comprehensive maintenance t
 - When mixing YYYY-MM-DD and YYYYMMDD formats
 - Data consistency verification
 
+### 4. Duplicate Prevention and Cleanup
+
+**Purpose**: Ensure absolute data integrity with zero duplicate tolerance
+
+**When to Use**:
+- After any system upgrades or changes
+- Monthly data integrity verification
+- When investigating data inconsistencies
+- Before major data exports or analysis
+
+**Available Tools**:
+- `scripts/test_duplicate_prevention.py` - Verify duplicate prevention is working
+- `scripts/check_and_fix_duplicates.py` - Find and fix existing duplicates
+- Built-in prevention in both `scrape.py` and `scrape_filtered.py`
+
+**Multi-Layer Protection System**:
+1. **Pre-scraping validation** - Checks existing data before scraping
+2. **Save-time prevention** - Validates entries during master file append
+3. **Data integrity tools** - Ongoing monitoring and cleanup utilities
+
 ---
 
 ## 🖥️ Admin Panel Tools

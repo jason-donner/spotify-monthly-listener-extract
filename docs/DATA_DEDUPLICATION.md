@@ -1,7 +1,50 @@
 # Data Deduplication Guide
 
 ## Current Status ✅
-**Data is Clean**: As of December 2024, the `spotify-monthly-listeners-master.json` file contains **no duplicate entries**. The automatic duplicate prevention system is working correctly.
+**Data is Clean**: As of June 25, 2025, the `spotify-monthly-listeners-master.json` file contains **5,582 clean entries with zero duplicates**. The bulletproof 3-layer duplicate prevention system is working perfectly.
+
+## Recent Updates (June 25, 2025)
+- **🛡️ Multi-Layer Duplicate Prevention**: Implemented enterprise-grade protection at 3 levels
+- **🔧 Critical Date Format Fix**: Fixed date format mismatch that was causing duplicate creation
+- **🧹 Historical Data Cleanup**: Removed 15 duplicate entries from June 25, 2025 data
+- **🔍 Enhanced Testing Tools**: Added comprehensive duplicate detection and prevention verification
+- **📊 Real-Time Prevention**: System now actively prevents and reports duplicate blocking
+
+## Bulletproof Prevention System
+
+### Three Layers of Protection
+
+#### Layer 1: Pre-Scraping Check
+**Location**: `scrape_filtered.py` and `scrape.py` → `load_existing_listeners()`
+**Function**: Checks master file for existing artist entries on target date
+**Result**: Skips artists already scraped, shows "Skipping [Artist] - already scraped today"
+
+#### Layer 2: Save-Time Validation  
+**Location**: `append_to_master()` function in both scraping scripts
+**Function**: Validates each entry before adding to master file using `(artist_id, date)` keys
+**Result**: Prevents duplicates at save time, shows "Prevented duplicate: [Artist] for [Date]"
+
+#### Layer 3: Data Integrity Tools
+**Location**: `scripts/check_and_fix_duplicates.py` and `scripts/test_duplicate_prevention.py`
+**Function**: Ongoing monitoring and cleanup of any edge cases
+**Result**: Comprehensive data integrity verification and maintenance
+
+### Critical Fix Applied (June 25, 2025)
+
+**Problem Identified**: Date format mismatch in duplicate checking logic
+- **Stored Data Format**: `YYYY-MM-DD` (e.g., "2025-06-25")
+- **Previous Check Format**: `YYYYMMDD` (e.g., "20250625")
+- **Result**: Duplicate prevention was failing due to format mismatch
+
+**Fix Applied**: 
+```python
+# Before (BROKEN)
+target_date_formatted = target_date.replace('-', '')  # Creates "20250625"
+if entry.get('date') == target_date_formatted:  # Never matches "2025-06-25"
+
+# After (FIXED)  
+if entry.get('date') == target_date:  # Direct match with "2025-06-25"
+```
 
 ## Overview
 Before implementing duplicate protection, the scraping system could create multiple entries for the same artist on the same date. This guide covers how to identify and clean up these duplicates safely, and documents the prevention system now in place.
@@ -98,6 +141,18 @@ ls -la *.backup_*
 # Restore from specific backup
 cp spotify-monthly-listeners-master.json.backup_YYYYMMDD_HHMMSS spotify-monthly-listeners-master.json
 ```
+
+## Manual Cleanup Process (if needed)
+
+In the rare case that duplicates are found after running the deduplication script, you can manually inspect and clean up the data:
+
+1. **Load the Data**: Open `spotify-monthly-listeners-master.json` in a JSON editor or text editor.
+2. **Find Duplicates**: Search for duplicate artist-date combinations. They will have the same `artist_id` and `date` values.
+3. **Compare Entries**: For each duplicate group, compare the entries. Check fields like `monthly_listeners`, `followers`, and `artist_popularity`.
+4. **Decide Which to Keep**: Generally, keep the entry with the highest `monthly_listeners`. If there's a tie, keep the one with the most recent data.
+5. **Delete Duplicates**: Remove the duplicate entries, ensuring only the preferred one remains.
+6. **Save the File**: After cleaning up duplicates, save the `spotify-monthly-listeners-master.json` file.
+7. **Re-run the Deduplication Script**: To ensure no duplicates remain, re-run the `scripts/dedupe_listeners.py` script.
 
 ## Prevention
 
@@ -236,4 +291,62 @@ After deduplication:
 - Can be overridden with `--allow-duplicates` flag
 - Integrated into web admin panel with checkbox control
 
----
+## Testing and Verification Tools
+
+### Duplicate Prevention Test
+**Script**: `scripts/test_duplicate_prevention.py`
+**Purpose**: Verify that duplicate prevention is working correctly
+**Usage**:
+```bash
+python scripts/test_duplicate_prevention.py
+```
+
+**Sample Output**:
+```
+🛠️ Duplicate Prevention Test
+==================================================
+🧪 Testing duplicate prevention for date: 2025-06-25
+Found 812 artists already scraped for 2025-06-25
+✅ Found 812 existing artist IDs for 2025-06-25
+✅ Duplicate prevention should work correctly!
+
+🔍 Verifying date format consistency...
+📊 Found 1 different date format lengths: {10}
+✅ All dates use YYYY-MM-DD format (length 10) - consistency verified!
+
+📋 Summary:
+  - Duplicate prevention: ✅ Working
+  - Date format consistency: ✅ Good
+🎉 All tests passed! Duplicate prevention should work correctly.
+```
+
+### Duplicate Detection and Cleanup
+**Script**: `scripts/check_and_fix_duplicates.py`
+**Purpose**: Find and fix any existing duplicates in the master file
+**Usage**:
+```bash
+python scripts/check_and_fix_duplicates.py
+```
+
+**Features**:
+- Scans entire master file for duplicate `(artist_id, date)` combinations
+- Shows detailed statistics about duplicates found
+- Creates automatic backup before cleaning
+- Keeps the latest entry for each duplicate set
+- Provides comprehensive before/after reporting
+
+**Sample Output**:
+```
+🔍 Checking for duplicates in master listeners file...
+📊 Total entries: 5597
+🚨 Found 5 sets of duplicates:
+  - It Looks Sad. (24M8W1AklCxyWTKjrJZDQ8) on 2025-06-25: 4 entries
+  - Prawn (29yppqr48ptt5PmMQvawXs) on 2025-06-25: 4 entries
+  [...]
+📈 Total duplicate entries to remove: 15
+
+🎉 Deduplication complete!
+  - Original entries: 5597
+  - Cleaned entries: 5582
+  - Removed duplicates: 15
+```
