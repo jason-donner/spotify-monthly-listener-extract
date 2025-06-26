@@ -4,11 +4,7 @@ build:
   commands:
     build:
       - echo "Building Spotify Monthly Listener Extract for AWS App Runner..."
-      - docker build -t spotify-listener-extract .
-      - echo "Build completed successfully"
 run:
-  runtime-version: latest
-  command: gunicorn app:app --workers 2 --threads 2 --timeout 60 --bind 0.0.0.0:8080 --access-logfile - --error-logfile -
   network:
     port: 8080
     env:
