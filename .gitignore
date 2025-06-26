@@ -1,22 +1,30 @@
 # Ignore virtual environment
 .venv/
+venv/
 
 # Ignore environment variables file
 .env
+webapp/.env
 
 # Ignore Spotipy and other cache files
 .cache
 .cache-*
+webapp/.cache
 
-# Ignore results directory
-src/results/
+# Ignore data results (keep structure but not actual data)
+data/results/*.json
+data/results/*.backup*
 
 # Ignore log files
 *.log
+scraping/*.log
+webapp/logs/
+scripts/*.log
 
 # Ignore Python bytecode
 __pycache__/
 *.pyc
+*.pyo
 
 # VS Code settings
 .vscode/
@@ -29,10 +37,9 @@ Thumbs.db
 htmlcov/
 .coverage
 *.cover
-*.pytest_cache/
 .pytest_cache/
 
-# Jupyter Notebook checkpoints (if you ever use notebooks)
+# Jupyter Notebook checkpoints
 .ipynb_checkpoints/
 
 # Backup files
@@ -40,8 +47,30 @@ htmlcov/
 *.swp
 *.swo
 
-# ignore token cache
-app/spotify-listener-tracker/spotify_token_cache.json
+# Token cache files
+webapp/spotify_token_cache.json
+*.token
 
-# ignore followapp directory
-migrate-artist-follows/followapp.py
+# Artist suggestions and blacklist files (user-submitted data)
+webapp/artist_suggestions.json
+webapp/artist_blacklist.json
+webapp/artist_blacklist_clean.json
+webapp/artist_suggestions_clean.json
+
+# Temporary files
+tmp/
+temp/
+
+# Testing and debugging files (exclude temporary test files but keep legitimate tests)
+# Note: Keeps tests/ directory for unit tests, but excludes debugging/diagnostic files
+/test_*.py
+/debug_*.py
+*_test.py
+*_debug.py
+diagnostic*.py
+*diagnostic*.py
+
+# Chrome/WebDriver test files in scraping directory
+scraping/test_*.py
+scraping/chrome_diagnostic.py
+scraping/*_test.py

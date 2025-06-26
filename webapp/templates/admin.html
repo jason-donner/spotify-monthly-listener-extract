@@ -1,0 +1,1544 @@
+{% extends "base.html" %}
+
+{% block title %}Admin - Artist Suggestions{% endblock %}
+
+{% block content %}
+<!-- Bootstrap CSS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<!-- Font Awesome for icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<div class="container mt-4" style="background: rgba(20, 20, 30, 0.95); border-radius: 12px; padding: 2rem; margin-top: 2rem;">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4" style="color: #00ff7f; text-align: center;">
+                🛠️ Admin Panel - Artist Suggestions
+                <button onclick="adminLogout()" class="btn btn-sm btn-outline-secondary float-end" style="font-size: 0.8rem;">
+                    Logout
+                </button>
+            </h1>
+            
+            <!-- Spotify Authentication Status -->
+            <div id="auth-status" class="alert" style="display: none;">
+                <!-- Content will be populated by JavaScript -->
+            </div>
+            
+            <div class="alert alert-info" style="background: rgba(0, 123, 255, 0.15); border: 1px solid rgba(0, 123, 255, 0.3); color: #87ceeb;">
+                <strong>Admin Controls:</strong> Review user-submitted artist suggestions and decide whether to follow them on Spotify or just add them to tracking.
+            </div>
+            
+            <!-- Scraping Controls Section -->
+            <div class="card mb-4" style="background: rgba(40, 40, 60, 0.95); border: 1px solid rgba(0, 255, 127, 0.3);">
+                <div class="card-header" style="background: rgba(0, 255, 127, 0.1); border-bottom: 1px solid rgba(0, 255, 127, 0.3);">
+                    <h5 class="mb-0" style="color: #00ff7f;">
+                        <i class="fas fa-spider"></i> Scraping Controls
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <p class="text-light">Run the monthly listener scraping script to update artist data from Spotify.</p>
+                            <div class="alert alert-info" role="alert" style="background-color: rgba(13, 202, 240, 0.2); border-color: rgba(13, 202, 240, 0.5); color: #ffffff; border-width: 2px;">
+                                <i class="fas fa-info-circle" style="color: #0dcaf0;"></i> <strong style="color: #ffffff;">Duplicate Protection:</strong> <span style="color: #e9ecef;">The scraper automatically prevents duplicate entries for the same artist on the same date.</span>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="headlessMode" checked>
+                                <label class="form-check-label text-light" for="headlessMode">
+                                    Run in headless mode (no browser window)
+                                </label>
+                                <small class="text-white d-block" style="opacity: 0.8;">Recommended for automated scraping</small>
+                            </div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="todayOnlyMode" checked>
+                                <label class="form-check-label text-light" for="todayOnlyMode">
+                                    <strong>Today only</strong> - Only scrape artists added today (recommended)
+                                </label>
+                                <small class="text-white d-block" style="opacity: 0.8;">Recommended for daily updates after adding new artists</small>
+                            </div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="allowDuplicatesMode">
+                                <label class="form-check-label text-light" for="allowDuplicatesMode">
+                                    <strong>Allow Duplicates</strong> - Re-scrape artists already scraped today
+                                </label>
+                                <small class="text-white d-block" style="opacity: 0.8;">Enable to get fresh data for all artists, even if already scraped today</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <button id="runScrapingBtn" class="btn btn-success btn-lg" onclick="runScraping()">
+                                <i class="fas fa-play"></i> Run Scraping
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Scraping Status -->
+                    <div id="scrapingStatus" style="display: none;" class="mt-3">
+                        <div class="alert alert-info" id="scrapingAlert">
+                            <div class="d-flex align-items-center">
+                                <div class="spinner-border spinner-border-sm me-2" role="status" id="scrapingSpinner">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <span id="scrapingStatusText">Starting scraping...</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Progress Bar -->
+                        <div id="scrapingProgress" style="display: none;" class="mb-3">
+                            <div class="card" style="background: rgba(20, 20, 30, 0.95); border: 1px solid rgba(0, 255, 127, 0.3);">
+                                <div class="card-body p-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="text-light" id="progressLabel">Processing artists...</span>
+                                        <span class="text-light" id="progressCounter">0 / 0</span>
+                                    </div>
+                                    <div class="progress" style="height: 8px; background: rgba(40, 40, 60, 0.8);">
+                                        <div class="progress-bar" 
+                                             id="progressBar"
+                                             role="progressbar" 
+                                             style="width: 0%; background: linear-gradient(90deg, #1db954, #00ff7f);"
+                                             aria-valuenow="0" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="100">
+                                        </div>
+                                    </div>
+                                    <div class="mt-2">
+                                        <small class="text-muted" id="progressDetails">Initializing...</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Progress and Output -->
+                        <div id="scrapingOutput" style="display: none;">
+                            <div class="card" style="background: rgba(20, 20, 30, 0.95); border: 1px solid rgba(255, 255, 255, 0.1);">
+                                <div class="card-header">
+                                    <h6 class="mb-0 text-light">Scraping Output</h6>
+                                </div>
+                                <div class="card-body">
+                                    <pre id="scrapingOutputText" class="text-light" style="max-height: 300px; overflow-y: auto; font-size: 0.8rem;"></pre>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Error Output -->
+                        <div id="scrapingError" style="display: none;">
+                            <div class="card" style="background: rgba(20, 20, 30, 0.95); border: 1px solid rgba(220, 53, 69, 0.3);">
+                                <div class="card-header" style="background: rgba(220, 53, 69, 0.1);">
+                                    <h6 class="mb-0 text-danger">Error Output</h6>
+                                </div>
+                                <div class="card-body">
+                                    <pre id="scrapingErrorText" class="text-danger" style="max-height: 200px; overflow-y: auto; font-size: 0.8rem;"></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Automated Scheduling Controls -->
+            <div class="card mb-4" style="background: rgba(20, 20, 30, 0.95); border: 1px solid rgba(255, 255, 255, 0.1);">
+                <div class="card-header" style="background: rgba(40, 40, 60, 0.8);">
+                    <h5 class="mb-0" style="color: #ffd700;">
+                        <i class="fas fa-clock"></i> Automated Daily Scraping
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <p class="text-light">Schedule automatic daily scraping to run at a specific time.</p>
+                            
+                            <!-- Scheduler Status -->
+                            <div class="alert alert-secondary" id="schedulerStatus" role="alert" style="background-color: rgba(108, 117, 125, 0.2); border-color: rgba(108, 117, 125, 0.5); color: #ffffff;">
+                                <i class="fas fa-info-circle" style="color: #6c757d;"></i> <strong>Status:</strong> <span id="schedulerStatusText">Loading...</span>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        <label for="scheduleTime" class="form-label text-light">Daily Run Time (24-hour format)</label>
+                                        <input type="time" class="form-control" id="scheduleTime" value="02:00" style="background: rgba(40, 40, 60, 0.8); border: 1px solid rgba(255, 255, 255, 0.3); color: white;">
+                                        <small class="text-white" style="opacity: 0.8;">Recommended: Early morning hours (e.g., 2:00 AM)</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        <label class="form-label text-light">Next Scheduled Run</label>
+                                        <div class="form-control" style="background: rgba(40, 40, 60, 0.5); border: 1px solid rgba(255, 255, 255, 0.3); color: #e9ecef;" id="nextRunTime">
+                                            Not scheduled
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <button id="updateScheduleBtn" class="btn btn-warning mb-2" onclick="updateSchedule()">
+                                <i class="fas fa-clock"></i> Update Schedule
+                            </button>
+                            <br>
+                            <button id="runNowBtn" class="btn btn-info" onclick="runScheduledScrapeNow()">
+                                <i class="fas fa-play-circle"></i> Run Full Scrape Now
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Maintenance Controls Section -->
+            <div class="card mb-4" style="background: rgba(40, 20, 60, 0.95); border: 1px solid rgba(138, 43, 226, 0.3);">
+                <div class="card-header" style="background: rgba(138, 43, 226, 0.1); border-bottom: 1px solid rgba(138, 43, 226, 0.3);">
+                    <h5 class="mb-0" style="color: #da70d6;">
+                        <i class="fas fa-tools"></i> Maintenance & Data Fixes
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <p class="text-light">Administrative tools for fixing data issues and maintenance tasks.</p>
+                            
+                            <div class="alert alert-info" role="alert" style="background-color: rgba(13, 202, 240, 0.2); border-color: rgba(13, 202, 240, 0.5); color: #ffffff; border-width: 2px;">
+                                <i class="fas fa-info-circle" style="color: #0dcaf0;"></i> <strong style="color: #ffffff;">Fix Stuck Suggestions:</strong> <span style="color: #e9ecef;">Repairs suggestions that are approved but not marked as followed (migration issues).</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <button id="fixStuckSuggestionsBtn" class="btn btn-warning" onclick="fixStuckSuggestions()">
+                                <i class="fas fa-wrench"></i> Fix Stuck Suggestions
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Filter tabs -->
+            <ul class="nav nav-tabs mb-3" id="suggestionTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending" type="button" role="tab">
+                        Pending Review <span class="badge bg-warning" id="pending-count">0</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="processed-tab" data-bs-toggle="tab" data-bs-target="#processed" type="button" role="tab">
+                        Processed <span class="badge bg-success" id="processed-count">0</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="rejected-tab" data-bs-toggle="tab" data-bs-target="#rejected" type="button" role="tab">
+                        Rejected <span class="badge bg-danger" id="rejected-count">0</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="blacklist-tab" data-bs-toggle="tab" data-bs-target="#blacklist" type="button" role="tab">
+                        <i class="fas fa-ban"></i> Blacklist <span class="badge bg-dark" id="blacklist-count">0</span>
+                    </button>
+                </li>
+            </ul>
+            
+            <!-- Tab content -->
+            <div class="tab-content" id="suggestionTabContent">
+                <div class="tab-pane fade show active" id="pending" role="tabpanel">
+                    <div id="pending-suggestions"></div>
+                </div>
+                <div class="tab-pane fade" id="processed" role="tabpanel">
+                    <div id="processed-suggestions"></div>
+                </div>
+                <div class="tab-pane fade" id="rejected" role="tabpanel">
+                    <div id="rejected-suggestions"></div>
+                </div>
+                <div class="tab-pane fade" id="blacklist" role="tabpanel">
+                    <!-- Add to Blacklist Form -->
+                    <div class="card mb-4" style="background: rgba(60, 20, 20, 0.95); border: 1px solid rgba(255, 0, 0, 0.3);">
+                        <div class="card-header" style="background: rgba(255, 0, 0, 0.1); border-bottom: 1px solid rgba(255, 0, 0, 0.3);">
+                            <h5 class="mb-0" style="color: #ff6b6b;">
+                                <i class="fas fa-plus-circle"></i> Add Artist to Blacklist
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info mb-3" style="background: rgba(13, 202, 240, 0.15); border: 1px solid rgba(13, 202, 240, 0.3); color: #87ceeb;">
+                                <i class="fas fa-info-circle"></i> <strong>How to use:</strong> Start typing an artist name to search Spotify (if API is configured), or manually enter the artist name and optional Spotify ID.
+                            </div>
+                            <form id="blacklist-form">
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <label for="blacklist-artist-name" class="form-label text-light">Artist Name *</label>
+                                        <input type="text" class="form-control" id="blacklist-artist-name" required 
+                                               placeholder="Enter artist name" autocomplete="off">
+                                        <div id="blacklist-artist-suggestions" class="dropdown-menu" style="display: none; max-height: 200px; overflow-y: auto;"></div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label for="blacklist-spotify-id" class="form-label text-light">Spotify ID</label>
+                                        <input type="text" class="form-control" id="blacklist-spotify-id" 
+                                               placeholder="Optional Spotify ID">
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label for="blacklist-reason" class="form-label text-light">Reason</label>
+                                        <input type="text" class="form-control" id="blacklist-reason" 
+                                               placeholder="Reason for blacklisting">
+                                    </div>
+                                    <div class="col-md-2 mb-3 d-flex align-items-end">
+                                        <button type="submit" class="btn btn-danger w-100">
+                                            <i class="fas fa-ban"></i> Add to Blacklist
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <!-- Blacklist Items -->
+                    <div id="blacklist-items"></div>
+                </div>
+            </div>
+            
+            <!-- Loading spinner -->
+            <div id="loading" class="text-center py-4" style="display: none;">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading suggestions...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Success/Error Messages -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <strong class="me-auto" id="toast-title">Notification</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body" id="toast-message">
+            Message here
+        </div>
+    </div>
+</div>
+
+<script>
+let suggestions = [];
+let isAuthenticated = false;
+let currentUser = null;
+
+// Utility function to escape HTML
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Load suggestions and check auth on page load
+document.addEventListener('DOMContentLoaded', function() {
+    checkAuthStatus();
+    loadSuggestions();
+    handleUrlParams();
+});
+
+function handleUrlParams() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const success = urlParams.get('success');
+    const error = urlParams.get('error');
+    
+    if (success === 'logged_in') {
+        showToast('Success', 'Successfully logged in to Spotify!', 'success');
+        // Clean URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (success === 'logged_out') {
+        showToast('Info', 'Successfully logged out of Spotify.', 'info');
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (error === 'auth_cancelled') {
+        showToast('Warning', 'Spotify login was cancelled.', 'warning');
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (error === 'auth_failed') {
+        showToast('Error', 'Spotify login failed. Please try again.', 'danger');
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+}
+
+function checkAuthStatus() {
+    fetch('/admin/auth_status')
+        .then(response => response.json())
+        .then(data => {
+            isAuthenticated = data.authenticated;
+            currentUser = data.user || null;
+            updateAuthStatus();
+        })
+        .catch(error => {
+            console.error('Auth status check failed:', error);
+            isAuthenticated = false;
+            currentUser = null;
+            updateAuthStatus();
+        });
+}
+
+function updateAuthStatus() {
+    const authStatusDiv = document.getElementById('auth-status');
+    
+    if (isAuthenticated && currentUser) {
+        authStatusDiv.className = 'alert alert-success';
+        authStatusDiv.style.display = 'block';
+        authStatusDiv.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>🎵 Spotify Connected:</strong> 
+                    Logged in as <strong>${currentUser.display_name || currentUser.id}</strong>
+                    ${currentUser.images && currentUser.images.length > 0 ? 
+                        `<img src="${currentUser.images[0].url}" alt="Profile" class="rounded-circle ms-2" style="width: 24px; height: 24px;">` : 
+                        ''}
+                </div>
+                <div>
+                    <button class="btn btn-outline-warning btn-sm me-2" onclick="forceLoginWithSpotify()" title="Switch to different account">
+                        <i class="fas fa-user-plus"></i> Switch Account
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm" onclick="logout()">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
+                </div>
+            </div>
+        `;
+    } else {
+        authStatusDiv.className = 'alert alert-warning';
+        authStatusDiv.style.display = 'block';
+        authStatusDiv.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>⚠️ Spotify Not Connected:</strong> 
+                    You need to log in with Spotify to follow artists directly from this panel.
+                </div>
+                <div>
+                    <button class="btn btn-success btn-sm me-2" onclick="loginWithSpotify()">
+                        <i class="fab fa-spotify"></i> Login with Spotify
+                    </button>
+                    <button class="btn btn-outline-success btn-sm" onclick="forceLoginWithSpotify()" title="Choose different account">
+                        <i class="fas fa-user-plus"></i> Switch Account
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+}
+
+function loginWithSpotify() {
+    window.location.href = '/admin/login';
+}
+
+function forceLoginWithSpotify() {
+    // Add a parameter to force account selection
+    window.location.href = '/admin/login?force=true';
+}
+
+function adminLogout() {
+    // Invisible logout - use fetch to call logout endpoint, then redirect
+    fetch('/admin/logout', { method: 'GET' })
+        .then(() => {
+            // Redirect to home page without showing logout URL
+            window.location.href = '/';
+        })
+        .catch(() => {
+            // If fetch fails, still redirect to home
+            window.location.href = '/';
+        });
+}
+
+function logout() {
+    // This is for Spotify logout (different from admin logout)
+    window.location.href = '/admin/spotify_logout';
+}
+
+function loadSuggestions() {
+    document.getElementById('loading').style.display = 'block';
+    
+    fetch('/admin/suggestions')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('loading').style.display = 'none';
+            suggestions = data.suggestions || [];
+            renderSuggestions();
+            updateCounts();
+            // Load blacklist count after successful authentication/suggestions load
+            // This ensures the count is loaded only when the user is properly authenticated
+            loadBlacklistCount();
+        })
+        .catch(error => {
+            document.getElementById('loading').style.display = 'none';
+            showToast('Error', 'Failed to load suggestions: ' + error.message, 'danger');
+        });
+}
+
+function renderSuggestions() {
+    const pending = suggestions.filter(s => !s.admin_approved && (!s.status || s.status === 'pending'));
+    const rejected = suggestions.filter(s => s.status === 'rejected');
+    const processed = suggestions.filter(s => s.status === 'processed' || s.status === 'approved');
+    
+    document.getElementById('pending-suggestions').innerHTML = renderSuggestionList(pending, 'pending');
+    document.getElementById('rejected-suggestions').innerHTML = renderSuggestionList(rejected, 'rejected');
+    document.getElementById('processed-suggestions').innerHTML = renderSuggestionList(processed, 'processed');
+}
+
+function renderSuggestionList(suggestionList, type) {
+    if (suggestionList.length === 0) {
+        return `<div class="alert alert-info">No ${type} suggestions found.</div>`;
+    }
+    
+    return suggestionList.map(suggestion => {
+        const date = new Date(suggestion.timestamp).toLocaleDateString();
+        const adminDate = suggestion.admin_action_date ? new Date(suggestion.admin_action_date).toLocaleDateString() : '';
+        
+        let statusBadge = '';
+        if (suggestion.already_followed) {
+            statusBadge = '<span class="badge bg-info ms-2">Already Followed</span>';
+        }
+        
+        let actionButtons = '';
+        if (type === 'pending') {
+            actionButtons = `
+                <div class="btn-group" role="group">
+                    <button class="btn btn-success btn-sm" onclick="followArtistNow('${suggestion.spotify_id}', '${suggestion.artist_name}', '${suggestion.timestamp}')">
+                        🎵 Follow & Track
+                    </button>
+                    <button class="btn btn-warning btn-sm" onclick="approveForTracking('${suggestion.timestamp}', '${suggestion.artist_name}')">
+                        👁️ Track Only
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="rejectSuggestion('${suggestion.timestamp}', '${suggestion.artist_name}')">
+                        ✗ Reject
+                    </button>
+                </div>
+            `;
+        }
+        
+        return `
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <h5 class="card-title mb-1">
+                                ${suggestion.artist_name}
+                                ${statusBadge}
+                            </h5>
+                            <p class="card-text small text-white mb-1" style="opacity: 0.7;">
+                                Suggested: ${date}
+                                ${adminDate ? ` | Admin Action: ${adminDate}` : ''}
+                            </p>
+                            ${suggestion.spotify_url ? `
+                                <a href="${suggestion.spotify_url}" target="_blank" class="btn btn-link btn-sm p-0">
+                                    🎵 View on Spotify
+                                </a>
+                            ` : ''}
+                        </div>
+                        <div class="col-md-6 text-end">
+                            ${actionButtons}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function updateCounts() {
+    const pending = suggestions.filter(s => !s.admin_approved && (!s.status || s.status === 'pending')).length;
+    const rejected = suggestions.filter(s => s.status === 'rejected').length;
+    const processed = suggestions.filter(s => s.status === 'processed' || s.status === 'approved').length;
+    
+    document.getElementById('pending-count').textContent = pending;
+    document.getElementById('rejected-count').textContent = rejected;
+    document.getElementById('processed-count').textContent = processed;
+}
+
+function approveForFollow(suggestionId, artistName) {
+    adminAction(suggestionId, 'approve_follow', `Approved ${artistName} for following`);
+}
+
+function approveForTracking(suggestionId, artistName) {
+    if (confirm(`Add "${artistName}" to tracking without following on Spotify?`)) {
+        adminAction(suggestionId, 'process_track_only', `Added ${artistName} to tracking`);
+    }
+}
+
+function rejectSuggestion(suggestionId, artistName) {
+    if (confirm(`Are you sure you want to reject the suggestion for "${artistName}"?`)) {
+        adminAction(suggestionId, 'reject', `Rejected ${artistName}`);
+    }
+}
+
+function adminAction(suggestionId, action, successMessage) {
+    fetch('/admin/approve_suggestion', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            suggestion_id: suggestionId,
+            action: action
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Success', successMessage, 'success');
+            loadSuggestions(); // Reload to update UI
+        } else {
+            showToast('Error', data.message, 'danger');
+        }
+    })
+    .catch(error => {
+        showToast('Error', 'Failed to process action: ' + error.message, 'danger');
+    });
+}
+
+function followArtistNow(artistId, artistName, timestamp = null) {
+    if (!isAuthenticated) {
+        showToast('Authentication Required', 'Please log in with Spotify first to follow artists.', 'warning');
+        return;
+    }
+    
+    if (confirm(`Follow "${artistName}" on Spotify and add to tracking?`)) {
+        // Show loading state
+        const button = event.target;
+        const originalText = button.innerHTML;
+        button.innerHTML = '⏳ Following...';
+        button.disabled = true;
+        
+        // Debug logging
+        console.log('Processing suggestion:', {
+            artist_id: artistId,
+            artist_name: artistName,
+            suggestion_id: timestamp
+        });
+        
+        fetch('/admin/follow_artist', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                artist_id: artistId,
+                artist_name: artistName,
+                suggestion_id: timestamp // Pass the suggestion ID for automatic processing
+            })
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response data:', data);
+            if (data.success) {
+                // Show warning for already followed artists, success for newly followed
+                const toastType = data.warning ? 'warning' : 'success';
+                const toastTitle = data.warning ? 'Already Followed' : 'Success';
+                console.log('Showing toast:', toastTitle, data.message, toastType);
+                showToast(toastTitle, data.message, toastType);
+                // Reload suggestions to reflect the changes
+                loadSuggestions();
+            } else {
+                button.innerHTML = originalText;
+                button.disabled = false;
+                
+                if (data.auth_required) {
+                    showToast('Authentication Required', data.message, 'warning');
+                    // Check auth status again to update UI
+                    checkAuthStatus();
+                } else {
+                    showToast('Error', data.message, 'danger');
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Fetch error:', error);
+            button.innerHTML = originalText;
+            button.disabled = false;
+            showToast('Error', 'Failed to follow artist: ' + error.message, 'danger');
+        });
+    }
+}
+
+function showToast(title, message, type) {
+    const toast = document.getElementById('toast');
+    const toastTitle = document.getElementById('toast-title');
+    const toastMessage = document.getElementById('toast-message');
+    
+    toastTitle.textContent = title;
+    toastMessage.textContent = message;
+    
+    // Remove existing classes and add new one based on type
+    let toastClass = 'toast ';
+    switch(type) {
+        case 'success':
+            toastClass += 'bg-success text-white';
+            break;
+        case 'danger':
+            toastClass += 'bg-danger text-white';
+            break;
+        case 'warning':
+            toastClass += 'bg-warning text-dark';
+            break;
+        case 'info':
+            toastClass += 'bg-info text-white';
+            break;
+        default:
+            toastClass += 'bg-secondary text-white';
+    }
+    toast.className = toastClass;
+    
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+}
+
+// Scraping functionality
+let currentScrapingJobId = null;
+let scrapingStatusInterval = null;
+
+function runScraping() {
+    const headless = document.getElementById('headlessMode').checked;
+    const todayOnly = document.getElementById('todayOnlyMode').checked;
+    const allowDuplicates = document.getElementById('allowDuplicatesMode').checked;
+    const btn = document.getElementById('runScrapingBtn');
+    const status = document.getElementById('scrapingStatus');
+    const alert = document.getElementById('scrapingAlert');
+    const statusText = document.getElementById('scrapingStatusText');
+    const spinner = document.getElementById('scrapingSpinner');
+    
+    // Disable button and show status
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting...';
+    status.style.display = 'block';
+    alert.className = 'alert alert-info';
+    
+    let statusMessage = 'Starting scraping...';
+    if (todayOnly && !allowDuplicates) {
+        statusMessage = 'Starting scraping for today\'s new artists...';
+    } else if (todayOnly && allowDuplicates) {
+        statusMessage = 'Starting scraping for today\'s artists (including duplicates)...';
+    } else if (!todayOnly && allowDuplicates) {
+        statusMessage = 'Starting full scraping (including duplicates)...';
+    } else {
+        statusMessage = 'Starting full scraping for new artists...';
+    }
+    statusText.textContent = statusMessage;
+    spinner.style.display = 'inline-block';
+    
+    // Hide previous outputs
+    document.getElementById('scrapingOutput').style.display = 'none';
+    document.getElementById('scrapingError').style.display = 'none';
+    
+    fetch('/admin/run_scraping', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            headless: headless,
+            today_only: todayOnly,
+            allow_duplicates: allowDuplicates
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            currentScrapingJobId = data.job_id;
+            statusText.textContent = 'Scraping is running...';
+            
+            // Start polling for status updates
+            scrapingStatusInterval = setInterval(checkScrapingStatus, 2000);
+            
+            showToast('Success', 'Scraping started successfully!', 'success');
+        } else {
+            resetScrapingUI();
+            showToast('Error', data.message, 'danger');
+        }
+    })
+    .catch(error => {
+        resetScrapingUI();
+        showToast('Error', 'Failed to start scraping: ' + error.message, 'danger');
+    });
+}
+
+function checkScrapingStatus() {
+    if (!currentScrapingJobId) return;
+    
+    fetch(`/admin/scraping_status/${currentScrapingJobId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.job) {
+                updateScrapingUI(data.job);
+                
+                // If job is completed, stop polling
+                if (data.job.completed) {
+                    clearInterval(scrapingStatusInterval);
+                    scrapingStatusInterval = null;
+                    currentScrapingJobId = null;
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error checking scraping status:', error);
+        });
+}
+
+function updateScrapingUI(job) {
+    const alert = document.getElementById('scrapingAlert');
+    const statusText = document.getElementById('scrapingStatusText');
+    const spinner = document.getElementById('scrapingSpinner');
+    const outputDiv = document.getElementById('scrapingOutput');
+    const outputText = document.getElementById('scrapingOutputText');
+    const errorDiv = document.getElementById('scrapingError');
+    const errorText = document.getElementById('scrapingErrorText');
+    const progressDiv = document.getElementById('scrapingProgress');
+    const progressBar = document.getElementById('progressBar');
+    const progressLabel = document.getElementById('progressLabel');
+    const progressCounter = document.getElementById('progressCounter');
+    const progressDetails = document.getElementById('progressDetails');
+    
+    // Update progress bar if available
+    if (job.progress) {
+        progressDiv.style.display = 'block';
+        const percentage = Math.round((job.progress.current / job.progress.total) * 100);
+        progressBar.style.width = percentage + '%';
+        progressBar.setAttribute('aria-valuenow', percentage);
+        progressCounter.textContent = `${job.progress.current} / ${job.progress.total}`;
+        
+        if (job.progress.phase) {
+            progressLabel.textContent = job.progress.phase;
+        }
+        
+        if (job.progress.details) {
+            progressDetails.textContent = job.progress.details;
+        }
+        
+        if (job.progress.current_artist) {
+            progressDetails.textContent = `Processing: ${job.progress.current_artist}`;
+        }
+    } else {
+        progressDiv.style.display = 'none';
+    }
+    
+    // Update status based on job status
+    switch (job.status) {
+        case 'starting':
+            alert.className = 'alert alert-info';
+            statusText.textContent = 'Starting scraping script...';
+            spinner.style.display = 'inline-block';
+            progressDiv.style.display = 'none';
+            break;
+            
+        case 'running':
+            alert.className = 'alert alert-primary';
+            if (job.progress && job.progress.total > 0) {
+                statusText.textContent = `Scraping ${job.progress.total} artists... (${job.progress.current}/${job.progress.total})`;
+            } else {
+                statusText.textContent = 'Scraping in progress... This may take several minutes.';
+            }
+            spinner.style.display = 'inline-block';
+            break;
+            
+        case 'completed':
+            alert.className = 'alert alert-success';
+            const completionMessage = getCompletionMessage(job);
+            statusText.textContent = `${completionMessage} (${formatDuration(job.started_at, job.completed_at)})`;
+            spinner.style.display = 'none';
+            progressDiv.style.display = 'none';
+            resetScrapingButton();
+            
+            // Show enhanced toast with artist count details
+            const toastMessage = getDetailedToastMessage(job);
+            showToast('Success', toastMessage, 'success');
+            break;
+            
+        case 'failed':
+            alert.className = 'alert alert-danger';
+            statusText.textContent = `Scraping failed! (${formatDuration(job.started_at, job.completed_at)})`;
+            spinner.style.display = 'none';
+            progressDiv.style.display = 'none';
+            resetScrapingButton();
+            showToast('Error', 'Scraping failed. Check the error output below.', 'danger');
+            break;
+            
+        case 'timeout':
+            alert.className = 'alert alert-warning';
+            statusText.textContent = 'Scraping timed out after 30 minutes.';
+            spinner.style.display = 'none';
+            progressDiv.style.display = 'none';
+            resetScrapingButton();
+            showToast('Warning', 'Scraping timed out. The process took too long.', 'warning');
+            break;
+            
+        case 'error':
+            alert.className = 'alert alert-danger';
+            statusText.textContent = 'An error occurred while running the scraping script.';
+            spinner.style.display = 'none';
+            progressDiv.style.display = 'none';
+            resetScrapingButton();
+            showToast('Error', 'An error occurred during scraping.', 'danger');
+            break;
+    }
+    
+    // Show output if available
+    if (job.output && job.output.trim()) {
+        outputText.innerHTML = formatScrapingOutput(job.output);
+        outputDiv.style.display = 'block';
+    }
+    
+    // Show error if available
+    if (job.error && job.error.trim()) {
+        errorText.textContent = job.error;
+        errorDiv.style.display = 'block';
+    }
+}
+
+function resetScrapingButton() {
+    const btn = document.getElementById('runScrapingBtn');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-play"></i> Run Scraping';
+}
+
+function resetScrapingUI() {
+    resetScrapingButton();
+    
+    // Also reset the "Run Full Scrape Now" button
+    const runNowBtn = document.getElementById('runNowBtn');
+    if (runNowBtn) {
+        runNowBtn.disabled = false;
+        runNowBtn.innerHTML = '<i class="fas fa-play-circle"></i> Run Full Scrape Now';
+    }
+    
+    document.getElementById('scrapingStatus').style.display = 'none';
+    
+    if (scrapingStatusInterval) {
+        clearInterval(scrapingStatusInterval);
+        scrapingStatusInterval = null;
+    }
+    currentScrapingJobId = null;
+}
+
+function formatDuration(startTime, endTime) {
+    if (!startTime || !endTime) return '';
+    
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    const diffMs = end - start;
+    const diffSecs = Math.floor(diffMs / 1000);
+    const diffMins = Math.floor(diffSecs / 60);
+    
+    if (diffMins > 0) {
+        const remainingSecs = diffSecs % 60;
+        return `${diffMins}m ${remainingSecs}s`;
+    } else {
+        return `${diffSecs}s`;
+    }
+}
+
+function getCompletionMessage(job) {
+    if (!job.output) {
+        return 'Scraping completed successfully!';
+    }
+    
+    // Parse the output to count newly scraped artists
+    const output = job.output;
+    
+    // Look for the completion message with count
+    const filteredMatch = output.match(/Filtered scraping complete\. (\d+) new artists scraped successfully\./);
+    const regularMatch = output.match(/Scraping complete\. (\d+) artists scraped successfully\./);
+    
+    if (filteredMatch) {
+        const count = parseInt(filteredMatch[1]);
+        if (count === 0) {
+            return 'Today-only scraping completed - no new artists added today';
+        } else {
+            return `Today-only scraping completed - ${count} new artist${count === 1 ? '' : 's'} added!`;
+        }
+    } else if (regularMatch) {
+        const count = parseInt(regularMatch[1]);
+        return `Full scraping completed - ${count} artist${count === 1 ? '' : 's'} updated!`;
+    }
+    
+    return 'Scraping completed successfully!';
+}
+
+function getDetailedToastMessage(job) {
+    if (!job.output) {
+        return 'Scraping completed successfully!';
+    }
+    
+    const output = job.output;
+    
+    // Check if this was filtered (today-only) scraping
+    const isFiltered = output.includes('Filtered scraping complete');
+    
+    if (isFiltered) {
+        // Count successful artists by looking for artist entries in the output
+        const artistMatches = output.match(/  • [^-]+ - [^\n]+/g);
+        const artistCount = artistMatches ? artistMatches.length : 0;
+        
+        if (artistCount === 0) {
+            return 'Today-only scraping completed - no new artists to add today';
+        } else if (artistCount === 1) {
+            // Extract the artist name for single artist
+            const singleArtist = artistMatches[0].match(/  • ([^-]+) -/);
+            const artistName = singleArtist ? singleArtist[1].trim() : 'artist';
+            return `Today-only scraping completed - added ${artistName}!`;
+        } else {
+            return `Today-only scraping completed - added ${artistCount} new artists!`;
+        }
+    } else {
+        // Full scraping - parse different output formats
+        const regularMatch = output.match(/Scraping complete\. (\d+) artists scraped successfully\./);
+        if (regularMatch) {
+            const count = parseInt(regularMatch[1]);
+            
+            // Check if it's a large batch (has summary statistics)
+            if (output.includes('📊 Summary statistics:')) {
+                const topPerformerMatch = output.match(/🏆 Top performer: ([^-]+) -/);
+                const topPerformer = topPerformerMatch ? topPerformerMatch[1].trim() : '';
+                
+                if (topPerformer) {
+                    return `Full scraping completed - ${count} artists updated! Top: ${topPerformer}`;
+                } else {
+                    return `Full scraping completed - ${count} artists updated!`;
+                }
+            } else if (output.includes('🏆 Top 5 performers:')) {
+                // Medium batch
+                return `Full scraping completed - ${count} artists updated! Check top performers below.`;
+            } else {
+                // Small batch
+                return `Full scraping completed - ${count} artists updated!`;
+            }
+        }
+        
+        return 'Full scraping completed successfully!';
+    }
+}
+
+function formatScrapingOutput(output) {
+    // Escape HTML to prevent XSS
+    const escapedOutput = output.replace(/&/g, '&amp;')
+                               .replace(/</g, '&lt;')
+                               .replace(/>/g, '&gt;');
+    
+    // Highlight successful artist scraping sections
+    let formattedOutput = escapedOutput.replace(
+        /✅ Successfully scraped new artists:/g,
+        '<span style="color: #28a745; font-weight: bold;">✅ Successfully scraped new artists:</span>'
+    );
+    
+    formattedOutput = formattedOutput.replace(
+        /✅ Successfully scraped (\d+) artists/g,
+        '<span style="color: #28a745; font-weight: bold;">✅ Successfully scraped $1 artists</span>'
+    );
+    
+    // Highlight top performers section
+    formattedOutput = formattedOutput.replace(
+        /🏆 Top 5 performers:/g,
+        '<span style="color: #ffc107; font-weight: bold;">🏆 Top 5 performers:</span>'
+    );
+    
+    // Highlight summary statistics
+    formattedOutput = formattedOutput.replace(
+        /📊 Summary statistics:/g,
+        '<span style="color: #17a2b8; font-weight: bold;">📊 Summary statistics:</span>'
+    );
+    
+    // Highlight individual artist entries with green color and better formatting
+    formattedOutput = formattedOutput.replace(
+        /  • ([^-]+) - ([^\n]+)/g,
+        '  <span style="color: #28a745;">•</span> <span style="color: #ffffff; font-weight: bold;">$1</span> - <span style="color: #17a2b8;">$2</span>'
+    );
+    
+    // Highlight numbered top performers
+    formattedOutput = formattedOutput.replace(
+        /  (\d+)\. ([^-]+) - ([^\n]+)/g,
+        '  <span style="color: #ffc107; font-weight: bold;">$1.</span> <span style="color: #ffffff; font-weight: bold;">$2</span> - <span style="color: #17a2b8;">$3</span>'
+    );
+    
+    // Highlight statistics lines
+    formattedOutput = formattedOutput.replace(
+        /  🏆 Top performer: ([^-]+) - ([^\n]+)/g,
+        '  <span style="color: #ffc107;">🏆</span> <span style="color: #ffffff; font-weight: bold;">Top performer:</span> <span style="color: #ffffff; font-weight: bold;">$1</span> - <span style="color: #17a2b8;">$2</span>'
+    );
+    
+    formattedOutput = formattedOutput.replace(
+        /  📈 Average listeners: ([^\n]+)/g,
+        '  <span style="color: #17a2b8;">📈</span> <span style="color: #ffffff; font-weight: bold;">Average listeners:</span> <span style="color: #17a2b8;">$1</span>'
+    );
+    
+    formattedOutput = formattedOutput.replace(
+        /  💫 Total listeners tracked: ([^\n]+)/g,
+        '  <span style="color: #28a745;">💫</span> <span style="color: #ffffff; font-weight: bold;">Total listeners tracked:</span> <span style="color: #28a745;">$1</span>'
+    );
+    
+    // Highlight failed artists section
+    formattedOutput = formattedOutput.replace(
+        /❌ (\d+) artists failed to scrape:/g,
+        '<span style="color: #dc3545; font-weight: bold;">❌ $1 artists failed to scrape:</span>'
+    );
+    
+    // Highlight completion messages
+    formattedOutput = formattedOutput.replace(
+        /(Filtered scraping complete\. \d+ new artists scraped successfully\.)/g,
+        '<span style="color: #28a745; font-weight: bold;">$1</span>'
+    );
+    
+    formattedOutput = formattedOutput.replace(
+        /(Scraping complete\. \d+ artists scraped successfully\.)/g,
+        '<span style="color: #28a745; font-weight: bold;">$1</span>'
+    );
+    
+    // Highlight summary text
+    formattedOutput = formattedOutput.replace(
+        /(... and \d+ other artists)/g,
+        '<span style="color: #6c757d; font-style: italic;">$1</span>'
+    );
+    
+    formattedOutput = formattedOutput.replace(
+        /(... and \d+ more failed URLs)/g,
+        '<span style="color: #dc3545; font-style: italic;">$1</span>'
+    );
+    
+    return formattedOutput;
+}
+
+// Scheduler Management Functions
+function loadSchedulerStatus() {
+    fetch('/admin/scheduler/status')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const status = data.status;
+                const statusElement = document.getElementById('schedulerStatusText');
+                const nextRunElement = document.getElementById('nextRunTime');
+                const timeInput = document.getElementById('scheduleTime');
+                
+                if (status.running) {
+                    statusElement.innerHTML = `<span style="color: #28a745;">Running</span> - Daily scraping at ${status.schedule_time}`;
+                    nextRunElement.textContent = status.next_run ? new Date(status.next_run).toLocaleString() : 'Not scheduled';
+                    timeInput.value = status.schedule_time;
+                } else {
+                    statusElement.innerHTML = '<span style="color: #dc3545;">Stopped</span>';
+                    nextRunElement.textContent = 'Not scheduled';
+                }
+            } else {
+                document.getElementById('schedulerStatusText').textContent = 'Error loading status';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading scheduler status:', error);
+            document.getElementById('schedulerStatusText').textContent = 'Error loading status';
+        });
+}
+
+function updateSchedule() {
+    const timeInput = document.getElementById('scheduleTime');
+    const time = timeInput.value;
+    const btn = document.getElementById('updateScheduleBtn');
+    
+    if (!time) {
+        showToast('Error', 'Please select a time', 'danger');
+        return;
+    }
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+    
+    fetch('/admin/scheduler/set_time', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ time: time })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Success', data.message, 'success');
+            loadSchedulerStatus(); // Refresh status
+        } else {
+            showToast('Error', data.message, 'danger');
+        }
+    })
+    .catch(error => {
+        showToast('Error', 'Failed to update schedule', 'danger');
+        console.error('Error:', error);
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-clock"></i> Update Schedule';
+    });
+}
+
+function runScheduledScrapeNow() {
+    const btn = document.getElementById('runNowBtn');
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting...';
+    
+    fetch('/admin/scheduler/run_now', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Set up the job tracking like regular scraping
+            currentScrapingJobId = data.job_id;
+            
+            // Switch to scraping tab to show progress
+            const scrapingSection = document.querySelector('[href="#scraping"]');
+            if (scrapingSection) {
+                scrapingSection.click();
+            }
+            
+            // Set up the scraping UI to show status
+            const status = document.getElementById('scrapingStatus');
+            const alert = document.getElementById('scrapingAlert');
+            const statusText = document.getElementById('scrapingStatusText');
+            const spinner = document.getElementById('scrapingSpinner');
+            
+            status.style.display = 'block';
+            alert.className = 'alert alert-info';
+            statusText.textContent = 'Running scheduled full scraping...';
+            spinner.style.display = 'inline-block';
+            
+            // Hide previous outputs
+            document.getElementById('scrapingOutput').style.display = 'none';
+            document.getElementById('scrapingError').style.display = 'none';
+            
+            // Disable the regular scraping button while this runs
+            const runScrapingBtn = document.getElementById('runScrapingBtn');
+            runScrapingBtn.disabled = true;
+            runScrapingBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Running...';
+            
+            // Start polling for status updates
+            scrapingStatusInterval = setInterval(checkScrapingStatus, 2000);
+            
+            showToast('Success', data.message, 'success');
+        } else {
+            showToast('Error', data.message, 'danger');
+        }
+    })
+    .catch(error => {
+        showToast('Error', 'Failed to start scraping', 'danger');
+        console.error('Error:', error);
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-play-circle"></i> Run Full Scrape Now';
+    });
+}
+
+// Load scheduler status when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    loadSchedulerStatus();
+    // Note: loadBlacklistCount() is now called after successful authentication in loadSuggestions()
+    
+    // Refresh scheduler status every 30 seconds
+    setInterval(loadSchedulerStatus, 30000);
+    
+    // Load blacklist when blacklist tab is shown
+    document.getElementById('blacklist-tab').addEventListener('shown.bs.tab', function() {
+        loadBlacklist();
+        setupBlacklistAutocomplete(); // Set up autocomplete when tab is shown
+        
+        // Set up form submission if not already set up
+        const form = document.getElementById('blacklist-form');
+        if (form && !form.dataset.listenerAdded) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                addToBlacklist();
+            });
+            form.dataset.listenerAdded = 'true';
+        }
+    });
+});
+
+// Blacklist Management Functions
+function loadBlacklistCount() {
+    fetch('/admin/blacklist')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('blacklist-count').textContent = data.count;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading blacklist count:', error);
+            // Don't show error toast for count loading, just fail silently
+        });
+}
+
+function loadBlacklist() {
+    fetch('/admin/blacklist')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayBlacklist(data.blacklist);
+                document.getElementById('blacklist-count').textContent = data.count;
+            } else {
+                showToast('Error', data.message, 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading blacklist:', error);
+            showToast('Error', 'Failed to load blacklist', 'danger');
+        });
+}
+
+function displayBlacklist(blacklist) {
+    const container = document.getElementById('blacklist-items');
+    
+    if (blacklist.length === 0) {
+        container.innerHTML = `
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> No artists in blacklist
+            </div>
+        `;
+        return;
+    }
+    
+    const html = blacklist.map(item => `
+        <div class="card mb-3" style="background: rgba(60, 20, 20, 0.95); border: 1px solid rgba(255, 0, 0, 0.3);">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-3">
+                        <h6 class="text-light mb-1">${escapeHtml(item.name)}</h6>
+                        ${item.spotify_id ? `<small class="text-muted">ID: ${escapeHtml(item.spotify_id)}</small>` : ''}
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">Reason:</small><br>
+                        <span class="text-light">${escapeHtml(item.reason)}</span>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">Date Added:</small><br>
+                        <span class="text-light">${escapeHtml(item.date_added)}</span>
+                    </div>
+                    <div class="col-md-3 text-end">
+                        <button class="btn btn-sm btn-outline-danger" onclick="removeFromBlacklist('${escapeHtml(item.name)}')">
+                            <i class="fas fa-trash"></i> Remove
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+    
+    container.innerHTML = html;
+}
+
+function addToBlacklist() {
+    const artistNameEl = document.getElementById('blacklist-artist-name');
+    const spotifyIdEl = document.getElementById('blacklist-spotify-id');
+    const reasonEl = document.getElementById('blacklist-reason');
+    
+    if (!artistNameEl || !spotifyIdEl || !reasonEl) {
+        showToast('Error', 'Form elements not found', 'danger');
+        return;
+    }
+    
+    const artistName = (artistNameEl.value || '').trim();
+    const spotifyId = (spotifyIdEl.value || '').trim();
+    const reason = (reasonEl.value || '').trim();
+    
+    if (!artistName) {
+        showToast('Error', 'Artist name is required', 'danger');
+        return;
+    }
+    
+    const data = {
+        artist_name: artistName,
+        spotify_id: spotifyId || null,
+        reason: reason || 'Added by admin'
+    };
+    
+    fetch('/admin/blacklist/add', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Success', data.message, 'success');
+            document.getElementById('blacklist-form').reset();
+            loadBlacklist(); // Reload the blacklist
+            loadBlacklistCount(); // Update the count badge
+        } else {
+            showToast('Error', data.message, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error adding to blacklist:', error);
+        showToast('Error', 'Failed to add to blacklist', 'danger');
+    });
+}
+
+function removeFromBlacklist(artistName) {
+    if (!confirm(`Are you sure you want to remove "${artistName}" from the blacklist?`)) {
+        return;
+    }
+    
+    fetch('/admin/blacklist/remove', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ artist_name: artistName })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Success', data.message, 'success');
+            loadBlacklist(); // Reload the blacklist
+            loadBlacklistCount(); // Update the count badge
+        } else {
+            showToast('Error', data.message, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error removing from blacklist:', error);
+        showToast('Error', 'Failed to remove from blacklist', 'danger');
+    });
+}
+
+function setupBlacklistAutocomplete() {
+    const input = document.getElementById('blacklist-artist-name');
+    const suggestions = document.getElementById('blacklist-artist-suggestions');
+    
+    if (!input || !suggestions) {
+        console.error('Blacklist form elements not found');
+        return;
+    }
+    
+    let timeoutId;
+    
+    input.addEventListener('input', function() {
+        const query = this.value.trim();
+        
+        clearTimeout(timeoutId);
+        
+        if (query.length < 2) {
+            suggestions.style.display = 'none';
+            return;
+        }
+        
+        timeoutId = setTimeout(() => {
+            fetch(`/search_spotify_artists?q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.artists && data.artists.length > 0) {
+                        const html = data.artists.map(artist => `
+                            <a class="dropdown-item blacklist-artist-option" href="javascript:void(0);" data-artist-name="${escapeHtml(artist.name)}" data-artist-id="${escapeHtml(artist.id)}">
+                                <img src="${artist.image}" width="32" height="32" class="me-2 rounded">
+                                ${escapeHtml(artist.name)}
+                                <small class="text-muted d-block">ID: ${escapeHtml(artist.id)}</small>
+                            </a>
+                        `).join('');
+                        
+                        suggestions.innerHTML = html;
+                        suggestions.style.display = 'block';
+                        suggestions.style.position = 'absolute';
+                        suggestions.style.zIndex = '1000';
+                        suggestions.style.width = input.offsetWidth + 'px';
+                    } else {
+                        // Show message when no results found
+                        suggestions.innerHTML = `
+                            <div class="dropdown-item-text text-muted">
+                                <i class="fas fa-info-circle"></i> No Spotify results found. You can still add the artist manually.
+                            </div>
+                        `;
+                        suggestions.style.display = 'block';
+                        suggestions.style.position = 'absolute';
+                        suggestions.style.zIndex = '1000';
+                        suggestions.style.width = input.offsetWidth + 'px';
+                        
+                        // Hide after 3 seconds
+                        setTimeout(() => {
+                            suggestions.style.display = 'none';
+                        }, 3000);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching artist suggestions:', error);
+                    suggestions.style.display = 'none';
+                });
+        }, 300);
+    });
+    
+    // Hide suggestions when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!input.contains(e.target) && !suggestions.contains(e.target)) {
+            suggestions.style.display = 'none';
+        }
+    });
+    
+    // Handle clicks on artist suggestions using event delegation
+    suggestions.addEventListener('click', function(e) {
+        const artistOption = e.target.closest('.blacklist-artist-option');
+        if (artistOption) {
+            e.preventDefault();
+            e.stopPropagation();
+            const name = artistOption.getAttribute('data-artist-name');
+            const id = artistOption.getAttribute('data-artist-id');
+            selectBlacklistArtist(name, id);
+        }
+    });
+}
+
+function selectBlacklistArtist(name, id) {
+    try {
+        const nameInput = document.getElementById('blacklist-artist-name');
+        const idInput = document.getElementById('blacklist-spotify-id');
+        const suggestions = document.getElementById('blacklist-artist-suggestions');
+        
+        if (nameInput) nameInput.value = name || '';
+        if (idInput) idInput.value = id || '';
+        if (suggestions) suggestions.style.display = 'none';
+    } catch (error) {
+        console.error('Error selecting blacklist artist:', error);
+        // Ensure suggestions are hidden even if there's an error
+        const suggestions = document.getElementById('blacklist-artist-suggestions');
+        if (suggestions) suggestions.style.display = 'none';
+    }
+}
+
+// Fix stuck suggestions
+function fixStuckSuggestions() {
+    const btn = document.getElementById('fixStuckSuggestionsBtn');
+    
+    if (!confirm('Fix suggestions that are approved but stuck in limbo?\n\nThis will mark them as properly processed and add them to the followed artists list.')) {
+        return;
+    }
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Fixing...';
+    
+    fetch('/admin/fix_stuck_suggestions', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (data.fixed_count > 0) {
+                showToast('Success', data.message, 'success');
+                loadSuggestions(); // Reload to update UI
+            } else {
+                showToast('Info', data.message, 'info');
+            }
+        } else {
+            showToast('Error', data.message, 'danger');
+        }
+    })
+    .catch(error => {
+        showToast('Error', 'Failed to fix stuck suggestions: ' + error.message, 'danger');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-wrench"></i> Fix Stuck Suggestions';
+    });
+}
+</script>
+{% endblock %}

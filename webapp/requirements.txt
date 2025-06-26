@@ -1,0 +1,9 @@
+Flask
+Flask-WTF
+Flask-JSON
+pandas
+spotipy
+python-dotenv
+requests
+schedule
+gunicorn

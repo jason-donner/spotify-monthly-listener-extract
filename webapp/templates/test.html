@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Spotify Search</title>
+    <script>
+        function testSearch() {
+            const query = document.getElementById('testInput').value;
+            fetch(`/search_spotify_artists?q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('results').innerHTML = JSON.stringify(data, null, 2);
+                })
+                .catch(error => {
+                    document.getElementById('results').innerHTML = 'Error: ' + error;
+                });
+        }
+    </script>
+</head>
+<body>
+    <h1>Spotify Artist Search Test</h1>
+    <input type="text" id="testInput" placeholder="Enter artist name">
+    <button onclick="testSearch()">Test Search</button>
+    <pre id="results"></pre>
+</body>
+</html>

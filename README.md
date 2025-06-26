@@ -1,293 +1,461 @@
-# Monthly Listener Project
+# Spotify Monthly Listener Extract
 
-This project allows you to export the list of artists you follow on Spotify and then scrape their monthly listener counts. It consists of two main scripts:
-
-- **src/get_artists.py**: Exports your followed artists to a JSON file.
-- **src/scrape.py**: Scrapes monthly listener counts for those artists and saves the results.
+A modern web-based system for tracking Spotify artists' monthly listener counts with automated scraping capabilities.
 
 ---
 
-## Features
+## 🎉 Recent Updates (June 2025)
 
-- Export all followed Spotify artists to a dated JSON file.
-- Scrape monthly listener counts for each artist using Selenium.
-- Progress bars with Spotify green color and time estimates.
-- Robust error handling and logging to dedicated log files.
-- Results and logs are always saved in the `results/` folder inside the project.
-- Designed for both automation and interactive use.
-- Supports command-line arguments for output file, logging, and limits.
-- **No hardcoded file paths:** All paths (including ChromeDriver and user data directory) are configurable via command-line arguments or environment variables.
-- Easy automation with a batch file and Windows Task Scheduler.
-- Clean project structure with all source code in `src/`.
+### Security & Configuration Improvements (June 25, 2025)
+- **🔒 Admin Password in .env File** - Moved admin password from environment variables to secure .env file
+- **📋 Streamlined Setup** - Single .env file now contains all configuration including admin password
+- **🧹 Testing File Cleanup** - Removed debugging and diagnostic files from git tracking
+- **📝 Enhanced .gitignore** - Better exclusion patterns for test files and temporary data
+- **🛡️ Improved Security** - More secure credential management following best practices
+
+### Data Integrity Verification (June 25, 2025)
+- **✅ Clean Data Confirmed** - Comprehensive analysis shows 6,392 entries with zero duplicates
+- **🛡️ Prevention System Verified** - Automatic duplicate protection working correctly since implementation
+- **📋 Documentation Updated** - Enhanced deduplication guide with verification records
+- **🔧 Best Practices Documented** - Clear guidelines for maintaining data integrity
+
+### Real-Time Progress Indicator (June 25, 2025)
+- **📊 Live Progress Bar** - Beautiful visual progress bar during scraping operations
+- **🎯 Artist Counter** - Shows "current / total" artists being processed in real-time
+- **👁️ Current Artist Display** - See exactly which artist is being processed
+- **⏱️ Phase Tracking** - Clear status updates (Starting, Scraping, Completed)
+- **🔄 Real-Time Updates** - Progress updates every 2 seconds with smooth animations
+
+### Leaderboard Enhancement (June 25, 2025)
+- **📅 Current Month Focus** - Leaderboard now shows only current month data (e.g., "June 2025")
+- **🎯 Improved Date Display** - Clear month/year display instead of confusing date ranges
+- **⚡ Automatic Month Updates** - Automatically switches to new month when the calendar changes
+- **📊 Better Data Relevance** - Shows more relevant, timely artist performance data
+
+### Critical Authentication Fix (June 25, 2025)
+- **🔐 Fixed "Failed to fetch" Error** - Resolved authentication issues in admin scraping endpoints
+- **🛡️ Enhanced Route Security** - Added proper `@admin_login_required` decorators to all admin endpoints
+- **⚙️ Environment Variable Support** - Fixed `ADMIN_PASSWORD` environment variable handling
+- **🚀 Stable Admin Panel** - All admin functionality now works reliably with proper authentication
+
+### Admin Panel Improvements
+- **🚀 Streamlined "Follow & Track" Process** - One-click approval that follows artists and marks suggestions as processed
+- **🔧 Fixed Suggestion Tab Management** - Properly moves processed suggestions between tabs
+- **📊 Enhanced Filtering Logic** - Accurate categorization of pending, approved, and processed suggestions
+- **🐛 Bug Fixes** - Resolved issues with stuck suggestions in "Pending Review"
+- **📝 Improved Logging** - Added detailed debug logging for suggestion processing
+- **🎨 Modern Admin Login** - Beautiful Spotify-themed login page with improved UX
+- **🔒 Secure Authentication** - Environment variable-based password management
+- **🛡️ Security Logging** - Comprehensive admin activity and authentication logging
+- **📋 Enhanced Scraping Feedback** - Detailed messages showing newly added artists when running "today only" scraping
+
+### Search & Discovery Enhancements  
+- **🎵 Top Tracks Preview** - Added artist top tracks preview on search page
+- **✨ Improved UI/UX** - Better visual feedback and user experience
+- **🎯 Refined Artist Selection** - Top tracks appear after artist selection, not on hover
+
+### Backend Improvements
+- **🔄 Enhanced Suggestion Lifecycle** - Better handling of suggestion status transitions
+- **⚡ Optimized Admin Actions** - Combined follow and processing into single operation
+- **🛡️ Error Handling** - More robust error handling and user feedback
+- **📋 Data Consistency** - Fixed data structure inconsistencies in suggestion processing
+
+### Code Quality Enhancements
+- **🔍 Improved Logging** - Added detailed debug logging for better troubleshooting
+- **🧹 Code Cleanup** - Removed redundant buttons and streamlined JavaScript
+- **📊 Better State Management** - Enhanced frontend filtering and tab management
+- **🎯 Consistent Data Flow** - Unified suggestion processing workflow
+- **📝 Centralized Logging** - Structured logging with file rotation and admin security monitoring
+
+### Auto-Follow System (June 25, 2025)
+- **🤖 Automatic Artist Following** - Suggestions are now auto-approved AND auto-followed on Spotify
+- **⚡ Instant Processing** - Users see immediate results when suggesting artists
+- **🔗 Smart Integration** - Seamlessly integrates with Spotify API when authenticated
+- **🛡️ Graceful Fallback** - Still works without Spotify auth, provides clear feedback
+- **📝 Enhanced User Feedback** - Detailed messages about what actions were taken
+
+### Data Migration & Maintenance (June 25, 2025)
+- **🔧 Stuck Suggestion Fix** - Built-in tools to repair suggestions stuck in limbo
+- **🛠️ Admin Maintenance Panel** - New maintenance section in admin panel for data fixes
+- **📋 Migration Scripts** - Automated scripts to handle data upgrades and fixes
+- **🔍 Data Integrity Tools** - Proactive detection and resolution of data issues
+
+### Unicode Encoding Fixes (June 25, 2025)
+- **🪟 Windows Compatibility** - Fixed Unicode encoding errors in scraping output
+- **🔧 Enhanced Colorama** - Better terminal output handling across platforms
+- **✅ Cross-Platform Support** - Works reliably on Windows, Mac, and Linux
+- **🎨 ASCII-Safe Display** - Replaced Unicode symbols with ASCII-compatible alternatives
+
+### Bulletproof Duplicate Prevention (June 25, 2025)
+- **🛡️ Multi-Layer Protection** - Enterprise-grade duplicate prevention at 3 levels
+- **🔧 Date Format Fix** - Fixed critical date format mismatch causing duplicate creation
+- **💾 Save-Time Validation** - Added duplicate checking during master file append
+- **🧹 Existing Data Cleanup** - Cleaned 15 duplicate entries from historical data
+- **🔍 Comprehensive Testing** - Built testing tools to verify duplicate prevention integrity
+- **📊 Real-Time Feedback** - Clear messages when duplicates are prevented
+- **🚫 Zero Tolerance** - Absolutely no duplicates will be created under any circumstances
 
 ---
 
-## Folder Structure
+## 🚀 Public Deployment
 
+### Ready for Production!
+Your Spotify Monthly Listener Extract app is ready for public deployment! Users will be able to:
+- 🔍 **Search artists** and view their monthly listener data
+- 💡 **Suggest new artists** for tracking 
+- 📊 **Browse leaderboards** and artist performance
+- 🎵 **Preview top tracks** for each artist
+
+### 🏆 AWS Deployment (Recommended)
+Enterprise-grade deployment with AWS App Runner:
+
+**Quick Deploy:**
+```powershell
+# Windows
+.\aws\deploy-apprunner.ps1
+
+# Mac/Linux  
+./aws/deploy-apprunner.sh
 ```
-spotify-monthly-listeners/
-│
-├── .env                  # Your Spotify API credentials (not committed)
-├── .gitignore
-├── automation.log        # Main workflow log
-├── get_artists.log       # Log for get_artists.py
-├── scrape.log            # Log for scrape.py
-├── LICENSE.txt
-├── README.md
-├── requirements.txt
-├── run_monthly_listener.bat
-├── results/              # All output JSON files
-│   ├── spotify-artist-urls-YYYYMMDD.json
-│   └── spotify-scraped-listeners-YYYYMMDD.json
-└── src/
-    ├── get_artists.py
-    └── scrape.py
-```
+
+**Benefits:**
+- 🚀 **Simple**: Deploy directly from GitHub
+- 🏢 **Enterprise-grade**: 99.9% uptime on AWS infrastructure  
+- 💰 **Cost-effective**: ~$46/month for production workload
+- 🔄 **Auto-scaling**: Handles traffic spikes automatically
+- 📊 **Monitoring**: Built-in CloudWatch integration
+
+### Other Options
+
+#### 🎯 Railway (Simple & Fast)
+1. Visit [railway.app](https://railway.app) and sign up
+2. Connect your GitHub repository  
+3. Set environment variables in Railway dashboard
+4. Deploy automatically!
+
+#### 🔧 Heroku (Reliable - $7/month)
+1. Install Heroku CLI
+2. `heroku create your-app-name`
+3. Set config vars with `heroku config:set`
+4. `git push heroku main`
+
+#### 🐳 Docker (Any platform)
+1. `docker build -t spotify-tracker .`
+2. Deploy to DigitalOcean, GCP, or any Docker platform
+
+### 📋 Pre-Deployment Checklist
+- [ ] Set up Spotify Developer App
+- [ ] Generate secure Flask secret key
+- [ ] Set strong admin password
+- [ ] Update redirect URI to production domain
+- [ ] Review security settings
+
+**📖 Full deployment guides**: 
+- `AWS_DEPLOYMENT_GUIDE.md` - Complete AWS options
+- `AWS_QUICK_START.md` - 10-minute AWS setup
+- `DEPLOYMENT.md` - All platform options
 
 ---
 
-## Setup
+## 🌟 Features
 
-1. **Clone the repository**  
-   ```sh
-   git clone <your-repo-url>
-   cd spotify-monthly-listeners
+- **🎵 Web-based Artist Management** - Manage followed artists through a modern web interface
+- **📅 Current Month Leaderboard** - Track artist performance for the current calendar month (e.g., "June 2025")
+- **📊 Real-Time Progress Tracking** - Live progress bars and artist counters during scraping operations
+- **✨ Artist Suggestion System** - Users can suggest new artists to track
+- **👨‍💼 Admin Panel** - Review, approve, and manage artist suggestions with real-time feedback
+- **🔗 Direct Spotify Integration** - Follow artists directly from the web interface using OAuth
+- **🤖 Automated Scraping** - Collect monthly listener data automatically
+- **📊 Data Persistence** - JSON storage with master results tracking
+- **📝 Comprehensive Logging** - Detailed logs for troubleshooting
+
+---
+
+## 🚀 Quick Start
+
+### 1. Prerequisites
+- Python 3.8+
+- Google Chrome browser
+- ChromeDriver (compatible with your Chrome version)
+- Spotify Developer App (create at https://developer.spotify.com/dashboard)
+
+### 2. Setup Environment Variables
+Create a `.env` file in the project root:
+```env
+SPOTIPY_CLIENT_ID=your_spotify_app_client_id
+SPOTIPY_CLIENT_SECRET=your_spotify_app_client_secret
+SPOTIPY_REDIRECT_URI=http://127.0.0.1:5000/admin/callback
+FLASK_SECRET_KEY=your-secret-key-for-sessions
+CHROMEDRIVER_PATH=C:\Windows\System32\chromedriver.exe
+ADMIN_PASSWORD=your_secure_admin_password_here
+```
+
+### 3. Install Dependencies
+
+The project has separate requirements for different components:
+
+```bash
+# Create and activate virtual environment
+python -m venv .venv
+.venv\Scripts\activate  # Windows
+
+# Install main dependencies
+pip install -r requirements.txt
+
+# Install webapp dependencies
+cd webapp
+pip install -r requirements.txt
+
+# Install scraping dependencies
+cd ../scraping
+pip install -r requirements.txt
+```
+
+### 4. Configure Spotify App
+In your Spotify Developer Dashboard:
+1. Set redirect URI to: `http://127.0.0.1:5000/admin/callback`
+2. Add scopes: `user-follow-read user-follow-modify`
+
+### 5. Start the Web Interface
+```bash
+cd webapp
+python app.py
+```
+
+### 6. Access the Application
+- **Main App**: http://localhost:5000
+- **Admin Login**: http://localhost:5000/admin_login
+- **Admin Panel**: http://localhost:5000/admin (requires login)
+
+---
+
+## 🎯 How to Use
+
+### Web Interface
+1. **Home/Leaderboard**: View artist performance rankings
+2. **Search**: Find and explore artist data
+3. **Artist Pages**: Detailed views with historical data
+4. **Suggest Artists**: Submit new artists for tracking
+
+### Admin Panel
+1. **Login**: Visit `/admin_login` and enter your admin password
+2. **OAuth Setup**: After login, click "Login with Spotify" to authenticate API access
+3. **Review Suggestions**: View pending, approved, and rejected suggestions
+4. **Process Suggestions**: 
+   - **🎵 Follow & Track** - Immediately follows artist on Spotify and adds to tracking (direct to processed)
+   - **👁️ Track Only** - Adds to tracking without following on Spotify (direct to processed)
+   - **✗ Reject** - Rejects the suggestion
+5. **Tab Management**: Suggestions automatically move between tabs based on status:
+   - **Pending Review** - New suggestions awaiting admin action
+   - **Processed** - Completed suggestions (followed/tracked)
+   - **Rejected** - Declined suggestions
+
+### Data Collection
+1. **Manual Collection**: Run scripts individually
+   ```bash
+   cd scraping
+   python get_artists.py    # Fetch followed artists
+   python scrape.py         # Scrape listener data
    ```
 
-2. **Create and activate a virtual environment (recommended)**
-   ```sh
-   python -m venv .venv
-   .venv\Scripts\activate   # On Windows
-   # Or
-   source .venv/bin/activate  # On macOS/Linux
+2. **Automated Collection**: Use the batch file
+   ```bash
+   cd scripts
+   run_monthly_listener.bat
    ```
 
-3. **Install dependencies**
-   ```sh
-   pip install -r requirements.txt
-   ```
-
-4. **Set up your Spotify API credentials**  
-   - Create a `.env` file in the project folder with the following:
-     ```
-     SPOTIPY_CLIENT_ID=your_client_id
-     SPOTIPY_CLIENT_SECRET=your_client_secret
-     SPOTIPY_REDIRECT_URI=your_redirect_uri
-     ```
-
 ---
 
-## Usage
+## 📁 File Structure
 
-### 1. Export Followed Artists
-
-```sh
-python src/get_artists.py
 ```
-
-- This will create a file like `results/spotify-artist-urls-YYYYMMDD.json`.
-- You can customize the output file:
-  ```sh
-  python src/get_artists.py --output my_artists.json
-  ```
-- For automation (no prompts):
-  ```sh
-  python src/get_artists.py --no-prompt
-  ```
-
-### 2. Scrape Monthly Listeners
-
-```sh
-python src/scrape.py --chromedriver "C:\path\to\chromedriver.exe"
-```
-
-- By default, this uses the latest `results/spotify-artist-urls-YYYYMMDD.json` as input.
-- You **must** specify the path to your ChromeDriver executable using `--chromedriver` or by setting the `CHROMEDRIVER_PATH` environment variable.
-- You can also specify a Chrome user data directory with `--user-data-dir` or the `SELENIUM_PROFILE` environment variable (optional, but useful for keeping your Spotify login session).
-- Example with both options:
-  ```sh
-  python src/scrape.py --chromedriver "C:\path\to\chromedriver.exe" --user-data-dir "C:\path\to\SeleniumProfile"
-  ```
-- For automation (no prompts):
-  ```sh
-  python src/scrape.py --chromedriver "C:\path\to\chromedriver.exe" --no-prompt
-  ```
-
-#### Using Environment Variables
-
-Instead of passing paths every time, you can set environment variables:
-
-On Windows (Command Prompt):
-```bat
-set CHROMEDRIVER_PATH=C:\path\to\chromedriver.exe
-set SELENIUM_PROFILE=C:\path\to\SeleniumProfile
-python src\scrape.py
-```
-
-On macOS/Linux:
-```sh
-export CHROMEDRIVER_PATH=/path/to/chromedriver
-export SELENIUM_PROFILE=/path/to/SeleniumProfile
-python src/scrape.py
+Spotify Monthly Listener Extract/
+├── 📁 webapp/                           # Web application
+│   ├── app.py                           # Flask application
+│   ├── app/                             # App modules
+│   ├── templates/                       # HTML templates
+│   ├── static/                          # CSS, images
+│   └── requirements.txt                 # Web app dependencies
+├── 📁 scraping/                         # Core scraping scripts
+│   ├── get_artists.py                   # Fetch artist URLs
+│   ├── scrape.py                        # Scrape listener data
+│   ├── process_suggestions.py           # Process suggestions
+│   └── requirements.txt                 # Scraping dependencies
+├── 📁 scripts/                          # Utility scripts
+│   ├── run_monthly_listener.bat         # Automation script
+│   └── *.py                             # Various utility scripts
+├── 📁 data/
+│   └── results/                         # JSON data files
+├── 📁 docs/                             # Documentation
+├── 📁 tests/                            # Test files
+├── requirements.txt                     # Main dependencies
+└── .env                                 # Environment variables
 ```
 
 ---
 
-### How Artist Tracking Works
+## 📂 Project Structure Details
 
-- When you run `get_artists.py`, it exports your currently followed artists to a dated JSON file (e.g., `results/spotify-artist-urls-YYYYMMDD.json`).
-- It also updates a **master file**:  
-  `results/spotify-followed-artists-master.json`
-    - This file keeps a running history of every artist you've ever followed.
-    - Each artist entry includes:
-      - `artist_name`
-      - `url`
-      - `date_added`: The date you first followed the artist (or when they were first detected)
-      - `removed`: `true` if you have unfollowed the artist, `false` otherwise
-      - `date_removed`: The date you unfollowed the artist (if applicable)
-    - If you re-follow an artist, their `removed` status is reset.
+### Core Components
+- **`webapp/`** - Flask web application with admin panel and user interface
+- **`scraping/`** - Python scripts for data collection and processing
+- **`scripts/`** - Utility scripts and automation tools
+- **`data/results/`** - JSON data files with artist and listener information
+- **`docs/`** - Documentation and guides
+- **`tests/`** - Unit tests for the application
 
-### Scraping and Master Listener File
-
-- When you run `scrape.py`, it scrapes monthly listener counts for all artists in your master file (or a specific input file).
-- Scraped results are saved to a dated file (e.g., `results/spotify-scraped-listeners-YYYYMMDD.json`).
-- All scraped data is also appended to a **master listener file**:  
-  `results/spotify-monthly-listeners-master.json`
-    - This file contains every scrape result, with:
-      - `artist_name`
-      - `url`
-      - `monthly_listeners`
-      - `date` (when the data was scraped)
-    - Duplicate entries (same artist and date) are avoided.
+### Key Files
+- **`webapp/app.py`** - Main Flask application entry point
+- **`scraping/get_artists.py`** - Fetches followed artists from Spotify
+- **`scraping/scrape.py`** - Scrapes monthly listener data
+- **`scripts/run_monthly_listener.bat`** - Automated data collection script
 
 ---
 
-## Output
+## 🔧 API Endpoints
 
-- **Dated export files**:  
-  - `results/spotify-artist-urls-YYYYMMDD.json`: Your followed artists at a point in time.
-  - `results/spotify-scraped-listeners-YYYYMMDD.json`: Listener counts scraped on a given date.
-- **Master files**:  
-  - `results/spotify-followed-artists-master.json`:  
-    Tracks all artists you’ve ever followed, with `date_added`, `removed`, and `date_removed` fields.
-  - `results/spotify-monthly-listeners-master.json`:  
-    Tracks all scraped listener data over time for all artists.
+### Public Endpoints
+- `GET /` - Home page/leaderboard
+- `GET /search` - Search artists with top tracks preview
+- `GET /artist/<slug>/<id>` - Artist detail page
+- `POST /suggest_artist` - Submit artist suggestion
+- `GET /api/artist/<artist_id>/top-tracks` - Get artist's top tracks (JSON)
+
+### Admin Endpoints
+- `GET /admin` - Admin panel interface
+- `GET /admin/suggestions` - Get all suggestions (JSON)
+- `POST /admin/approve_suggestion` - Approve/reject suggestions
+- `POST /admin/follow_artist` - Follow artist on Spotify and process suggestion
+- `POST /admin/run_scraping` - Start automated scraping job
+- `POST /admin/process_suggestions` - Process approved suggestions in batch
+- `GET /admin/scraping_status/<job_id>` - Check scraping job status
+
+### Authentication Endpoints
+- `GET /login` - Start Spotify OAuth
+- `GET /callback` - OAuth callback handler
+- `GET /logout` - Clear authentication
+- `GET /auth_status` - Check auth status (JSON)
 
 ---
 
-## Customization
+## 🛠️ Data Processing Workflow
 
-- Both scripts support command-line arguments for output file, logging, and limits.
-- See `python src/get_artists.py --help` and `python src/scrape.py --help` for all options.
-- **No file paths are hardcoded:** All paths can be set via arguments or environment variables.
-- **Artist history is preserved:**  
-  The master artist file allows you to see when you started or stopped following each artist.
-
----
-
-## Automation
-
-### Batch File: `run_monthly_listener.bat`
-
-You can automate the entire workflow using the provided batch file.  
-**Place this file in your project folder (where your scripts and `.venv` are located):**
-
-```bat
-@echo off
-cd /d "%~dp0"
-call .venv\Scripts\activate
-python src\get_artists.py --no-prompt --log get_artists.log
-python src\scrape.py --no-prompt --log scrape.log
-echo %DATE% %TIME% - Monthly listener workflow completed >> automation.log
+### 1. Artist Management
+```
+User Suggestion → Admin Review → Direct Processing (Follow & Track OR Track Only) → Processed
 ```
 
-- `%~dp0` ensures the batch file always runs from the project folder, no matter where it's launched from.
-- This batch file runs both scripts with no prompts and logs all output to `automation.log`.
-- **Do not hardcode your ChromeDriver path in the batch file. Instead, set it in your `.env` file as described below.**
-
----
-
-### Setting the ChromeDriver Path
-
-Before running the workflow, you must tell the scripts where to find your `chromedriver.exe`.  
-**Create or edit a `.env` file in your project folder and add:**
-
+### 2. Data Collection
 ```
-CHROMEDRIVER_PATH=C:\Path\To\chromedriver.exe
+Get Followed Artists → Scrape Monthly Listeners → Save to JSON → Update Master File
 ```
 
-- Replace `C:\Path\To\chromedriver.exe` with the actual path to your ChromeDriver executable.
-- On Windows, backslashes are fine.
-- Do **not** commit your `.env` file to version control.
-
-If you do not have ChromeDriver, download it from [https://chromedriver.chromium.org/downloads](https://chromedriver.chromium.org/downloads) and place it somewhere on your system.
-
----
-
-### Scheduling with Windows Task Scheduler
-
-To run the workflow automatically (e.g., on the first of every month):
-
-1. **Open Task Scheduler** (search for it in the Start menu).
-2. Click **Create Basic Task...** and give it a name (e.g., "Monthly Spotify Listener Export").
-3. Set the trigger to **Monthly**, and choose the 1st day of each month.
-4. For the action, select **Start a program** and browse to your `run_monthly_listener.bat` file in your project folder.
-5. Finish the wizard.
-
-Your workflow will now run automatically on the schedule you set.  
-Check `automation.log` for output and errors after each run.
+### 3. Web Interface
+```
+Load Data → Display Charts → Search/Filter → Artist Details
+```
 
 ---
 
-## Testing
+## 🔍 Troubleshooting
 
-To run the automated tests:
+### Authentication Issues
+- ✅ Check Spotify app redirect URI
+- ✅ Verify client credentials in `.env`
+- ✅ **Admin login issues**: Ensure `ADMIN_PASSWORD` is set in your `.env` file
+- ✅ Clear browser cache/cookies
+- ✅ Check Flask app is running on port 5000
 
-1. Install the test dependencies (if not already done):
-   ```sh
-   pip install -r requirements.txt
-   ```
+### Admin Panel Issues
+- ✅ **Admin login fails**: Verify `ADMIN_PASSWORD` in `.env` file matches your input
+- ✅ **"Failed to fetch" errors**: Check that admin password is properly configured in `.env`
+- ✅ **Suggestions stuck in "Pending Review"**: Check suggestion status in `artist_suggestions.json`
+- ✅ **"Follow & Track" not working**: Ensure Spotify authentication is active
+- ✅ **Tab counts incorrect**: Refresh the page or check filtering logic in browser console
+- ✅ **Processing errors**: Check Flask app logs for detailed error messages
 
-2. From the project root, set your `PYTHONPATH` and run pytest:
-   - On Windows (PowerShell):
-     ```sh
-     $env:PYTHONPATH="$PWD"
-     pytest
-     ```
-   - On Windows (Command Prompt):
-     ```cmd
-     set PYTHONPATH=%CD%
-     pytest
-     ```
-   - On macOS/Linux:
-     ```sh
-     export PYTHONPATH=$PWD
-     pytest
-     ```
+### Scraping Issues
+- ✅ Ensure ChromeDriver is compatible with Chrome version
+- ✅ Check ChromeDriver path in environment variables
+- ✅ Verify Spotify login works manually
+- ✅ Review `scrape.log` for errors
+- ✅ **Smart detailed feedback**: 
+  - "Today only" scraping shows detailed list of newly added artists
+  - Full scraping shows appropriate detail level (detailed list for small batches, top performers for medium batches, statistics for large batches)
+- ✅ **Completion messages**: Admin panel displays context-aware artist count and performance statistics
+- ✅ **Real-time progress**: Live progress bar shows current artist being processed with accurate counters
 
-This will discover and run all tests in the `tests/` folder.
+### Progress Indicator Issues
+- ✅ **Progress bar not showing**: Check that scraping script outputs "PROGRESS:" markers
+- ✅ **Progress stuck at 0%**: Verify scraping script is outputting progress updates
+- ✅ **No artist names showing**: Check progress parsing in job service logs
+- ✅ **Progress bar shows but no updates**: Ensure frontend is polling `/admin/scraping_status/` endpoint
+- ✅ **Progress percentage incorrect**: Verify total artist count is detected correctly from script output
+
+### Web Interface Issues
+- ✅ Check Flask app logs in terminal
+- ✅ Verify all dependencies are installed
+- ✅ Check browser developer console for JavaScript errors
+- ✅ Ensure data files exist in `data/results/`
+- ✅ **Top tracks not loading**: Check Spotify API credentials and rate limits
+
+### Logging and Monitoring
+- ✅ **Application logs**: Check `webapp/logs/app.log` for general application issues
+- ✅ **Admin security logs**: Check `webapp/logs/admin.log` for authentication and admin activity
+- ✅ **Failed login attempts**: Monitor admin.log for security violations
+- ✅ **Performance issues**: Review app.log with timestamps for slow operations
+- ✅ **Log rotation**: Logs automatically rotate at 10MB (app.log) and 5MB (admin.log)
+
+### Duplicate Prevention Issues
+- ✅ **No duplicates created**: The system now has bulletproof 3-layer duplicate prevention
+- ✅ **Date format consistency**: All data uses YYYY-MM-DD format for reliable duplicate detection
+- ✅ **Multi-level protection**: 
+  - **Level 1**: Pre-scraping check - skips artists already scraped today
+  - **Level 2**: Save-time check - prevents duplicates during master file append
+  - **Level 3**: Data validation - ensures consistency and integrity
+- ✅ **Testing tools available**: Run `python scripts/test_duplicate_prevention.py` to verify system integrity
+- ✅ **Cleanup tools**: Use `python scripts/check_and_fix_duplicates.py` to clean any existing duplicates
+- ✅ **Real-time feedback**: System shows "Prevented X duplicate entries" when duplicates are blocked
 
 ---
 
-## Notes
+## 📋 Migration from Dual-Account System
 
-- Make sure your `.env` and `.cache` files are **not committed** to git (see `.gitignore`).
-- The scripts are designed to be robust for both interactive and automated workflows.
-- Progress bars use Spotify green and show elapsed/estimated time.
-- All source code is in the `src/` folder for clarity and maintainability.
-- **No hardcoded file paths:** All paths are configurable for portability.
+If you were using the old dual-account system, see `MIGRATION_GUIDE.md` for detailed migration instructions.
 
----
-
-## License
-
-MIT License
+**Key Changes:**
+- ❌ No more main/scrape account separation
+- ❌ `spotify_follow_sync.py` script is deprecated (but still present)
+- ✅ Single account for all operations
+- ✅ Web-based OAuth authentication
+- ✅ Simplified setup and configuration
 
 ---
 
-## Acknowledgments
+## 📚 Additional Documentation
 
-- [Spotipy](https://spotipy.readthedocs.io/) for Spotify API access.
-- [Selenium](https://www.selenium.dev/) for web scraping.
-- [tqdm](https://tqdm.github.io/) for progress bars.
-- [colorama](https://pypi.org/project/colorama/) for colored terminal output.
+### Setup & Configuration
+- `docs/SECURITY.md` - Security guidelines and best practices
+- `docs/ADMIN_PASSWORD_MIGRATION.md` - Migration guide for admin password changes
+- `docs/WEB_OAUTH_GUIDE.md` - Web-based OAuth setup guide
+- `docs/MIGRATION_GUIDE.md` - Migration from dual-account system
+
+### Features & Operations
+- `docs/WORKFLOW.md` - Detailed workflow documentation
+- `docs/DATA_DEDUPLICATION.md` - Data integrity and duplicate prevention guide
+- `docs/BULLETPROOF_DUPLICATE_PREVENTION.md` - Comprehensive duplicate prevention system documentation
+- `docs/AUTO_FOLLOW_SYSTEM.md` - Complete auto-follow system documentation
+- `docs/MAINTENANCE_TOOLS.md` - Maintenance and migration tools guide
+- `docs/PROGRESS_TRACKING.md` - Real-time progress indicator documentation
+
+---
+
+## 🤝 Contributing
+
+Feel free to submit issues, feature requests, or pull requests to improve the system.
+
+---
+
+## 📄 License
+
+See `LICENSE.txt` for license information.

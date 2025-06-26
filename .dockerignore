@@ -1,0 +1,55 @@
+# Docker ignore file
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment files (will be set in container)
+.env
+.env.local
+.env.production
+
+# Data files (should be mounted as volumes in production)
+data/
+artist_suggestions.json
+artist_blacklist.json
+spotify_token_cache.json
+
+# Test files
+*test*.json
+test_*.py
+tests/
+
+# Documentation (not needed in container)
+docs/
+*.md
+
+# Git
+.git/
+.gitignore
+
+# Other
+.coverage
+htmlcov/
+.pytest_cache/

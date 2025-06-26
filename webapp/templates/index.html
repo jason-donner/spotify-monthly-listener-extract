@@ -1,0 +1,509 @@
+<!doctype html>
+<html>
+<head>
+    <title>Spotify Monthly Listener Tracker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            min-height: 100vh;
+            background: 
+                radial-gradient(ellipse at 60% 40%, #ff5ecd 0%, transparent 60%),
+                radial-gradient(ellipse at 30% 70%, #7f5eff 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 80%, #191414 0%, #121212 80%),
+                linear-gradient(120deg, #2d0036 0%, #1a0036 100%);
+            background-blend-mode: lighten, lighten, normal, normal;
+            color: #fff;
+            position: relative;
+            overflow-x: hidden;
+        }
+        /* Smokey SVG blobs overlay */
+        body::before {
+            content: "";
+            position: fixed;
+            z-index: 0;
+            top: -120px;
+            left: -120px;
+            width: 120vw;
+            height: 120vh;
+            pointer-events: none;
+            background: 
+                radial-gradient(circle at 20% 40%, rgba(29,185,84,0.18) 0, transparent 60%),
+                radial-gradient(circle at 80% 20%, rgba(30,215,96,0.14) 0, transparent 60%),
+                radial-gradient(circle at 60% 80%, rgba(40,40,40,0.22) 0, transparent 70%);
+            filter: blur(48px);
+            opacity: 0.85;
+        }
+        h1 {
+            background: linear-gradient(90deg, #1DB954 60%, #1ed760 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-fill-color: transparent;
+            text-align: center;
+            margin-top: 32px;
+            letter-spacing: 2px;
+        }
+        form {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            margin: 32px 0 24px 0;
+        }
+        input[type="text"] {
+            padding: 12px 16px;
+            border: none;
+            border-radius: 24px 0 0 24px;
+            outline: none;
+            width: 320px;
+            font-size: 1.1em;
+            background: #222326;
+            color: #fff;
+        }
+        button[type="submit"] {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 0 24px 24px 0;
+            background: linear-gradient(90deg, #1DB954 60%, #1ed760 100%);
+            color: #fff;
+            font-weight: bold;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button[type="submit"]:hover {
+            background: linear-gradient(90deg, #1ed760 60%, #1DB954 100%);
+        }
+        #suggestion-box {
+            position: absolute;
+            left: 0;
+            top: 100%;
+            background: #222326;
+            border: 1px solid #1DB954;
+            z-index: 1000;
+            width: 100%;
+            display: none;
+            border-radius: 0 0 12px 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+        }
+        #suggestion-box div {
+            padding: 10px 16px;
+            cursor: pointer;
+            color: #fff;
+            transition: background 0.15s;
+        }
+        #suggestion-box div:hover {
+            background: #1DB954;
+            color: #191414;
+        }
+        .content-container {
+            max-width: 1400px;
+            margin: 40px auto 40px auto;
+            background: rgba(30, 30, 40, 0.55); /* More transparent */
+            border-radius: 24px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+            padding: 36px 24px 32px 24px;
+            backdrop-filter: blur(16px) saturate(160%);
+            -webkit-backdrop-filter: blur(16px) saturate(160%);
+            border: 1.5px solid rgba(255,255,255,0.18);
+            position: relative;
+            z-index: 1;
+        }
+        .leaderboard-controls {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            background: #181818;
+            border-radius: 32px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+            padding: 12px 24px;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+        }
+        .leaderboard-toggle-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+            width: 100%;
+        }
+        .leaderboard-toggle {
+            padding: 10px 20px;
+            border: none;
+            color: #fff !important;
+            font-weight: bold;
+            font-size: 1.02em;
+            text-decoration: none;
+            transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            outline: none;
+            border-radius: 20px;
+            border: 1.5px solid transparent;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            background: linear-gradient(90deg, #ff5ecd 0%, #7f5eff 100%) !important;
+            margin-bottom: 0;
+        }
+        .leaderboard-toggle.active-growth, .leaderboard-toggle.active-loss {
+            background: inherit !important;
+            color: #fff !important;
+            text-decoration: none;
+            box-shadow: 0 0 0 4px rgba(255,94,205,0.25), 0 2px 8px rgba(127,95,255,0.10);
+            border: 2.5px solid #fff;
+            position: relative;
+            z-index: 1;
+        }
+        .leaderboard-toggle:not(.active-growth):not(.active-loss):hover {
+            filter: brightness(1.15);
+            border: 1.5px solid #1DB954;
+        }
+        .leaderboard-tier-group {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            background: #181818;
+            border-radius: 32px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+            padding: 10px 24px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        .leaderboard-tier-label {
+            color: #aaa;
+            font-size: 1.08em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            text-align: center;
+            width: 100%;
+            display: block;
+        }
+        .leaderboard-tier-row {
+            display: flex;
+            flex-direction: row;
+            gap: 8px;
+            width: 100%;
+        }
+        .leaderboard-tier {
+            padding: 10px 20px;
+            border: none;
+            color: #fff !important;
+            font-weight: bold;
+            font-size: 1.02em;
+            text-decoration: none;
+            transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            outline: none;
+            border-radius: 20px;
+            border: 1.5px solid transparent;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            background: #ff5ecd !important;
+        }
+        .leaderboard-tier.tier-micro { background: #ff5ecd !important; }
+        .leaderboard-tier.tier-small { background: linear-gradient(90deg, #ff5ecd 0%, #c86dd7 100%) !important; }
+        .leaderboard-tier.tier-medium { background: linear-gradient(90deg, #c86dd7 0%, #7f5eff 100%) !important; }
+        .leaderboard-tier.tier-large { background: linear-gradient(90deg, #7f5eff 0%, #5e60ce 100%) !important; }
+        .leaderboard-tier.tier-major { background: #5e60ce !important; }
+        .leaderboard-tier.active-tier {
+            background: inherit !important;
+            color: #fff !important;
+            text-decoration: none;
+            box-shadow: 0 0 0 4px rgba(255,94,205,0.25), 0 2px 8px rgba(127,95,255,0.10);
+            border: 2.5px solid #fff;
+            position: relative;
+            z-index: 1;
+        }
+        .leaderboard-tier:not(.active-tier):hover {
+            filter: brightness(1.15);
+            border: 1.5px solid #1DB954;
+        }
+        /* Professional table styling */
+        table.leaderboard-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: #232323;
+            border-radius: 18px;
+            overflow: hidden;
+            margin: 0 auto 24px auto;
+            box-shadow: 0 4px 24px rgba(29,185,84,0.10);
+        }
+        .leaderboard-table th, .leaderboard-table td {
+            padding: 16px 20px;
+            text-align: left;
+        }
+        .leaderboard-table th {
+            background: linear-gradient(90deg, #1DB954 60%, #1ed760 100%);
+            color: #191414;
+            font-weight: bold;
+            border-bottom: 2px solid #1DB954;
+            font-size: 1.08em;
+        }
+        .leaderboard-table tr {
+            border-bottom: 1.5px solid #232323;
+        }
+        .leaderboard-table tr:last-child {
+            border-bottom: none;
+        }
+        .leaderboard-table tr:nth-child(even) {
+            background: #202020;
+        }
+        .leaderboard-table tr:hover {
+            background: #282828;
+            transition: background 0.2s;
+        }
+        .leaderboard-table td {
+            font-size: 1.05em;
+            vertical-align: middle;
+        }
+        .leaderboard-table img {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+        }
+        @media (max-width: 700px) {
+            .content-container {
+                padding: 16px 4vw 18px 4vw;
+                border-radius: 12px;
+            }
+        }
+        @media (max-width: 600px) {
+            input[type="text"] {
+                width: 140px;
+                font-size: 1em;
+            }
+            table, th, td {
+                font-size: 0.95em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="content-container">
+        <h1>
+            <a href="/" style="color:#1DB954;text-decoration:none;cursor:pointer;">Spotify Monthly Listener Tracker</a>
+        </h1>
+        <form method="get">
+            <input type="text" name="artist" placeholder="Search artist..." value="{{ query }}" autocomplete="off">
+            <button type="submit">Search</button>
+            <div id="suggestion-box"></div>
+        </form>
+        {% if not results and not query and leaderboard %}
+        <div style="max-width:800px;margin:40px auto 0 auto;">
+            <h2 style="color:#1DB954;text-align:center;margin-bottom:16px;">Biggest Monthly Listener Changes (Last 30 Days)</h2>
+            <div class="leaderboard-controls">
+                <div class="leaderboard-toggle-group">
+                    <a href="?mode=growth&tier={{ leaderboard_tier }}" class="leaderboard-toggle {% if leaderboard_mode == 'growth' %}active-growth{% endif %}">Upstrokes</a>
+                    <a href="?mode=loss&tier={{ leaderboard_tier }}" class="leaderboard-toggle {% if leaderboard_mode == 'loss' %}active-loss{% endif %}">Downstrokes</a>
+                </div>
+            </div>
+            <div class="leaderboard-tier-group">
+                <div class="leaderboard-tier-label">Monthly Listener Tiers</div>
+                <div class="leaderboard-tier-row">
+                    <a href="?mode={{ leaderboard_mode }}&tier=all" class="leaderboard-tier tier-all {% if leaderboard_tier == 'all' %}active-tier{% endif %}">All</a>
+                    <a href="?mode={{ leaderboard_mode }}&tier=micro" class="leaderboard-tier tier-micro {% if leaderboard_tier == 'micro' %}active-tier{% endif %}">0–1,000</a>
+                    <a href="?mode={{ leaderboard_mode }}&tier=small" class="leaderboard-tier tier-small {% if leaderboard_tier == 'small' %}active-tier{% endif %}">1,001–3,000</a>
+                    <a href="?mode={{ leaderboard_mode }}&tier=medium" class="leaderboard-tier tier-medium {% if leaderboard_tier == 'medium' %}active-tier{% endif %}">3,001–15,000</a>
+                    <a href="?mode={{ leaderboard_mode }}&tier=large" class="leaderboard-tier tier-large {% if leaderboard_tier == 'large' %}active-tier{% endif %}">15,001–50,000</a>
+                    <a href="?mode={{ leaderboard_mode }}&tier=major" class="leaderboard-tier tier-major {% if leaderboard_tier == 'major' %}active-tier{% endif %}">&gt;50,000</a>
+                </div>
+            </div>
+            <table class="leaderboard-table">
+                <tr>
+                    <th>Artist</th>
+                    <th>Starting Listeners</th>
+                    <th>Ending Listeners</th>
+                    <th>Change</th>
+                    <th>% Change</th>
+                </tr>
+                {% for row in leaderboard %}
+                <tr>
+                    <td style="display:flex;align-items:center;gap:16px;">
+                    <a href="/?artist={{ row.artist|urlencode }}" style="display:flex;align-items:center;gap:16px;text-decoration:none;">
+                        {% if row.image_url %}
+                        <img src="{{ row.image_url }}" alt="{{ row.artist }}" style="width:60px;height:60px;border-radius:50%;vertical-align:middle;">
+                        {% else %}
+                        <img src="{{ url_for('static', filename='placeholder.png') }}" alt="No image" style="width:60px;height:60px;border-radius:50%;vertical-align:middle;">
+                        {% endif %}
+                        <span style="color:#1DB954;font-weight:bold;font-size:1.13em;">{{ row.artist }}</span>
+                    </a>
+                    </td>
+                    <td>{{ "{:,}".format(row.start) }}</td>
+                    <td>{{ "{:,}".format(row.end) }}</td>
+                    <td>
+                        {% if row.change > 0 %}
+                            <span style="color:#1DB954;">+{{ "{:,}".format(row.change) }}</span>
+                        {% elif row.change < 0 %}
+                            <span style="color:#e74c3c;">{{ "{:,}".format(row.change) }}</span>
+                        {% else %}
+                            <span style="color:#aaa;">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if row.percent_change > 0 %}
+                            <span style="color:#1DB954;font-weight:bold;">+{{ '%.2f'|format(row.percent_change) }}%</span>
+                        {% elif row.percent_change < 0 %}
+                            <span style="color:#e74c3c;font-weight:bold;">{{ '%.2f'|format(row.percent_change) }}%</span>
+                        {% else %}
+                            <span style="color:#aaa;">0.00%</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+        {% endif %}
+        {% if results %}
+    <div style="max-width:800px;margin:40px auto 0 auto;">
+        <h2 style="color:#1DB954;text-align:center;margin-bottom:16px;">Results for "{{ query }}"</h2>
+        <div style="display:flex;align-items:center;gap:28px;margin-bottom:28px;padding:20px 24px;background:#232323;border-radius:18px;box-shadow:0 2px 16px rgba(0,0,0,0.10);">
+            <!-- Artist image -->
+            {% if artist_image_url %}
+                <img src="{{ artist_image_url }}" alt="{{ query }}" style="width:96px;height:96px;border-radius:50%;box-shadow:0 2px 16px rgba(0,0,0,0.18);background:#232323;">
+            {% else %}
+                <img src="/artist_image?name={{ query|urlencode }}" alt="{{ query }}" style="width:96px;height:96px;border-radius:50%;box-shadow:0 2px 16px rgba(0,0,0,0.18);background:#232323;">
+            {% endif %}
+            <!-- Artist info -->
+            <div style="display:flex;flex-direction:column;justify-content:center;">
+                <div style="font-size:1.7em;font-weight:bold;color:#fff;line-height:1.1;">{{ query }}</div>
+                {% if artist_info %}
+                    {% if artist_info.get('genres') %}
+                        <div style="color:#1DB954;margin-top:8px;font-size:1.08em;">
+                            <span style="font-weight:600;">Genres:</span>
+                            <span style="color:#fff;">{{ artist_info.get('genres', [])|join(', ') }}</span>
+                        </div>
+                    {% endif %}
+                    {% if artist_info.get('followers') %}
+                        <div style="color:#aaa;margin-top:6px;font-size:1.05em;">
+                            <span style="font-weight:600;color:#1DB954;">Followers:</span>
+                            <span style="color:#fff;">{{ "{:,}".format(artist_info['followers']) }}</span>
+                        </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+        <!-- Area Chart -->
+        <div style="background:#232323;padding:24px 18px 8px 18px;border-radius:18px;box-shadow:0 2px 16px rgba(0,0,0,0.10);margin-bottom:28px;">
+            <canvas id="listenersChart" height="120"></canvas>
+        </div>
+        <table style="width:100%;border-collapse:collapse;">
+            <tr style="background:#232323;">
+                <th style="padding:10px 6px;text-align:left;">Date</th>
+                <th style="padding:10px 6px;text-align:left;">Monthly Listeners</th>
+            </tr>
+            {% for row in results %}
+            <tr style="background:{% if loop.index0 % 2 == 0 %}#191414{% else %}#232323{% endif %};">
+                <td>{{ row.date | datetimeformat('%b %d, %Y') }}</td>
+                <td>{{ "{:,}".format(row.monthly_listeners) }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+    // Prepare data for the chart
+    const chartLabels = [
+        {% for row in results|reverse %}
+            "{{ row.date | datetimeformat('short') }}",
+        {% endfor %}
+    ];
+    const chartData = [
+        {% for row in results|reverse %}
+            {{ row.monthly_listeners }},
+        {% endfor %}
+    ];
+
+    const ctx = document.getElementById('listenersChart').getContext('2d');
+    const gradient = ctx.createLinearGradient(0, 0, 0, 220);
+     gradient.addColorStop(0, 'rgba(30,215,96,0.97)');
+    gradient.addColorStop(1, 'rgba(25,21,20,0.18)');
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: chartLabels,
+            datasets: [{
+                label: 'Monthly Listeners',
+                data: chartData,
+                fill: true,
+                backgroundColor: gradient,
+                borderColor: '#1DB954',
+                borderWidth: 3,
+                pointRadius: 3,
+                pointBackgroundColor: '#1DB954',
+                pointBorderColor: '#fff',
+                tension: 0.35,
+            }]
+        },
+        options: {
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Date',
+                        color: '#fff',
+                        font: { weight: 'bold', size: 16 }
+                    },
+                    ticks: { color: '#aaa', font: { weight: 'bold' } },
+                    grid: { color: 'rgba(29,185,84,0.08)' }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Monthly Listeners',
+                        color: '#fff',
+                        font: { weight: 'bold', size: 16 }
+                    },
+                    ticks: { color: '#aaa', font: { weight: 'bold' } },
+                    grid: { color: 'rgba(29,185,84,0.08)' }
+                }
+            }
+        }
+    });
+    </script>
+{% endif %}
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const input = document.querySelector('input[name="artist"]');
+            const suggestionBox = document.getElementById('suggestion-box');
+            const form = input.closest('form');
+
+            input.addEventListener('input', function() {
+                const val = this.value;
+                if (val.length < 2) {
+                    suggestionBox.style.display = 'none';
+                    return;
+                }
+                fetch(`/suggest?term=${encodeURIComponent(val)}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        suggestionBox.innerHTML = '';
+                        if (data.length === 0) {
+                            suggestionBox.style.display = 'none';
+                            return;
+                        }
+                        data.forEach(item => {
+                            const div = document.createElement('div');
+                            div.textContent = item;
+                            div.addEventListener('mousedown', function() {
+                                input.value = item;
+                                suggestionBox.style.display = 'none';
+                                form.submit();
+                            });
+                            suggestionBox.appendChild(div);
+                        });
+                        suggestionBox.style.display = 'block';
+                    });
+            });
+
+            document.addEventListener('click', function(e) {
+                if (!suggestionBox.contains(e.target) && e.target !== input) {
+                    suggestionBox.style.display = 'none';
+                }
+            });
+        });
+        </script>
+    </div>
+</body>
+</html>

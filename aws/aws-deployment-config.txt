@@ -1,0 +1,27 @@
+﻿AWS App Runner Deployment Configuration
+=======================================
+Generated: 06/26/2025 01:09:14
+
+SERVICE CONFIGURATION:
+- Service Name: spotify-listener-extract-7739
+- Region: us-east-1
+- App URL: https://spotify-listener-extract-7739.us-east-1.awsapprunner.com
+- Admin URL: https://spotify-listener-extract-7739.us-east-1.awsapprunner.com/admin_login
+- Redirect URI: https://spotify-listener-extract-7739.us-east-1.awsapprunner.com/admin/callback
+
+ENVIRONMENT VARIABLES FOR AWS:
+FLASK_SECRET_KEY=.*IUuluk+nwOKf7{RT{Rlcb{M*2m3h4DB3&zCE8%Q|NG.9_6z?JDh^(6sXV]*kI7
+ADMIN_PASSWORD=faith!995
+SPOTIPY_CLIENT_ID=5e36297fe74744de9fd4a7cf6c3a9941
+SPOTIPY_CLIENT_SECRET=703744d10ba54d779b199134a85333bc
+SPOTIPY_REDIRECT_URI=https://spotify-listener-extract-7739.us-east-1.awsapprunner.com/admin/callback
+PORT=8080
+FLASK_DEBUG=false
+
+NEXT STEPS:
+1. Complete App Runner setup in AWS Console
+2. Update Spotify Developer App with redirect URI
+3. Test deployment
+
+AWS CONSOLE LINK:
+https://console.aws.amazon.com/apprunner/

@@ -1,0 +1,557 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="content-container{% if grow_results %} grow-results{% endif %}">
+    {% if query %}
+        {% if results and results|length > 0 %}
+        <div class="results-table-container">
+            <h2 style="color:#00ff7f;text-align:center;margin-bottom:16px;">Results for "{{ query }}"</h2>
+            <div style="color:#aaa;font-size:0.98em;margin-bottom:10px;">Click an artist name below to view their detail page.</div>
+            <table class="results-table">
+                <tr>
+                    <th>Artist</th>
+                    <th>Date</th>
+                    <th>Monthly Listeners</th>
+                </tr>
+                {% for row in results %}
+                <tr>
+                    <td>
+                        {% if row.image_url %}
+                            <img src="{{ row.image_url }}" alt="{{ row.artist_name }}" class="artist-img">
+                        {% else %}
+                            <img src="{{ url_for('static', filename='placeholder.png') }}" alt="No image" class="artist-img">
+                        {% endif %}
+                        {% if row.artist_id %}
+                            <a href="/artist/{{ row.slug }}/{{ row.artist_id }}" class="artist-link-table">{{ row.artist_name }}</a>
+                        {% else %}
+                            {{ row.artist_name }}
+                        {% endif %}
+                    </td>
+                    <td>{{ row.date | datetimeformat('%b %d, %Y') }}</td>
+                    <td>{{ "{:,}".format(row.monthly_listeners) }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+        {% else %}
+        <!-- No Results Found -->
+        <div class="no-results-container">
+            <div style="text-align:center;padding:40px 20px;">
+                <div style="font-size:3em;margin-bottom:16px;">🔍</div>
+                <h2 style="color:#00ff7f;margin-bottom:16px;font-size:1.6em;">No Results Found</h2>
+                <p style="color:#aaa;font-size:1.1em;margin-bottom:8px;">We couldn't find any artists matching "{{ query }}"</p>
+                <p style="color:#777;font-size:0.95em;">Try a different spelling or suggest the artist below!</p>
+            </div>
+        </div>
+        {% endif %}
+    {% endif %}
+    
+    <!-- Artist Suggestion Form -->
+    <div class="suggestion-form-container">
+        <h3 style="color:#00ff7f;text-align:center;margin-bottom:16px;font-size:1.4em;">Suggest an Artist</h3>
+        <p style="color:#aaa;font-size:0.95em;text-align:center;margin-bottom:20px;">
+            Can't find an artist? Suggest them to be added to our database!
+        </p>
+        <form id="suggestionForm" style="max-width:580px;margin:0 auto;">
+            <div style="margin-bottom:24px;position:relative;">
+                <input type="text" id="artistName" name="artistName" placeholder="Search for an artist..." required class="suggestion-input" autocomplete="off">
+                <div id="artistSuggestions" class="artist-suggestions"></div>
+            </div>
+            <input type="hidden" id="spotifyUrl" name="spotifyUrl">
+            <div style="text-align:center;">
+                <button type="submit" style="padding:14px 36px;border:none;border-radius:8px;background:linear-gradient(90deg,#00ff7f 0%,#1ed760 100%);color:#191414;font-weight:bold;font-size:1.1em;cursor:pointer;transition:transform 0.2s,box-shadow 0.2s;height:auto;line-height:1.1;">
+                    Suggest Artist
+                </button>
+            </div>
+        </form>
+        <div id="suggestionMessage" style="margin-top:20px;text-align:center;font-weight:500;line-height:1.4;"></div>
+    </div>
+    
+    <!-- Selected Artist Preview - Now outside the suggestion form container -->
+    <div id="selectedArtistPreview" style="display: none; max-width: 700px; margin: 20px auto 0 auto; padding: 20px; background: rgba(40, 40, 60, 0.8); border-radius: 12px; border: 1px solid rgba(0, 255, 127, 0.3); box-shadow: 0 8px 32px rgba(0,0,0,0.25); backdrop-filter: blur(10px) saturate(140%);">
+        <div id="selectedArtistInfo" class="selected-artist-info">
+            <!-- Artist info will be populated here -->
+        </div>
+        <div id="selectedArtistTracks" class="selected-artist-tracks">
+            <!-- Top tracks will be populated here -->
+        </div>
+    </div>
+</div>
+<style>
+.results-table-container {
+    max-width: 1100px;
+    margin: 40px auto 0 auto;
+    background: rgba(30, 30, 40, 0.65);
+    border-radius: 18px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    padding: 32px 32px 24px 32px;
+    backdrop-filter: blur(10px) saturate(140%);
+}
+.results-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 1.18em;
+    background: transparent;
+}
+.results-table th, .results-table td {
+    padding: 16px 10px;
+    text-align: left;
+}
+.results-table th {
+    background: #232323;
+    color: #00ff7f;
+    font-size: 1.08em;
+    letter-spacing: 1px;
+    border-bottom: 2px solid #00ff7f;
+}
+.results-table tr {
+    background: #191414;
+    transition: background 0.2s;
+}
+.results-table tr:nth-child(even) {
+    background: #232323;
+}
+.results-table tr:hover {
+    background: #282828;
+}
+.artist-img {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+    vertical-align: middle;
+    margin-right: 16px;
+    box-shadow: 0 2px 8px #0006;
+}
+.artist-link-table {
+    color: #00ff7f;
+    font-weight: bold;
+    text-decoration: underline;
+    cursor: pointer;
+    font-size: 1.08em;
+}
+.artist-link-table:hover {
+    color: #ff5ecd;
+}
+.no-results-container {
+    max-width: 600px;
+    margin: 40px auto 0 auto;
+    background: rgba(30, 30, 40, 0.65);
+    border-radius: 18px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    backdrop-filter: blur(10px) saturate(140%);
+}
+.suggestion-form-container {
+    max-width: 700px;
+    margin: 40px auto 0 auto;
+    background: rgba(30, 30, 40, 0.65);
+    border-radius: 18px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    padding: 40px 36px;
+    backdrop-filter: blur(10px) saturate(140%);
+}
+.suggestion-form-container h3 {
+    line-height: 1.3;
+    margin-bottom: 20px;
+}
+.suggestion-form-container p {
+    line-height: 1.5;
+    margin-bottom: 24px;
+    max-width: 90%;
+    margin-left: auto;
+    margin-right: auto;
+}
+.suggestion-form-container input {
+    width: 100%;
+    padding: 14px 18px;
+    border: none;
+    border-radius: 8px;
+    background: #232323;
+    color: #fff;
+    font-size: 1.1em;
+    outline: none;
+    border: 2px solid transparent;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+.suggestion-form-container input:focus {
+    border-color: #00ff7f !important;
+    box-shadow: 0 0 0 3px rgba(0,255,127,0.2);
+}
+.suggestion-input {
+    width: 100%;
+    padding: 14px 18px;
+    border: none;
+    border-radius: 8px;
+    background: #232323;
+    color: #fff;
+    font-size: 1.1em;
+    outline: none;
+    border: 2px solid transparent;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+    min-width: 0;
+}
+.suggestion-input::placeholder {
+    color: #888;
+    font-size: 1.05em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.suggestion-form-container button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,255,127,0.3);
+}
+.artist-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+.artist-suggestion-item {
+    padding: 12px 16px;
+    cursor: pointer;
+    border-bottom: 1px solid #333;
+    display: flex;
+    align-items: center;
+    transition: background 0.2s;
+}
+.artist-suggestion-item:hover {
+    background: #2a2a2a;
+}
+.artist-suggestion-item:last-child {
+    border-bottom: none;
+}
+.artist-suggestion-image {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 12px;
+    background: #333;
+}
+.artist-suggestion-info {
+    flex-grow: 1;
+}
+.artist-suggestion-name {
+    font-weight: bold;
+    color: #fff;
+    font-size: 1em;
+    margin-bottom: 2px;
+}
+.artist-suggestion-followers {
+    font-size: 0.85em;
+    color: #aaa;
+}
+.selected-artist-info {
+    display: flex;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.selected-artist-image {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 16px;
+    background: #333;
+}
+.selected-artist-details h4 {
+    color: #00ff7f;
+    margin: 0 0 4px 0;
+    font-size: 1.2em;
+}
+.selected-artist-details p {
+    color: #aaa;
+    margin: 0;
+    font-size: 0.9em;
+}
+.selected-artist-tracks {
+    display: none;
+}
+.selected-artist-tracks.loading {
+    display: block;
+    color: #aaa;
+    font-size: 0.9em;
+    font-style: italic;
+    text-align: center;
+    padding: 20px;
+}
+.selected-artist-tracks.loaded {
+    display: block;
+}
+.tracks-title {
+    color: #00ff7f;
+    font-size: 1em;
+    font-weight: bold;
+    margin-bottom: 12px;
+}
+.track-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 0;
+    font-size: 0.9em;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.track-item:last-child {
+    border-bottom: none;
+}
+.track-number {
+    color: #666;
+    font-size: 0.9em;
+    margin-right: 12px;
+    min-width: 20px;
+    text-align: center;
+}
+.track-name {
+    color: #ddd;
+    flex-grow: 1;
+}
+.track-album-image {
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    object-fit: cover;
+    margin-left: 12px;
+    background: #333;
+}
+.grow-results {
+    animation: growResults 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    transform: scale(1.04);
+    box-shadow: 0 0 32px 0 #1DB95444;
+}
+@keyframes growResults {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 #1DB95400;
+    }
+    80% {
+        transform: scale(1.06);
+        box-shadow: 0 0 40px 0 #1DB95466;
+    }
+    100% {
+        transform: scale(1.04);
+        box-shadow: 0 0 32px 0 #1DB95444;
+    }
+}
+</style>
+<script>
+let searchTimeout;
+let selectedArtist = null;
+
+// Artist search functionality
+document.getElementById('artistName').addEventListener('input', function(e) {
+    const query = e.target.value.trim();
+    const suggestionsDiv = document.getElementById('artistSuggestions');
+    
+    // Clear previous timeout
+    clearTimeout(searchTimeout);
+    
+    if (query.length < 2) {
+        suggestionsDiv.style.display = 'none';
+        selectedArtist = null;
+        document.getElementById('spotifyUrl').value = '';
+        return;
+    }
+    
+    // Debounce the search
+    searchTimeout = setTimeout(() => {
+        fetch(`/search_spotify_artists?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                displayArtistSuggestions(data.artists);
+            })
+            .catch(error => {
+                console.error('Error searching artists:', error);
+                suggestionsDiv.style.display = 'none';
+            });
+    }, 300);
+});
+
+function displayArtistSuggestions(artists) {
+    const suggestionsDiv = document.getElementById('artistSuggestions');
+    
+    if (artists.length === 0) {
+        suggestionsDiv.style.display = 'none';
+        return;
+    }
+    
+    suggestionsDiv.innerHTML = '';
+    
+    artists.forEach(artist => {
+        const item = document.createElement('div');
+        item.className = 'artist-suggestion-item';
+        item.innerHTML = `
+            <img src="${artist.image || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiMzMzMiLz48cGF0aCBkPSJNMjAgMTBjMi4yIDAgNCAzIDQgNiAwIDItMSA0LTIuNSA1djJjMCAxLTEgMi0yIDJzLTItMS0yLTJ2LTJjLTEuNS0xLTIuNS0zLTIuNS01IDAtMyAxLjgtNiA0LTZ6IiBmaWxsPSIjNTU1Ii8+PC9zdmc+'}" 
+                 alt="${artist.name}" 
+                 class="artist-suggestion-image">
+            <div class="artist-suggestion-info">
+                <div class="artist-suggestion-name">${artist.name}</div>
+                <div class="artist-suggestion-followers">${formatFollowers(artist.followers)} followers</div>
+            </div>
+        `;
+        
+        item.addEventListener('click', () => {
+            selectArtist(artist);
+        });
+        
+        suggestionsDiv.appendChild(item);
+    });
+    
+    suggestionsDiv.style.display = 'block';
+}
+
+function selectArtist(artist) {
+    selectedArtist = artist;
+    document.getElementById('artistName').value = artist.name;
+    document.getElementById('spotifyUrl').value = artist.url;
+    document.getElementById('artistSuggestions').style.display = 'none';
+    
+    // Show selected artist preview with top tracks
+    showSelectedArtistPreview(artist);
+}
+
+function showSelectedArtistPreview(artist) {
+    const previewDiv = document.getElementById('selectedArtistPreview');
+    const infoDiv = document.getElementById('selectedArtistInfo');
+    const tracksDiv = document.getElementById('selectedArtistTracks');
+    
+    // Show artist info
+    infoDiv.innerHTML = `
+        <img src="${artist.image || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMzAiIGZpbGw9IiMzMzMiLz48cGF0aCBkPSJNMzAgMTVjMy4zIDAgNiA0LjUgNiA5IDAgMy0xLjUgNi0zLjc1IDcuNXYzYzAgMS41LTEuNSAzLTMgM3MtMy0xLjUtMy0zdi0zQzI0LjUgMzAgMjMgMjcgMjMgMjRjMC00LjUgMi43LTkgNi05eiIgZmlsbD0iIzU1NSIvPjwvc3ZnPg=='}" 
+             alt="${artist.name}" 
+             class="selected-artist-image">
+        <div class="selected-artist-details">
+            <h4>${artist.name}</h4>
+            <p>${formatFollowers(artist.followers)} followers</p>
+        </div>
+    `;
+    
+    // Show loading state for tracks
+    tracksDiv.className = 'selected-artist-tracks loading';
+    tracksDiv.innerHTML = 'Loading top tracks...';
+    
+    // Show the preview
+    previewDiv.style.display = 'block';
+    
+    // Load top tracks
+    loadSelectedArtistTracks(artist.id);
+}
+
+function loadSelectedArtistTracks(artistId) {
+    const tracksDiv = document.getElementById('selectedArtistTracks');
+    
+    fetch(`/top_tracks/${artistId}`)
+        .then(response => response.json())
+        .then(tracks => {
+            tracksDiv.className = 'selected-artist-tracks loaded';
+            
+            if (tracks && tracks.length > 0) {
+                const trackItems = tracks.slice(0, 5).map((track, index) => `
+                    <div class="track-item">
+                        <span class="track-number">${index + 1}</span>
+                        <span class="track-name">${track.name}</span>
+                        ${track.album_image ? `<img src="${track.album_image}" alt="Album" class="track-album-image">` : ''}
+                    </div>
+                `).join('');
+                
+                tracksDiv.innerHTML = `
+                    <div class="tracks-title">Popular tracks:</div>
+                    ${trackItems}
+                `;
+            } else {
+                tracksDiv.innerHTML = '<div style="color: #666; text-align: center; padding: 20px;">No tracks available</div>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading top tracks:', error);
+            tracksDiv.className = 'selected-artist-tracks loaded';
+            tracksDiv.innerHTML = '<div style="color: #666; text-align: center; padding: 20px;">Failed to load tracks</div>';
+        });
+}
+
+function formatFollowers(count) {
+    if (count >= 1000000) {
+        return (count / 1000000).toFixed(1) + 'M';
+    } else if (count >= 1000) {
+        return (count / 1000).toFixed(1) + 'K';
+    }
+    return count.toString();
+}
+
+// Hide suggestions when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.suggestion-form-container')) {
+        document.getElementById('artistSuggestions').style.display = 'none';
+    }
+});
+
+// Clear preview when input is cleared
+document.getElementById('artistName').addEventListener('input', function(e) {
+    if (e.target.value.trim() === '') {
+        document.getElementById('selectedArtistPreview').style.display = 'none';
+        selectedArtist = null;
+    }
+});
+
+// Form submission
+document.getElementById('suggestionForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const artistName = document.getElementById('artistName').value.trim();
+    const spotifyUrl = document.getElementById('spotifyUrl').value.trim();
+    const messageDiv = document.getElementById('suggestionMessage');
+    
+    if (!artistName) {
+        messageDiv.innerHTML = '<span style="color:#e74c3c;">Please enter an artist name.</span>';
+        return;
+    }
+    
+    if (!selectedArtist) {
+        messageDiv.innerHTML = '<span style="color:#e74c3c;">Please select an artist from the suggestions.</span>';
+        return;
+    }
+    
+    // Show loading message
+    messageDiv.innerHTML = '<span style="color:#aaa;">Submitting suggestion...</span>';
+    
+    // Submit the suggestion
+    fetch('/suggest_artist', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            artist_name: artistName,
+            spotify_url: spotifyUrl,
+            spotify_id: selectedArtist ? selectedArtist.id : null
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            messageDiv.innerHTML = '<span style="color:#00ff7f;">✓ Thank you! Your suggestion has been submitted.</span>';
+            document.getElementById('suggestionForm').reset();
+            document.getElementById('selectedArtistPreview').style.display = 'none';
+            selectedArtist = null;
+        } else {
+            messageDiv.innerHTML = '<span style="color:#e74c3c;">❌ ' + (data.message || 'Error submitting suggestion.') + '</span>';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        messageDiv.innerHTML = '<span style="color:#e74c3c;">❌ Error submitting suggestion. Please try again.</span>';
+    });
+});
+</script>
+{% endblock %}
