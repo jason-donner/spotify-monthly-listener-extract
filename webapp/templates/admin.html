@@ -441,7 +441,7 @@ function loadSuggestions() {
 function renderSuggestions() {
     const pending = suggestions.filter(s => !s.admin_approved && (!s.status || s.status === 'pending'));
     const rejected = suggestions.filter(s => s.status === 'rejected');
-    const processed = suggestions.filter(s => s.status === 'processed');
+    const processed = suggestions.filter(s => s.status === 'processed' || s.status === 'approved');
     
     document.getElementById('pending-suggestions').innerHTML = renderSuggestionList(pending, 'pending');
     document.getElementById('rejected-suggestions').innerHTML = renderSuggestionList(rejected, 'rejected');
@@ -511,7 +511,7 @@ function renderSuggestionList(suggestionList, type) {
 function updateCounts() {
     const pending = suggestions.filter(s => !s.admin_approved && (!s.status || s.status === 'pending')).length;
     const rejected = suggestions.filter(s => s.status === 'rejected').length;
-    const processed = suggestions.filter(s => s.status === 'processed').length;
+    const processed = suggestions.filter(s => s.status === 'processed' || s.status === 'approved').length;
     
     document.getElementById('pending-count').textContent = pending;
     document.getElementById('rejected-count').textContent = rejected;
