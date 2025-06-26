@@ -541,21 +541,52 @@ def save_results(results, today, output_path=None):
 
 def append_to_master(results, master_path=None):
     """
-    Append new results to the master JSON file in src/results.
+    Append new results to the master JSON file with duplicate prevention.
     """
     script_dir = os.path.dirname(os.path.abspath(__file__))
     results_dir = os.path.join(script_dir, "..", "data", "results")
     if not master_path:
         master_path = os.path.join(results_dir, 'spotify-monthly-listeners-master.json')
+    
     if os.path.exists(master_path):
         with open(master_path, 'r', encoding='utf-8') as f:
             master = json.load(f)
     else:
         master = []
-    master.extend(results)
-    with open(master_path, 'w', encoding='utf-8') as f:
-        json.dump(master, f, ensure_ascii=False, indent=2)
-    print(Fore.GREEN + f"Appended {len(results)} results to master file")
+    
+    # Create a set of existing entries for duplicate detection
+    existing_entries = set()
+    for entry in master:
+        # Create a unique key using artist_id and date
+        key = (entry.get('artist_id'), entry.get('date'))
+        existing_entries.add(key)
+    
+    # Only add results that don't already exist
+    new_results = []
+    duplicates_prevented = 0
+    
+    for result in results:
+        key = (result.get('artist_id'), result.get('date'))
+        if key not in existing_entries:
+            new_results.append(result)
+            existing_entries.add(key)  # Add to set to prevent duplicates within this batch
+        else:
+            duplicates_prevented += 1
+            print(f"Prevented duplicate: {result.get('artist_name')} for {result.get('date')}")
+    
+    if new_results:
+        master.extend(new_results)
+        
+        with open(master_path, 'w', encoding='utf-8') as f:
+            json.dump(master, f, ensure_ascii=False, indent=2)
+        
+        print(Fore.GREEN + f"Appended {len(new_results)} new results to master file")
+        if duplicates_prevented > 0:
+            print(Fore.YELLOW + f"Prevented {duplicates_prevented} duplicate entries")
+    else:
+        print(Fore.YELLOW + "No new results to append - all were duplicates")
+    
+    return len(new_results)
 
 
 def parse_args():
