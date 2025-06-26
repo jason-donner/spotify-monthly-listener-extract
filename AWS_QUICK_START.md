@@ -4,6 +4,25 @@
 - ✅ AWS Account
 - ✅ GitHub repository with your code
 - ✅ Spotify Developer App
+- ✅ **Merge your feature branch to main first** (see Step 0 below)
+
+## Step 0: Merge to Main Branch (1 minute)
+
+Since your working app is in a feature branch, merge it to main first:
+
+```bash
+# Check current branch and status
+git status
+
+# Switch to main branch
+git checkout main
+
+# Merge your feature branch (replace 'your-feature-branch' with actual name)
+git merge your-feature-branch-name
+
+# Push to GitHub
+git push origin main
+```
 
 ## Step 1: Run Deployment Script (2 minutes)
 
