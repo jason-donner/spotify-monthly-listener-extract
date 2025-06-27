@@ -4,23 +4,13 @@ build:
   commands:
     build:
       - echo "Installing dependencies..."
-      - apt-get update
-      - apt-get install -y chromium chromium-driver curl
       - pip install --upgrade pip
       - pip install -r webapp/requirements.txt
 run:
-  runtime-version: 3.11
-  command: cd webapp && gunicorn app:app --bind 0.0.0.0:8080 --workers 2 --timeout 60
+  runtime-version: latest
+  command: cd webapp && python app.py
   network:
     port: 8080
   env:
-    - name: CHROMEDRIVER_PATH
-      value: /usr/bin/chromedriver
-    - name: AWS_REGION
-      value: us-east-1
     - name: PORT
       value: "8080"
-    - name: FLASK_DEBUG
-      value: "false"
-    - name: PYTHONPATH
-      value: /opt/python/current/app
