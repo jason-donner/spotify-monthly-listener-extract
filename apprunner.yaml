@@ -7,7 +7,7 @@ build:
       - pip install --upgrade pip
       - pip install -r webapp/requirements.txt
 run:
-  runtime-version: latest
+  runtime-version: 3.8.20
   command: cd webapp && python app.py
   network:
     port: 8080
