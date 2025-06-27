@@ -2,7 +2,7 @@ version: 1.0
 runtime: python3
 build:
   commands:
-    install:
+    build:
       - pip install --upgrade pip
       - pip install -r webapp/requirements.txt
 run:
