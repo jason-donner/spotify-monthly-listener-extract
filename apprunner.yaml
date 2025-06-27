@@ -7,9 +7,14 @@ build:
 run:
   network:
     port: 8080
-    env:
-      - AWS_REGION=us-east-1
-      - PORT=8080
-      - FLASK_DEBUG=false
-      - LOG_LEVEL=INFO
-      - LOG_TO_STDOUT=true
+  env:
+    - name: AWS_REGION
+      value: us-east-1
+    - name: PORT
+      value: "8080"
+    - name: FLASK_DEBUG
+      value: "false"
+    - name: LOG_LEVEL
+      value: INFO
+    - name: LOG_TO_STDOUT
+      value: "true"
