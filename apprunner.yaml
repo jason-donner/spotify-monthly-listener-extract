@@ -7,9 +7,11 @@ build:
       - pip install -r webapp/requirements.txt
 run:
   runtime-version: 3.8.20
-  command: cd webapp && gunicorn --bind 0.0.0.0:8080 --workers 2 app:app
+  command: cd webapp && gunicorn --bind 0.0.0.0:8080 --workers 1 --timeout 120 --log-level debug app:app
   network:
     port: 8080
   env:
     - name: PORT
       value: "8080"
+    - name: FLASK_ENV
+      value: "production"

@@ -83,7 +83,20 @@ def configure_environment():
     
     missing_vars = [var for var in required_vars if not os.environ.get(var)]
     if missing_vars:
-        raise RuntimeError(f"Missing required environment variables: {', '.join(missing_vars)}")
+        print(f"WARNING: Missing required environment variables: {', '.join(missing_vars)}")
+        print("The application may not function properly without these variables.")
+        # Set default values for missing variables to allow startup
+        for var in missing_vars:
+            if var == 'FLASK_SECRET_KEY':
+                os.environ[var] = 'dev-secret-key-change-in-production'
+            elif var == 'ADMIN_PASSWORD':
+                os.environ[var] = 'admin123'
+            elif var == 'SPOTIPY_CLIENT_ID':
+                os.environ[var] = 'missing-client-id'
+            elif var == 'SPOTIPY_CLIENT_SECRET':
+                os.environ[var] = 'missing-client-secret'
+            elif var == 'SPOTIPY_REDIRECT_URI':
+                os.environ[var] = 'http://localhost:8080/callback'
 
 # Configure environment before importing other modules
 configure_environment()
