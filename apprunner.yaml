@@ -16,6 +16,6 @@ run:
     - name: FLASK_ENV
       value: "production"
     - name: AWS_SECRET_NAME
-      value: "spotify-app-secrets"
+      value: "spotify-listener-extract/spotify-listener-extract-7934"
     - name: AWS_REGION
       value: "us-east-1"
