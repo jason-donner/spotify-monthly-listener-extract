@@ -2,10 +2,9 @@ version: 1.0
 runtime: python3
 build:
   commands:
-    build:
-      - echo "Installing dependencies..."
-      - pip install --upgrade pip
-      - pip install -r webapp/requirements.txt
+    - echo "Installing dependencies..."
+    - pip install --upgrade pip
+    - pip install -r webapp/requirements.txt
 run:
   runtime-version: 3.8.20
   command: cd webapp && python app.py
