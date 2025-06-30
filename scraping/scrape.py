@@ -583,21 +583,29 @@ def test_network_connectivity():
     import urllib.request
     import urllib.error
     
+    # Use sys.stdout with utf-8 encoding to avoid UnicodeEncodeError on Windows
+    import sys
+    def safe_print(text):
+        try:
+            print(text)
+        except UnicodeEncodeError:
+            sys.stdout.buffer.write((str(text) + '\n').encode('utf-8', errors='replace'))
+
     try:
-        print("Testing network connectivity to Spotify...")
+        safe_print("Testing network connectivity to Spotify...")
         response = urllib.request.urlopen("https://open.spotify.com", timeout=10)
         if response.getcode() == 200:
-            print(Fore.GREEN + "✓ Network connectivity to Spotify is working")
+            safe_print(Fore.GREEN + "✓ Network connectivity to Spotify is working")
             return True
         else:
-            print(Fore.YELLOW + f"⚠ Spotify returned status code: {response.getcode()}")
+            safe_print(Fore.YELLOW + f"⚠ Spotify returned status code: {response.getcode()}")
             return False
     except urllib.error.URLError as e:
-        print(Fore.RED + f"✗ Network connectivity test failed: {e}")
-        print("Check your internet connection and try again.")
+        safe_print(Fore.RED + f"✗ Network connectivity test failed: {e}")
+        safe_print("Check your internet connection and try again.")
         return False
     except Exception as e:
-        print(Fore.YELLOW + f"⚠ Network test inconclusive: {e}")
+        safe_print(Fore.YELLOW + f"⚠ Network test inconclusive: {e}")
         return True  # Continue anyway
 
 
