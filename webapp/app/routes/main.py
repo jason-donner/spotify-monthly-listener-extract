@@ -238,9 +238,9 @@ def create_main_routes(spotify_service, data_service):
                     "date": parse_date(max_entry.get("date", ""))
                 }
             
-            # Prepare chart labels as formatted date strings, skip invalid, and reverse to match chartData
+            # Prepare chart labels as formatted month and day strings (e.g., 'Jun 30'), skip invalid, and reverse to match chartData
             chart_labels = [
-                row['date'].strftime('%b %d, %Y')
+                row['date'].strftime('%b %d')
                 for row in results
                 if isinstance(row['date'], datetime)
             ][::-1]
