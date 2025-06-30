@@ -68,3 +68,18 @@ diagnostic*.py
 scraping/test_*.py
 scraping/chrome_diagnostic.py
 scraping/*_test.py
+
+# Artist/user data and cache
+webapp/artist_blacklist.json
+webapp/artist_blacklist_clean.json
+webapp/artist_suggestions.json
+webapp/artist_suggestions_clean.json
+webapp/spotify_token_cache.json
+
+# Example/template env files (optional)
+.env.example
+webapp/.env.template
+
+# Backup/temp files
+*.bak
+*.tmp

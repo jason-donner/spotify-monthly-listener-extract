@@ -390,7 +390,7 @@
             </tr>
             {% for row in results %}
             <tr style="background:{% if loop.index0 % 2 == 0 %}#191414{% else %}#232323{% endif %};">
-                <td>{{ row.date | datetimeformat('%b %d, %Y') }}</td>
+                <td>{{ row.date | datetimeformat('%b %d, %Y') }}<br><span style="color:#e74c3c;font-size:0.9em;">[raw: {{ row.date }}]</span></td>
                 <td>{{ "{:,}".format(row.monthly_listeners) }}</td>
             </tr>
             {% endfor %}
@@ -400,11 +400,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
     // Prepare data for the chart
-    const chartLabels = [
-        {% for row in results|reverse %}
-            "{{ row.date | datetimeformat('short') }}",
-        {% endfor %}
-    ];
+    const chartLabels = {{ chart_labels|tojson }};
     const chartData = [
         {% for row in results|reverse %}
             {{ row.monthly_listeners }},
@@ -477,7 +473,7 @@
                 }
                 fetch(`/suggest?term=${encodeURIComponent(val)}`)
                     .then(res => res.json())
-                    .then(data => {
+                    .then data => {
                         suggestionBox.innerHTML = '';
                         if (data.length === 0) {
                             suggestionBox.style.display = 'none';

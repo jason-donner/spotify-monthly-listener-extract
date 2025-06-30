@@ -62,6 +62,20 @@ def create_main_routes(spotify_service, data_service):
                 else:
                     result["image_url"] = None
             
+            # Parse dates for template (like artist_detail)
+            def parse_date(val):
+                if isinstance(val, datetime):
+                    return val
+                if isinstance(val, str):
+                    for fmt in ("%Y-%m-%d", "%Y-%m-%dT%H:%M:%S"):
+                        try:
+                            return datetime.strptime(val, fmt)
+                        except Exception:
+                            continue
+                return val
+            for row in results:
+                row["date"] = parse_date(row.get("date"))
+            
             results_for_chart = list(reversed(results))
             
             # Get artist info for the first result
@@ -224,13 +238,20 @@ def create_main_routes(spotify_service, data_service):
                     "date": parse_date(max_entry.get("date", ""))
                 }
             
+            # Prepare chart labels as formatted date strings, skip invalid, and reverse to match chartData
+            chart_labels = [
+                row['date'].strftime('%b %d, %Y')
+                for row in results
+                if isinstance(row['date'], datetime)
+            ][::-1]
             return render_template(
                 "artist.html",
                 results=results,
                 artist_info=artist_info,
                 artist_image_url=artist_image_url,
                 all_time_high=all_time_high,
-                artist_id=artist_id
+                artist_id=artist_id,
+                chart_labels=chart_labels
             )
         
         except Exception as e:

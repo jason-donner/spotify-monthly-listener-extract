@@ -114,13 +114,6 @@ def create_app():
     app.job_service = job_service
     app.scheduler_service = scheduler_service
     
-    # Register blueprints
-    main_bp = create_main_routes(spotify_service, data_service)
-    admin_bp = create_admin_routes(spotify_service, data_service, job_service, scheduler_service)
-    
-    app.register_blueprint(main_bp)
-    app.register_blueprint(admin_bp, url_prefix='/admin')
-    
     # Register template filters (from original app.py)
     @app.template_filter('datetimeformat')
     def datetimeformat(value, format='medium'):
@@ -145,11 +138,8 @@ def create_app():
         else:
             dt = value
         if format == 'short':
-            # "Jun 18" or "Jun 2024"
-            if isinstance(value, str) and len(value) in (10, 8):  # YYYY-MM-DD or YYYYMMDD
-                return dt.strftime('%b %d')
-            elif isinstance(value, str) and len(value) == 7:      # YYYY-MM
-                return dt.strftime('%b %Y')
+            # Always return Month Day, Year for 'short'
+            return dt.strftime('%b %d, %Y')
         # Use the provided format string for all other cases
         return dt.strftime(format)
     
@@ -163,6 +153,12 @@ def create_app():
         else:
             return str(num)
 
+    # Register blueprints
+    main_bp = create_main_routes(spotify_service, data_service)
+    admin_bp = create_admin_routes(spotify_service, data_service, job_service, scheduler_service)
+    app.register_blueprint(main_bp)
+    app.register_blueprint(admin_bp, url_prefix='/admin')
+    
     # Clean up old job files on startup
     job_service.cleanup_old_jobs()
     

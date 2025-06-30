@@ -227,7 +227,7 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-const chartLabels = [{% for row in results %}"{{ row.date | datetimeformat('short') }}"{% if not loop.last %},{% endif %}{% endfor %}];
+const chartLabels = {{ chart_labels|tojson }};
 const chartData = [{% for row in results %}{{ row.monthly_listeners }}{% if not loop.last %},{% endif %}{% endfor %}];
 const ctx = document.getElementById('listenersChart').getContext('2d');
 const gradient = ctx.createLinearGradient(0, 0, 0, 220);
