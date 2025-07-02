@@ -79,9 +79,6 @@ def create_admin_routes(spotify_service, data_service, job_service):
         # Filter followed artists that are not processed
         unprocessed = [a for a in followed_artists if a.get('artist_id') and a['artist_id'] not in processed_ids]
         return jsonify({"success": True, "unprocessed_artists": unprocessed})
-        except Exception as e:
-            logger.error(f"Error in process_artist endpoint: {e}")
-            return jsonify({"success": False, "message": f"Error: {str(e)}"})
     # (Removed duplicate blueprint and decorator definitions)
     @admin_bp.route("/admin_login")
     def admin_login_page():
