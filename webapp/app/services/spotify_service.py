@@ -258,16 +258,18 @@ class SpotifyService:
         try:
             artists = []
             for artist in results.get('artists', {}).get('items', []):
+                image = artist["images"][0]["url"] if artist.get("images") else ""
+                # Defensive: never return template placeholders
+                if isinstance(image, str) and image.startswith("${"):
+                    image = ""
                 artists.append({
                     "id": artist["id"],
                     "name": artist["name"],
                     "url": artist["external_urls"]["spotify"],
-                    "image": artist["images"][0]["url"] if artist.get("images") else "",
+                    "image": image,
                     "followers": artist.get("followers", {}).get("total", 0)
                 })
-            
             return artists
-        
         except Exception as e:
             logger.error(f"Error processing artist search results for '{query}': {e}")
             return []
@@ -323,7 +325,7 @@ class SpotifyService:
             logger.error(f"Error processing artist info for {artist_id}: {e}")
             return {}
     
-    def get_top_tracks(self, artist_id, market="US"):
+    def get_artist_top_tracks(self, artist_id, market="US"):
         """
         Get top tracks for an artist.
         
@@ -363,17 +365,37 @@ class SpotifyService:
         
         try:
             tracks = []
+            import re
+            def is_invalid_url(url):
+                if not url or url is None:
+                    return True
+                if isinstance(url, str):
+                    # Check for template placeholders or encoded templates
+                    if url.strip() == '' or url.startswith('${') or re.match(r'^\$\{.*\}$', url):
+                        return True
+                    if url.lower().startswith('%24%7b') or re.match(r'^%24%7b.*%7d$', url, re.IGNORECASE):
+                        return True
+                return False
+
             for track in results.get("tracks", []):
+                album_image = ""
+                if track.get("album") and track["album"].get("images") and len(track["album"]["images"]) > 0:
+                    album_image = track["album"]["images"][0]["url"]
+                preview_url = track.get("preview_url")
+                # Robustly sanitize URLs
+                if is_invalid_url(album_image):
+                    album_image = ""
+                if is_invalid_url(preview_url):
+                    preview_url = None
                 tracks.append({
                     "name": track["name"],
                     "url": track["external_urls"]["spotify"],
-                    "album_image": track["album"]["images"][0]["url"] if track["album"].get("images") else "",
-                    "preview_url": track.get("preview_url"),
+                    "album_image": album_image,
+                    "preview_url": preview_url,
                     "album": track["album"].get("name", "") if track.get("album") else "",
                     "artists": [a["name"] for a in track.get("artists", [])],
                 })
             return tracks
-        
         except Exception as e:
             logger.error(f"Error processing top tracks for {artist_id}: {e}")
             return []
