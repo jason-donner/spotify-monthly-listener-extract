@@ -387,7 +387,7 @@ class JobService:
         """
         try:
             # Path to the suggestion processing script
-            script_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "scraping")
+            script_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "scraping"))
             process_script = os.path.join(script_dir, "process_suggestions.py")
             
             # Set environment variables for the subprocess

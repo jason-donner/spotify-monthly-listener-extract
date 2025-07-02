@@ -118,20 +118,17 @@ def load_existing_listeners(target_date):
     master_listeners_file = os.path.join(results_dir, 'spotify-monthly-listeners-master.json')
 
     existing_artist_ids = set()
-    
     if os.path.exists(master_listeners_file):
         with open(master_listeners_file, 'r', encoding='utf-8') as f:
             listeners_data = json.load(f)
-        
         # Convert target_date to the format used in the listeners file (YYYYMMDD)
         target_date_formatted = target_date.replace('-', '')
-        
         for entry in listeners_data:
             if entry.get('date') == target_date_formatted:
                 artist_id = entry.get('artist_id')
-                if artist_id:
-                    existing_artist_ids.add(artist_id)
-    
+                if artist_id is not None:
+                    # Normalize to string and strip whitespace
+                    existing_artist_ids.add(str(artist_id).strip())
     print(f"Found {len(existing_artist_ids)} artists already scraped for {target_date}")
     return existing_artist_ids
 
@@ -179,10 +176,12 @@ def scrape_filtered_artists(driver, artists, today, existing_artist_ids):
     artists_to_scrape = []
     for artist in artists:
         artist_id = artist.get('artist_id')
-        if artist_id in existing_artist_ids:
+        artist_id_norm = str(artist_id).strip() if artist_id is not None else None
+        if artist_id_norm in existing_artist_ids:
             skipped_count += 1
-            print(f"Skipping {artist.get('artist_name', 'Unknown')} - already scraped today")
+            print(f"Skipping {artist.get('artist_name', 'Unknown')} (ID: {artist_id_norm}) - already scraped today")
         else:
+            print(f"Will scrape {artist.get('artist_name', 'Unknown')} (ID: {artist_id_norm})")
             artists_to_scrape.append(artist)
     
     print(f"Scraping {len(artists_to_scrape)} artists (skipped {skipped_count} duplicates)")
@@ -313,7 +312,7 @@ def main():
             print(Style.BRIGHT + f"\nFiltered scraping complete. {len(results)} new artists scraped successfully.")
             
             # Print detailed list of newly scraped artists
-            print(Fore.GREEN + "\n✅ Successfully scraped new artists:")
+            print(Fore.GREEN + "\n[OK] Successfully scraped new artists:")
             for result in results:
                 listeners_formatted = format_listener_count(result['monthly_listeners'])
                 print(Fore.GREEN + f"  • {result['artist_name']} - {listeners_formatted} monthly listeners")

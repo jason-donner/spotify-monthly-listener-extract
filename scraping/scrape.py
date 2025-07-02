@@ -400,25 +400,35 @@ def scrape_all(driver, urls, today, bar_format, existing_artist_ids, wait_time=0
     failed_urls = []
     skipped_count = 0
     
-    # Filter out artists that already have data for today
+
+    # Debug: Print all input artists and their IDs
+    print("[DEBUG] Filtering input artists against today's scraped artist_ids...")
     urls_to_scrape = []
     for url in urls:
-        artist_id = url.get('artist_id') if isinstance(url, dict) and url.get('artist_id') else extract_artist_id(url['url'] if isinstance(url, dict) else url)
+        if isinstance(url, dict):
+            artist_id = url.get('artist_id') or extract_artist_id(url.get('url', ''))
+            artist_name = url.get('artist_name', 'Unknown')
+            artist_url = url.get('url', '')
+        else:
+            artist_id = extract_artist_id(url)
+            artist_name = 'Unknown'
+            artist_url = url
+        print(f"  [DEBUG] Considering: {artist_name} | {artist_id} | {artist_url}")
         if artist_id in existing_artist_ids:
             skipped_count += 1
-            artist_name = url.get('artist_name', 'Unknown') if isinstance(url, dict) else 'Unknown'
-            print(f"Skipping {artist_name} - already scraped today")
+            print(f"    [DEBUG] Skipping {artist_name} ({artist_id}) - already scraped today")
         else:
+            print(f"    [DEBUG] Will scrape {artist_name} ({artist_id})")
             urls_to_scrape.append(url)
-    
+
     if skipped_count > 0:
         print(f"Scraping {len(urls_to_scrape)} artists (skipped {skipped_count} duplicates)")
     else:
         print(f"Scraping {len(urls_to_scrape)} artists")
-    
+
     # Output total for progress tracking
     print(f"PROGRESS: Starting scrape of {len(urls_to_scrape)} artists")
-    
+
     if not urls_to_scrape:
         print(Fore.YELLOW + "No new artists to scrape - all artists already have data for today!")
         return results, failed_urls
@@ -566,6 +576,7 @@ def parse_args():
     parser.add_argument('--output', help="Output JSON file for results")
     parser.add_argument('--no-prompt', action='store_true', help="Skip login confirmation prompt")
     parser.add_argument('--allow-duplicates', action='store_true', help="Allow scraping artists already scraped today (bypass duplicate protection)")
+    parser.add_argument('--skip-network-test', action='store_true', help="Skip the initial network connectivity test (useful if bot-blocking is suspected)")
     return parser.parse_args()
 
 
@@ -615,20 +626,29 @@ def main():
     driver = None
     
     try:
-        # Test network connectivity first
-        if not test_network_connectivity():
-            print("Network connectivity issues detected. Please check your internet connection.")
-            return
+        # Test network connectivity first, but allow override with --skip-network-test
+        if not getattr(args, 'skip_network_test', False):
+            if not test_network_connectivity():
+                print("Network connectivity issues detected. Proceeding anyway due to possible false positive (e.g., bot blocking).")
         
         urls = load_urls(args.input)
-        
+        print("\n[DEBUG] Loaded input artist list:")
+        for u in urls:
+            if isinstance(u, dict):
+                print(f"  - {u.get('artist_name', 'Unknown')} | {u.get('artist_id', extract_artist_id(u.get('url', '')))} | {u.get('url', '')}")
+            else:
+                print(f"  - [raw url] {u}")
+
         # Load existing listeners to prevent duplicates (unless bypassed)
         if args.allow_duplicates:
             print("Duplicate protection disabled - will scrape all artists")
             existing_artist_ids = set()
         else:
             existing_artist_ids = load_existing_listeners(today)
-        
+        print("[DEBUG] Existing artist_ids for today:")
+        for eid in existing_artist_ids:
+            print(f"  - {eid}")
+
         print("\nSetting up Chrome WebDriver...")
         try:
             driver = setup_driver(chromedriver_path=args.chromedriver, headless=args.headless)
@@ -645,17 +665,17 @@ def main():
         max_init_retries = 3
         for attempt in range(max_init_retries):
             try:
-                print("Navigating to Spotify...")
-                driver.get("https://open.spotify.com")
+                print("Navigating to Spotify login page...")
+                driver.get("https://accounts.spotify.com/login")
                 time.sleep(3)  # Wait for session/cookies to initialize
                 break
             except Exception as e:
                 if attempt < max_init_retries - 1:
-                    print(Fore.YELLOW + f"Failed to load Spotify (attempt {attempt + 1}/{max_init_retries}): {e}")
+                    print(Fore.YELLOW + f"Failed to load Spotify login (attempt {attempt + 1}/{max_init_retries}): {e}")
                     print("Retrying in 5 seconds...")
                     time.sleep(5)
                 else:
-                    print(Fore.RED + f"Failed to load Spotify after {max_init_retries} attempts: {e}")
+                    print(Fore.RED + f"Failed to load Spotify login after {max_init_retries} attempts: {e}")
                     raise
 
         # Only prompt if --no-prompt is NOT set

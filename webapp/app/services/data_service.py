@@ -173,14 +173,14 @@ class DataService:
         
         return results
     
-    def get_leaderboard_data(self, mode: str = 'growth', tier: str = 'all', current_month: bool = True) -> Dict[str, Any]:
+    def get_leaderboard_data(self, mode: str = 'growth', tier: str = 'all', current_month: bool = False) -> Dict[str, Any]:
         """
         Generate leaderboard data.
         
         Args:
             mode: 'growth' or 'loss'
             tier: Artist tier filter
-            current_month: If True, only show current month data; if False, use last 30 days
+            current_month: If True, only show current month data; if False, use last 30 days (default)
         
         Returns:
             Dictionary with leaderboard data and metadata
@@ -202,7 +202,6 @@ class DataService:
         for entry in data:
             artist = entry["artist_name"]
             date_str = entry["date"]
-            
             try:
                 if '-' in date_str:
                     date = datetime.strptime(date_str, "%Y-%m-%d")
@@ -210,15 +209,15 @@ class DataService:
                     date = datetime.strptime(date_str, "%Y%m%d")
             except Exception:
                 continue
-            
             listeners = entry["monthly_listeners"]
             if artist not in artist_changes:
                 artist_changes[artist] = []
-            
+            # Use 'artist_url' if present, else fallback to 'url'
+            artist_url = entry.get("artist_url") or entry.get("url", "")
             artist_changes[artist].append({
                 "date": date,
                 "listeners": listeners,
-                "artist_url": entry.get("artist_url", ""),
+                "artist_url": artist_url,
                 "artist_id": entry.get("artist_id"),
                 "slug": self.slugify(artist)
             })
@@ -240,22 +239,20 @@ class DataService:
             start_date = None
             end_date = None
         
+        # Debug: print how many artists and records are being processed
+        print(f"[DEBUG] Total artists in data: {len(artist_changes)}")
         for artist, records in artist_changes.items():
             recent = [r for r in records if r["date"] >= cutoff]
+            print(f"[DEBUG] Artist: {artist}, records in range: {len(recent)}")
             if len(recent) < 2:
                 continue
-            
             recent.sort(key=lambda x: x["date"])
-            
             start = recent[0]["listeners"]
             end = recent[-1]["listeners"]
-            
             if start == 0 or (start < 50 and end < 50):
                 continue
-            
             change = end - start
             percent_change = ((end - start) / start) * 100
-            
             # Get artist metadata
             artist_id = None
             artist_url = None
@@ -266,7 +263,6 @@ class DataService:
                     artist_url = r.get("artist_url")
                     slug = r.get("slug")
                     break
-            
             leaderboard_data.append({
                 "artist": artist,
                 "artist_id": artist_id,
@@ -406,30 +402,41 @@ class DataService:
     
     def is_artist_followed(self, artist_name: str, spotify_id: str = None) -> bool:
         """
-        Check if an artist is already being followed.
-        
+        Check if an artist is already being followed (robust normalization).
         Args:
             artist_name: Artist name
             spotify_id: Spotify artist ID (optional)
-        
         Returns:
             True if artist is followed, False otherwise
         """
+        import re
+        def normalize_name(name):
+            if not name:
+                return ""
+            # Lowercase, remove punctuation, collapse whitespace
+            name = name.strip().lower()
+            name = re.sub(r"[\s\-\._]+", " ", name)
+            name = re.sub(r"[^a-z0-9 ]", "", name)
+            return name
+        def normalize_id(spotify_id):
+            return (spotify_id or "").strip().lower()
+
+        norm_artist_name = normalize_name(artist_name)
+        norm_spotify_id = normalize_id(spotify_id)
         followed_artists = self.load_followed_artists()
-        
         for followed in followed_artists:
-            followed_name = followed.get("artist_name", "").lower()
-            followed_id = followed.get("artist_id", "")
+            followed_name = normalize_name(followed.get("artist_name", ""))
+            followed_id = normalize_id(followed.get("artist_id", ""))
             followed_url = followed.get("url", "")
-            
             # Extract ID from URL if not directly available
             if not followed_id and followed_url:
-                followed_id = self.get_artist_id_from_url(followed_url)
-            
-            if (artist_name.lower() == followed_name or 
-                (spotify_id and followed_id and spotify_id == followed_id)):
+                parts = followed_url.rstrip("/").split("/")
+                if parts and len(parts[-1]) >= 10:
+                    followed_id = normalize_id(parts[-1])
+            # Compare by normalized name or ID
+            if (norm_artist_name and norm_artist_name == followed_name) or \
+               (norm_spotify_id and followed_id and norm_spotify_id == followed_id):
                 return True
-        
         return False
     
     def is_artist_suggested(self, artist_name: str, spotify_id: str = None) -> bool:

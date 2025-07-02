@@ -21,17 +21,12 @@ def get_client_ip():
     """Get client IP address for logging"""
     return request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr)
 
-def create_admin_routes(spotify_service, data_service, job_service, scheduler_service):
+def create_admin_routes(spotify_service, data_service, job_service):
     """Create admin routes blueprint with injected services."""
-    
     admin_bp = Blueprint('admin', __name__)
-    
     def require_admin_auth():
-        """Check if user is authenticated as admin"""
         return session.get('admin_authenticated') == True
-    
     def admin_login_required(f):
-        """Decorator to require admin authentication"""
         def decorated_function(*args, **kwargs):
             if not require_admin_auth():
                 return redirect(url_for('admin.admin_login_page'))
@@ -159,7 +154,7 @@ def create_admin_routes(spotify_service, data_service, job_service, scheduler_se
         """API endpoint to get all suggestions for admin review."""
         try:
             suggestions = data_service.load_suggestions()
-            
+            print(f"/admin/suggestions endpoint hit. Loaded {len(suggestions)} suggestions.")
             # Add additional info for each suggestion
             for suggestion in suggestions:
                 # Check if already followed
@@ -167,93 +162,83 @@ def create_admin_routes(spotify_service, data_service, job_service, scheduler_se
                     suggestion.get("artist_name", ""),
                     suggestion.get("spotify_id")
                 )
-            
+            print(f"Returning suggestions: {[s.get('artist_name') for s in suggestions]}")
             return jsonify({"suggestions": suggestions})
-        
         except Exception as e:
             logger.error(f"Error loading suggestions: {e}")
             return jsonify({"error": str(e), "suggestions": []})
     
+
     @admin_bp.route("/approve_suggestion", methods=["POST"])
     def admin_approve_suggestion():
-        """Admin endpoint to approve a suggestion."""
+        """Admin endpoint to approve a suggestion and process it automatically."""
         try:
+            # Import the process_suggestions function from the script
+            import sys
+            import importlib.util
+            import_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../scraping/process_suggestions.py'))
+            spec = importlib.util.spec_from_file_location("process_suggestions_module", import_path)
+            process_mod = importlib.util.module_from_spec(spec)
+            sys.modules["process_suggestions_module"] = process_mod
+            spec.loader.exec_module(process_mod)
+
             data = request.get_json()
             suggestion_id = data.get("suggestion_id")  # Using timestamp as ID
-            action = data.get("action")  # "approve_follow", "approve_track", "reject"
-            
+            action = data.get("action")
+
             client_ip = get_client_ip()
             suggestions = data_service.load_suggestions()
-            
+
             # Find the suggestion to update
             suggestion_found = False
             for suggestion in suggestions:
                 if suggestion.get("timestamp") == suggestion_id:
                     suggestion_found = True
                     artist_name = suggestion.get("artist_name", "Unknown")
-                    
-                    if action == "approve_follow":
-                        suggestion["status"] = "approved_for_follow"
-                        suggestion["admin_approved"] = True
-                        suggestion["admin_action_date"] = datetime.now().isoformat()
-                        admin_security_logger.info(f"Admin approved artist '{artist_name}' for follow from IP: {client_ip}")
-                    elif action == "approve_track":
-                        suggestion["status"] = "approved_for_tracking"
-                        suggestion["admin_approved"] = True
-                        suggestion["admin_action_date"] = datetime.now().isoformat()
-                        admin_security_logger.info(f"Admin approved artist '{artist_name}' for tracking only from IP: {client_ip}")
-                    elif action == "process_track_only":
-                        # Immediately process for tracking (skip the "approved" intermediate state)
-                        suggestion["status"] = "processed"
-                        suggestion["admin_approved"] = True
-                        suggestion["admin_action_date"] = datetime.now().isoformat()
-                        suggestion["processed_date"] = datetime.now().isoformat()
-                        
-                        # Add to followed artists file
-                        artist_id = suggestion.get("spotify_id")
-                        if artist_id:
-                            followed_artists = data_service.load_followed_artists()
-                            
-                            # Check if already in list
-                            already_exists = any(
-                                followed.get("artist_id") == artist_id 
-                                for followed in followed_artists
-                            )
-                            
-                            if not already_exists:
-                                new_artist = {
-                                    "artist_name": artist_name,
-                                    "artist_id": artist_id,
-                                    "url": f"https://open.spotify.com/artist/{artist_id}",
-                                    "source": "admin_track_only",
-                                    "date_added": datetime.now().strftime("%Y-%m-%d"),
-                                    "removed": False
-                                }
-                                followed_artists.append(new_artist)
-                                data_service.save_followed_artists(followed_artists)
-                                logger.info(f"Added {artist_name} to followed artists file (track only)")
-                        
-                        admin_security_logger.info(f"Admin processed artist '{artist_name}' for tracking only (immediate) from IP: {client_ip}")
-                    elif action == "reject":
+                    artist_id = suggestion.get("spotify_id")
+                    if action == "reject":
                         suggestion["status"] = "rejected"
                         suggestion["admin_approved"] = False
                         suggestion["admin_action_date"] = datetime.now().isoformat()
                         admin_security_logger.info(f"Admin rejected artist '{artist_name}' from IP: {client_ip}")
-                    
+                    elif action == "approve_follow":
+                        suggestion["status"] = "approved_for_follow"
+                        suggestion["admin_approved"] = True
+                        suggestion["admin_action_date"] = datetime.now().isoformat()
+                        admin_security_logger.info(f"Admin approved artist '{artist_name}' for follow from IP: {client_ip}")
+                    elif action == "process_track_only":
+                        suggestion["status"] = "approved_for_tracking"
+                        suggestion["admin_approved"] = True
+                        suggestion["admin_action_date"] = datetime.now().isoformat()
+                        admin_security_logger.info(f"Admin approved artist '{artist_name}' for tracking only from IP: {client_ip}")
+                    else:
+                        # Fallback: treat as processed
+                        suggestion["status"] = "processed"
+                        suggestion["admin_approved"] = True
+                        suggestion["admin_action_date"] = datetime.now().isoformat()
+                        suggestion["processed_date"] = datetime.now().isoformat()
+                        admin_security_logger.info(f"Admin approved artist '{artist_name}' (generic approval) from IP: {client_ip}")
                     break
-            
+
             if not suggestion_found:
                 return jsonify({"success": False, "message": "Suggestion not found"})
-            
+
             # Save updated suggestions
-            if data_service.save_suggestions(suggestions):
-                return jsonify({
-                    "success": True, 
-                    "message": f"Suggestion {action.replace('_', ' ')}d successfully"
-                })
-            else:
+            if not data_service.save_suggestions(suggestions):
                 return jsonify({"success": False, "message": "Failed to save changes"})
-        
+
+            # AUTOMATICALLY process suggestions (call the function directly)
+            try:
+                process_mod.process_suggestions()
+                logger.info("Processed suggestions automatically after admin approval.")
+            except Exception as e:
+                logger.error(f"Error running process_suggestions: {e}")
+                return jsonify({"success": False, "message": f"Approved, but failed to process suggestions: {e}"})
+
+            return jsonify({
+                "success": True,
+                "message": f"Suggestion {action.replace('_', ' ')}d, artist added to followed list, and suggestions processed."
+            })
         except Exception as e:
             logger.error(f"Error approving suggestion: {e}")
             return jsonify({"success": False, "message": f"Error: {str(e)}"})
@@ -469,64 +454,7 @@ def create_admin_routes(spotify_service, data_service, job_service, scheduler_se
                 "message": f"Error: {str(e)}"
             })
     
-    @admin_bp.route("/scheduler/status")
-    def admin_scheduler_status():
-        """Get scheduler status."""
-        try:
-            status = scheduler_service.get_status()
-            return jsonify({"success": True, "status": status})
-        
-        except Exception as e:
-            logger.error(f"Error getting scheduler status: {e}")
-            return jsonify({"success": False, "message": f"Error: {str(e)}"})
-    
-    @admin_bp.route("/scheduler/set_time", methods=["POST"])
-    def admin_set_schedule_time():
-        """Set the daily scraping schedule time."""
-        try:
-            data = request.get_json()
-            time_str = data.get("time")
-            
-            if not time_str:
-                return jsonify({"success": False, "message": "Time is required"})
-            
-            scheduler_service.set_schedule_time(time_str)
-            client_ip = get_client_ip()
-            admin_security_logger.info(f"Admin updated daily scraping schedule to {time_str} from IP: {client_ip}")
-            
-            return jsonify({
-                "success": True,
-                "message": f"Daily scraping scheduled for {time_str}",
-                "status": scheduler_service.get_status()
-            })
-        
-        except ValueError as e:
-            return jsonify({"success": False, "message": "Invalid time format. Use HH:MM (24-hour format)"})
-        except Exception as e:
-            logger.error(f"Error setting schedule time: {e}")
-            return jsonify({"success": False, "message": f"Error: {str(e)}"})
-    
-    @admin_bp.route("/scheduler/run_now", methods=["POST"])
-    def admin_run_scheduled_scrape_now():
-        """Trigger the scheduled scraping job immediately."""
-        try:
-            # Use the same logic as the scheduled job
-            job_id = job_service.create_scraping_job(headless=True, today_only=False)
-            
-            if job_service.start_scraping_job(job_id):
-                client_ip = get_client_ip()
-                admin_security_logger.info(f"Admin triggered immediate full scraping from IP: {client_ip}")
-                
-                return jsonify({
-                    "success": True,
-                    "message": "Full scraping started immediately",
-                    "job_id": job_id
-                })
-            else:
-                return jsonify({"success": False, "message": "Failed to start scraping job"})
-        
-        except Exception as e:
-            logger.error(f"Error running immediate scrape: {e}")
-            return jsonify({"success": False, "message": f"Error: {str(e)}"})
+    # Scheduler endpoints removed (scheduler_service is deprecated)
+    # Cleaned up: No scheduler code remains. If you see this comment, all scheduler code is removed.
     
     return admin_bp

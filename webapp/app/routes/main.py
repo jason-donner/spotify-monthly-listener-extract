@@ -8,7 +8,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def create_main_routes(spotify_service, data_service):
+def create_main_routes(spotify_service, data_service, job_service=None):
     """Create main routes blueprint with injected services."""
     
     main_bp = Blueprint('main', __name__)
@@ -343,54 +343,82 @@ def create_main_routes(spotify_service, data_service):
             artist_name = data.get("artist_name", "").strip()
             spotify_url = data.get("spotify_url", "").strip()
             spotify_id = data.get("spotify_id", "").strip()
-            
+
             if not artist_name:
                 return jsonify({"success": False, "message": "Artist name is required"})
-            
+
             # Check blacklist
             blacklisted_artists, blacklisted_ids = data_service.load_blacklist()
-            
+
             if (artist_name.lower() in blacklisted_artists or 
                 (spotify_id and spotify_id in blacklisted_ids)):
                 return jsonify({"success": False, "message": "We do not support predators"})
-            
+
             # Check if already suggested
             if data_service.is_artist_suggested(artist_name, spotify_id):
                 return jsonify({
                     "success": False, 
                     "message": f"{artist_name} has already been suggested and is waiting to be added!"
                 })
-            
+
             # Check if already followed
             if data_service.is_artist_followed(artist_name, spotify_id):
                 return jsonify({
                     "success": False, 
                     "message": f"You're already following {artist_name} on Spotify!"
                 })
-            
+
             # Add new suggestion
             suggestions = data_service.load_suggestions()
+            now_str = datetime.now().isoformat()
             new_suggestion = {
                 "artist_name": artist_name,
                 "spotify_url": spotify_url if spotify_url else None,
                 "spotify_id": spotify_id if spotify_id else None,
-                "timestamp": datetime.now().isoformat(),
-                "status": "approved"  # Auto-approve everything not blacklisted
+                "timestamp": now_str,
+                # Force status to approved_for_follow for immediate processing
+                "status": "approved_for_follow",
+                "admin_approved": True,
+                "admin_action_date": now_str
             }
-            
+
             suggestions.append(new_suggestion)
-            
-            if data_service.save_suggestions(suggestions):
+
+            logger.info(f"[DEBUG] About to call save_suggestions for artist: {artist_name} (ID: {spotify_id})")
+            save_result = data_service.save_suggestions(suggestions)
+            logger.info(f"[DEBUG] save_suggestions returned: {save_result} for artist: {artist_name} (ID: {spotify_id})")
+
+            if save_result:
+                # Immediately process the suggestion and mark as processed
+                logger.info(f"[AUTO-PROCESS] About to run process_suggestions after saving suggestion for artist: {artist_name} (ID: {spotify_id})")
+                try:
+                    import sys
+                    import importlib.util
+                    import os
+                    import_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../scraping/process_suggestions.py'))
+                    spec = importlib.util.spec_from_file_location("process_suggestions_module", import_path)
+                    process_mod = importlib.util.module_from_spec(spec)
+                    sys.modules["process_suggestions_module"] = process_mod
+                    spec.loader.exec_module(process_mod)
+                    process_mod.process_suggestions()
+                    logger.info(f"[AUTO-PROCESS] process_suggestions completed successfully for artist: {artist_name} (ID: {spotify_id})")
+                except Exception as e:
+                    logger.error(f"[AUTO-PROCESS] Error running process_suggestions after suggestion for artist: {artist_name} (ID: {spotify_id}): {e}")
+                    return jsonify({
+                        "success": False,
+                        "message": f"Suggestion saved but failed to process: {e}"
+                    })
                 return jsonify({
-                    "success": True, 
-                    "message": "Artist suggestion approved and added to the queue!"
+                    "success": True,
+                    "message": "Artist suggestion processed and added!"
                 })
             else:
+                logger.error(f"[ERROR] save_suggestions failed for artist: {artist_name} (ID: {spotify_id})")
                 return jsonify({
-                    "success": False, 
+                    "success": False,
                     "message": "Failed to save suggestion"
                 })
-        
+
         except Exception as e:
             logger.error(f"Error handling artist suggestion: {e}")
             return jsonify({"success": False, "message": "Server error occurred"})

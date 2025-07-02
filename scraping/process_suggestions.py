@@ -47,8 +47,8 @@ def load_suggestions():
     try:
         with open(suggestions_file, 'r', encoding='utf-8') as f:
             suggestions = json.load(f)
-            # Return suggestions that are admin-approved for following or tracking
-            return [s for s in suggestions if s.get('admin_approved') == True and s.get('status') in ['approved_for_follow', 'approved_for_tracking']]
+            # Return suggestions that have status 'approved' or 'approved_for_follow'
+            return [s for s in suggestions if s.get('status') in ('approved', 'approved_for_follow')]
     except Exception as e:
         logging.error(f"Error loading suggestions: {e}")
         return []
@@ -152,8 +152,11 @@ def process_suggestions(auto_follow=False):
     logging.info(f"Found {len(suggestions)} admin-approved suggestions")
     
     followed_artists = load_followed_artists()
-    followed_ids = {artist.get('artist_id') for artist in followed_artists}
-    followed_names = {artist.get('artist_name', '').lower() for artist in followed_artists}
+    # Normalize followed IDs and names for robust matching
+    def norm(val):
+        return (val or '').strip().lower()
+    followed_ids = {norm(artist.get('artist_id')) for artist in followed_artists}
+    followed_names = {norm(artist.get('artist_name')) for artist in followed_artists}
     
     # Initialize Spotify client for auto-following
     sp = None
@@ -175,20 +178,37 @@ def process_suggestions(auto_follow=False):
     suggestions_to_process = []  # Track all suggestions we process (including already followed ones)
     
     for suggestion in suggestions:
-        artist_name = suggestion.get('artist_name', '')
-        artist_id = suggestion.get('spotify_id', '')
+        artist_name = (suggestion.get('artist_name') or '').strip()
+        artist_id = suggestion.get('spotify_id') or suggestion.get('artist_id')
         artist_url = suggestion.get('spotify_url', '')
         should_follow = suggestion.get('status') == 'approved_for_follow'
-        
+
+        norm_artist_id = norm(artist_id)
+        norm_artist_name = norm(artist_name)
+
+        logging.info(f"Considering suggestion: artist_name='{artist_name}', artist_id='{artist_id}', status='{suggestion.get('status')}'")
+
         # Add to list of suggestions to mark as processed
         suggestions_to_process.append(suggestion)
-        
-        # Skip if already in followed list
-        if (artist_id and artist_id in followed_ids) or (artist_name.lower() in followed_names):
-            logging.info(f"Artist '{artist_name}' is already in followed list")
+
+        # Improved matching: check for empty IDs, log why skipped
+        already_in_list = False
+        if norm_artist_id and norm_artist_id in followed_ids:
+            logging.info(f"Artist '{artist_name}' (ID: {artist_id}) is already in followed list by ID match.")
+            already_in_list = True
+        elif norm_artist_name and norm_artist_name in followed_names:
+            logging.info(f"Artist '{artist_name}' is already in followed list by name match.")
+            already_in_list = True
+        else:
+            # Extra: try partial/loose match for diagnostics
+            for existing in followed_artists:
+                ex_name = norm(existing.get('artist_name'))
+                if ex_name and ex_name in norm_artist_name or norm_artist_name in ex_name:
+                    logging.info(f"Artist '{artist_name}' loosely matches followed artist '{existing.get('artist_name')}'.")
+        if already_in_list:
             already_followed += 1
             continue
-        
+
         # Add to followed list
         new_artist = {
             "artist_name": artist_name,
@@ -199,17 +219,17 @@ def process_suggestions(auto_follow=False):
             "auto_followed": False,
             "removed": False
         }
-        
+
         # Try to follow on Spotify if approved for following
         if should_follow and sp and artist_id:
             if follow_artist_on_spotify(sp, artist_id):
                 new_artist["auto_followed"] = True
                 new_artist["source"] = "admin_followed"
                 followed_count += 1
-        
+
+        logging.info(f"Adding to followed list: {new_artist}")
         followed_artists.append(new_artist)
         new_artists_added += 1
-        logging.info(f"Added '{artist_name}' to tracking list (follow: {should_follow and new_artist['auto_followed']})")
     
     # Save followed artists if we added new ones
     if new_artists_added > 0:
