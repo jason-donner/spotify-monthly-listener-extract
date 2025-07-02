@@ -367,9 +367,11 @@ class SpotifyService:
                 tracks.append({
                     "name": track["name"],
                     "url": track["external_urls"]["spotify"],
-                    "album_image": track["album"]["images"][0]["url"] if track["album"]["images"] else ""
+                    "album_image": track["album"]["images"][0]["url"] if track["album"].get("images") else "",
+                    "preview_url": track.get("preview_url"),
+                    "album": track["album"].get("name", "") if track.get("album") else "",
+                    "artists": [a["name"] for a in track.get("artists", [])],
                 })
-            
             return tracks
         
         except Exception as e:
