@@ -22,7 +22,17 @@ def get_client_ip():
     return request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr)
 
 def create_admin_routes(spotify_service, data_service, job_service):
+
     admin_bp = Blueprint('admin', __name__)
+    def require_admin_auth():
+        return session.get('admin_authenticated') == True
+    def admin_login_required(f):
+        def decorated_function(*args, **kwargs):
+            if not require_admin_auth():
+                return redirect(url_for('admin.admin_login_page'))
+            return f(*args, **kwargs)
+        decorated_function.__name__ = f.__name__
+        return decorated_function
 
     @admin_bp.route("/search_artist", methods=["GET"])
     @admin_login_required
