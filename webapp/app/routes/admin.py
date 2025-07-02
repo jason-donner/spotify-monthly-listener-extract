@@ -22,6 +22,7 @@ def get_client_ip():
     return request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr)
 
 def create_admin_routes(spotify_service, data_service, job_service):
+    admin_bp = Blueprint('admin', __name__)
 
     @admin_bp.route("/search_artist", methods=["GET"])
     @admin_login_required
