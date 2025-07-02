@@ -1,16 +1,62 @@
 <!-- Removed duplicate panels above. Panels now only exist inside the block content. -->
 
 <script>
+
 document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchArtistInput');
+    let searchTimeout = null;
+    let lastQuery = '';
+    searchInput.addEventListener('input', function(e) {
+        const query = searchInput.value.trim();
+        if (query.length < 2) {
+            document.getElementById('artistSearchResults').innerHTML = '';
+            document.getElementById('artistTopTracks').innerHTML = '';
+            lastQuery = '';
+            return;
+        }
+        if (query === lastQuery) return;
+        lastQuery = query;
+        if (searchTimeout) clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            autoSuggestArtist(query);
+        }, 300);
+    });
     document.getElementById('searchArtistForm').addEventListener('submit', function(e) {
         e.preventDefault();
         searchArtist();
     });
-    document.getElementById('processArtistForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        processArtistDirectly();
-    });
 });
+
+function autoSuggestArtist(query) {
+    document.getElementById('artistTopTracks').innerHTML = '';
+    document.getElementById('artistSearchResults').innerHTML = '<div class="text-center py-2"><div class="spinner-border text-info"></div> Searching...</div>';
+    fetch(`/admin/search_artist?q=${encodeURIComponent(query)}`)
+        .then(async response => {
+            const contentType = response.headers.get('content-type') || '';
+            if (contentType.includes('application/json')) {
+                const data = await response.json();
+                if (data.success && data.results.length > 0) {
+                    renderArtistSearchResults(data.results);
+                } else {
+                    document.getElementById('artistSearchResults').innerHTML = '<div class="alert alert-warning">No artists found.</div>';
+                }
+            } else {
+                // Try to detect if it's a login page or HTML error
+                const text = await response.text();
+                console.warn('Unexpected response from /admin/search_artist:', text);
+                if (text.includes('<form') && text.toLowerCase().includes('login')) {
+                    document.getElementById('artistSearchResults').innerHTML = '<div class="alert alert-danger">Session expired or login required. Please <a href="/admin/login">log in</a> again.</div>';
+                } else if (response.status === 401 || response.status === 403) {
+                    document.getElementById('artistSearchResults').innerHTML = '<div class="alert alert-danger">You are not authorized. Please <a href="/admin/login">log in</a> again.</div>';
+                } else {
+                    document.getElementById('artistSearchResults').innerHTML = `<div class=\"alert alert-danger\">Search failed: Unexpected server response (status ${response.status}). Please try again or check the console for details.</div>`;
+                }
+            }
+        })
+        .catch(error => {
+            document.getElementById('artistSearchResults').innerHTML = '<div class="alert alert-danger">Search failed: ' + error.message + '</div>';
+        });
+}
 
 function searchArtist() {
     const query = document.getElementById('searchArtistInput').value.trim();
@@ -21,12 +67,25 @@ function searchArtist() {
     document.getElementById('artistSearchResults').innerHTML = '<div class="text-center py-2"><div class="spinner-border text-info"></div> Searching...</div>';
     document.getElementById('artistTopTracks').innerHTML = '';
     fetch(`/admin/search_artist?q=${encodeURIComponent(query)}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success && data.results.length > 0) {
-                renderArtistSearchResults(data.results);
+        .then(async response => {
+            const contentType = response.headers.get('content-type') || '';
+            if (contentType.includes('application/json')) {
+                const data = await response.json();
+                if (data.success && data.results.length > 0) {
+                    renderArtistSearchResults(data.results);
+                } else {
+                    document.getElementById('artistSearchResults').innerHTML = '<div class="alert alert-warning">No artists found.</div>';
+                }
             } else {
-                document.getElementById('artistSearchResults').innerHTML = '<div class="alert alert-warning">No artists found.</div>';
+                const text = await response.text();
+                console.warn('Unexpected response from /admin/search_artist:', text);
+                if (text.includes('<form') && text.toLowerCase().includes('login')) {
+                    document.getElementById('artistSearchResults').innerHTML = '<div class="alert alert-danger">Session expired or login required. Please <a href="/admin/login">log in</a> again.</div>';
+                } else if (response.status === 401 || response.status === 403) {
+                    document.getElementById('artistSearchResults').innerHTML = '<div class="alert alert-danger">You are not authorized. Please <a href="/admin/login">log in</a> again.</div>';
+                } else {
+                    document.getElementById('artistSearchResults').innerHTML = `<div class=\"alert alert-danger\">Search failed: Unexpected server response (status ${response.status}). Please try again or check the console for details.</div>`;
+                }
             }
         })
         .catch(error => {
@@ -224,25 +283,80 @@ function processArtistDirectly() {
             <div class="card mb-4" style="background: rgba(40, 40, 60, 0.95); border: 1px solid rgba(0, 255, 127, 0.3);">
                 <div class="card-header" style="background: rgba(0, 255, 127, 0.1); border-bottom: 1px solid rgba(0, 255, 127, 0.3);">
                     <h5 class="mb-0" style="color: #00ff7f;">
-                        <i class="fas fa-sync-alt"></i> Process Artist
+                        <i class="fas fa-sync-alt"></i> Unprocessed Followed Artists
                     </h5>
                 </div>
                 <div class="card-body">
-                    <form id="processArtistForm" class="row g-3">
-                        <div class="col-md-5">
-                            <input type="text" class="form-control" id="processArtistIdInput" placeholder="Spotify Artist ID or URL" required>
-                        </div>
-                        <div class="col-md-5">
-                            <input type="text" class="form-control" id="processArtistNameInput" placeholder="Artist Name (optional)">
-                        </div>
-                        <div class="col-md-2">
-                            <button type="submit" class="btn btn-primary w-100">
-                                <i class="fas fa-sync-alt"></i> Process
-                            </button>
-                        </div>
-                    </form>
+                    <div id="unprocessedArtistsList" class="mb-3"></div>
+                    <button class="btn btn-outline-primary" onclick="fetchUnprocessedArtists()">
+                        <i class="fas fa-sync-alt"></i> Refresh List
+                    </button>
                 </div>
             </div>
+// Fetch and render unprocessed followed artists
+function fetchUnprocessedArtists() {
+    const container = document.getElementById('unprocessedArtistsList');
+    container.innerHTML = '<div class="text-center py-2"><div class="spinner-border text-info"></div> Loading...</div>';
+    fetch('/admin/process_artist_list')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.unprocessed_artists.length > 0) {
+                container.innerHTML = renderUnprocessedArtists(data.unprocessed_artists);
+            } else {
+                container.innerHTML = '<div class="alert alert-warning">No unprocessed followed artists found.</div>';
+            }
+        })
+        .catch(error => {
+            container.innerHTML = '<div class="alert alert-danger">Failed to load unprocessed artists: ' + error.message + '</div>';
+        });
+}
+
+function renderUnprocessedArtists(artists) {
+    let html = '<ul class="list-group">';
+    artists.forEach(artist => {
+        html += `<li class="list-group-item d-flex justify-content-between align-items-center">
+            <span><strong>${artist.artist_name || artist.name}</strong> <small class="text-muted">(${artist.artist_id})</small></span>
+            <a href="https://open.spotify.com/artist/${artist.artist_id}" target="_blank" class="btn btn-sm btn-outline-success">Spotify</a>
+        </li>`;
+    });
+    html += '</ul>';
+    return html;
+}
+
+// Auto-load on page ready
+document.addEventListener('DOMContentLoaded', fetchUnprocessedArtists);
+// Fetch and render unprocessed followed artists
+function fetchUnprocessedArtists() {
+    const container = document.getElementById('unprocessedArtistsList');
+    container.innerHTML = '<div class="text-center py-2"><div class="spinner-border text-info"></div> Loading...</div>';
+    fetch('/admin/process_artist_list')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.unprocessed_artists.length > 0) {
+                container.innerHTML = renderUnprocessedArtists(data.unprocessed_artists);
+            } else {
+                container.innerHTML = '<div class="alert alert-warning">No unprocessed followed artists found.</div>';
+            }
+        })
+        .catch(error => {
+            container.innerHTML = '<div class="alert alert-danger">Failed to load unprocessed artists: ' + error.message + '</div>';
+        });
+}
+
+function renderUnprocessedArtists(artists) {
+    let html = '<ul class="list-group">';
+    artists.forEach(artist => {
+        html += `<li class="list-group-item d-flex justify-content-between align-items-center">
+            <span><strong>${artist.artist_name || artist.name}</strong> <small class="text-muted">(${artist.artist_id})</small></span>
+            <a href="https://open.spotify.com/artist/${artist.artist_id}" target="_blank" class="btn btn-sm btn-outline-success">Spotify</a>
+        </li>`;
+    });
+    html += '</ul>';
+    return html;
+}
+
+// Auto-load on page ready
+document.addEventListener('DOMContentLoaded', fetchUnprocessedArtists);
             
             <!-- ...Automated Scheduling Controls card removed... -->
             

@@ -35,19 +35,20 @@ def create_admin_routes(spotify_service, data_service, job_service):
         return decorated_function
 
     @admin_bp.route("/search_artist", methods=["GET"])
-    @admin_login_required
     def admin_search_artist():
         """Search Spotify for artists by name and return a list of matches."""
         try:
             query = request.args.get("q", "").strip()
             if not query:
-                return jsonify({"success": False, "message": "No search query provided."}), 400
+                return jsonify({"success": False, "results": [], "message": "No search query provided."}), 200
             results = spotify_service.search_artists(query)
-            # Expecting a list of dicts with id, name, image, url
-            return jsonify({"success": True, "results": results})
+            # Always return a JSON response, even if no results
+            if not results:
+                return jsonify({"success": False, "results": [], "message": "No artists found for this query."}), 200
+            return jsonify({"success": True, "results": results}), 200
         except Exception as e:
             logger.error(f"Error searching artists: {e}")
-            return jsonify({"success": False, "message": f"Error: {str(e)}"}), 500
+            return jsonify({"success": False, "results": [], "message": f"Error: {str(e)}"}), 200
 
     @admin_bp.route("/artist_top_tracks", methods=["GET"])
     @admin_login_required
@@ -64,54 +65,24 @@ def create_admin_routes(spotify_service, data_service, job_service):
             logger.error(f"Error getting top tracks: {e}")
             return jsonify({"success": False, "message": f"Error: {str(e)}"}), 500
 
-    @admin_bp.route("/process_artist", methods=["POST"])
+    @admin_bp.route("/process_artist_list", methods=["GET"])
     @admin_login_required
-    def admin_process_artist():
-        """Admin endpoint to process a followed artist by Spotify ID."""
-        try:
-            data = request.get_json()
-            artist_id = data.get("artist_id")
-            artist_name = data.get("artist_name", "Unknown Artist")
-            client_ip = get_client_ip()
-            logger.info(f"PROCESS_ARTIST REQUEST: artist_id={artist_id}, artist_name={artist_name}")
-            admin_security_logger.info(f"Admin initiated process for artist '{artist_name}' (ID: {artist_id}) from IP: {client_ip}")
-
-            if not artist_id:
-                logger.error("PROCESS_ARTIST ERROR: No artist ID provided")
-                return jsonify({"success": False, "message": "Artist ID is required"})
-
-            # Import the process_suggestions function from the script
-            import sys
-            import importlib.util
-            import_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../scraping/process_suggestions.py'))
-            spec = importlib.util.spec_from_file_location("process_suggestions_module", import_path)
-            process_mod = importlib.util.module_from_spec(spec)
-            sys.modules["process_suggestions_module"] = process_mod
-            spec.loader.exec_module(process_mod)
-
-            # Call the process function for a single artist
-            try:
-                result = process_mod.process_single_artist(artist_id, artist_name)
-                logger.info(f"Processed artist {artist_name} ({artist_id}) via admin panel.")
-                return jsonify({"success": True, "message": f"Artist {artist_name} ({artist_id}) processed successfully.", "result": result})
-            except Exception as e:
-                logger.error(f"Error processing artist: {e}")
-                return jsonify({"success": False, "message": f"Error processing artist: {e}"})
+    def admin_process_artist_list():
+        """Return a list of followed but not processed artists."""
+        followed_artists = data_service.load_followed_artists()
+        suggestions = data_service.load_suggestions()
+        # Build a set of processed artist IDs from suggestions
+        processed_ids = set()
+        for s in suggestions:
+            if s.get('status') == 'processed' and s.get('spotify_id'):
+                processed_ids.add(s['spotify_id'])
+        # Filter followed artists that are not processed
+        unprocessed = [a for a in followed_artists if a.get('artist_id') and a['artist_id'] not in processed_ids]
+        return jsonify({"success": True, "unprocessed_artists": unprocessed})
         except Exception as e:
             logger.error(f"Error in process_artist endpoint: {e}")
             return jsonify({"success": False, "message": f"Error: {str(e)}"})
-    """Create admin routes blueprint with injected services."""
-    admin_bp = Blueprint('admin', __name__)
-    def require_admin_auth():
-        return session.get('admin_authenticated') == True
-    def admin_login_required(f):
-        def decorated_function(*args, **kwargs):
-            if not require_admin_auth():
-                return redirect(url_for('admin.admin_login_page'))
-            return f(*args, **kwargs)
-        decorated_function.__name__ = f.__name__
-        return decorated_function
-    
+    # (Removed duplicate blueprint and decorator definitions)
     @admin_bp.route("/admin_login")
     def admin_login_page():
         """Admin login page"""

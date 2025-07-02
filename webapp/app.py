@@ -154,6 +154,11 @@ def create_app():
     admin_bp = create_admin_routes(spotify_service, data_service, job_service)
     app.register_blueprint(main_bp)
     app.register_blueprint(admin_bp, url_prefix='/admin')
+    # DEBUG: Print all registered routes to verify /admin/search_artist is present
+    print("\nRegistered routes:")
+    for rule in app.url_map.iter_rules():
+        print(f"{rule}")
+    print()
     # Clean up old job files on startup
     job_service.cleanup_old_jobs()
     return app
