@@ -45,28 +45,8 @@
         {% endif %}
     {% endif %}
     
-    <!-- Artist Suggestion Form -->
-    <div class="suggestion-form-container">
-        <h3 style="color:#00ff7f;text-align:center;margin-bottom:16px;font-size:1.4em;">Suggest an Artist</h3>
-        <p style="color:#aaa;font-size:0.95em;text-align:center;margin-bottom:20px;">
-            Can't find an artist? Suggest them to be added to our database!
-        </p>
-        <form id="suggestionForm" style="max-width:580px;margin:0 auto;">
-            <div style="margin-bottom:24px;position:relative;">
-                <input type="text" id="artistName" name="artistName" placeholder="Search for an artist..." required class="suggestion-input" autocomplete="off">
-                <div id="artistSuggestions" class="artist-suggestions"></div>
-            </div>
-            <input type="hidden" id="spotifyUrl" name="spotifyUrl">
-            <div style="text-align:center;">
-                <button type="submit" style="padding:14px 36px;border:none;border-radius:8px;background:linear-gradient(90deg,#00ff7f 0%,#1ed760 100%);color:#191414;font-weight:bold;font-size:1.1em;cursor:pointer;transition:transform 0.2s,box-shadow 0.2s;height:auto;line-height:1.1;">
-                    Suggest Artist
-                </button>
-            </div>
-        </form>
-        <div id="suggestionMessage" style="margin-top:20px;text-align:center;font-weight:500;line-height:1.4;"></div>
-    </div>
-    
-    <!-- Selected Artist Preview - Now outside the suggestion form container -->
+    <!-- Artist Suggestion Form removed after workflow refactor -->
+    <!-- Selected Artist Preview - Now outside the search form container -->
     <div id="selectedArtistPreview" style="display: none; max-width: 700px; margin: 20px auto 0 auto; padding: 20px; background: rgba(40, 40, 60, 0.8); border-radius: 12px; border: 1px solid rgba(0, 255, 127, 0.3); box-shadow: 0 8px 32px rgba(0,0,0,0.25); backdrop-filter: blur(10px) saturate(140%);">
         <div id="selectedArtistInfo" class="selected-artist-info">
             <!-- Artist info will be populated here -->
@@ -141,116 +121,7 @@
     box-shadow: 0 8px 32px rgba(0,0,0,0.25);
     backdrop-filter: blur(10px) saturate(140%);
 }
-.suggestion-form-container {
-    max-width: 700px;
-    margin: 40px auto 0 auto;
-    background: rgba(30, 30, 40, 0.65);
-    border-radius: 18px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
-    padding: 40px 36px;
-    backdrop-filter: blur(10px) saturate(140%);
-}
-.suggestion-form-container h3 {
-    line-height: 1.3;
-    margin-bottom: 20px;
-}
-.suggestion-form-container p {
-    line-height: 1.5;
-    margin-bottom: 24px;
-    max-width: 90%;
-    margin-left: auto;
-    margin-right: auto;
-}
-.suggestion-form-container input {
-    width: 100%;
-    padding: 14px 18px;
-    border: none;
-    border-radius: 8px;
-    background: #232323;
-    color: #fff;
-    font-size: 1.1em;
-    outline: none;
-    border: 2px solid transparent;
-    transition: border-color 0.2s;
-    box-sizing: border-box;
-}
-.suggestion-form-container input:focus {
-    border-color: #00ff7f !important;
-    box-shadow: 0 0 0 3px rgba(0,255,127,0.2);
-}
-.suggestion-input {
-    width: 100%;
-    padding: 14px 18px;
-    border: none;
-    border-radius: 8px;
-    background: #232323;
-    color: #fff;
-    font-size: 1.1em;
-    outline: none;
-    border: 2px solid transparent;
-    transition: border-color 0.2s;
-    box-sizing: border-box;
-    min-width: 0;
-}
-.suggestion-input::placeholder {
-    color: #888;
-    font-size: 1.05em;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.suggestion-form-container button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(0,255,127,0.3);
-}
-.artist-suggestions {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: #1e1e1e;
-    border: 1px solid #333;
-    border-radius: 8px;
-    max-height: 300px;
-    overflow-y: auto;
-    z-index: 1000;
-    display: none;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-}
-.artist-suggestion-item {
-    padding: 12px 16px;
-    cursor: pointer;
-    border-bottom: 1px solid #333;
-    display: flex;
-    align-items: center;
-    transition: background 0.2s;
-}
-.artist-suggestion-item:hover {
-    background: #2a2a2a;
-}
-.artist-suggestion-item:last-child {
-    border-bottom: none;
-}
-.artist-suggestion-image {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    object-fit: cover;
-    margin-right: 12px;
-    background: #333;
-}
-.artist-suggestion-info {
-    flex-grow: 1;
-}
-.artist-suggestion-name {
-    font-weight: bold;
-    color: #fff;
-    font-size: 1em;
-    margin-bottom: 2px;
-}
-.artist-suggestion-followers {
-    font-size: 0.85em;
-    color: #aaa;
-}
+/* Legacy suggestion form styles removed */
 .selected-artist-info {
     display: flex;
     align-items: center;
@@ -489,69 +360,6 @@ function formatFollowers(count) {
     return count.toString();
 }
 
-// Hide suggestions when clicking outside
-document.addEventListener('click', function(e) {
-    if (!e.target.closest('.suggestion-form-container')) {
-        document.getElementById('artistSuggestions').style.display = 'none';
-    }
-});
-
-// Clear preview when input is cleared
-document.getElementById('artistName').addEventListener('input', function(e) {
-    if (e.target.value.trim() === '') {
-        document.getElementById('selectedArtistPreview').style.display = 'none';
-        selectedArtist = null;
-    }
-});
-
-// Form submission
-document.getElementById('suggestionForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const artistName = document.getElementById('artistName').value.trim();
-    const spotifyUrl = document.getElementById('spotifyUrl').value.trim();
-    const messageDiv = document.getElementById('suggestionMessage');
-    
-    if (!artistName) {
-        messageDiv.innerHTML = '<span style="color:#e74c3c;">Please enter an artist name.</span>';
-        return;
-    }
-    
-    if (!selectedArtist) {
-        messageDiv.innerHTML = '<span style="color:#e74c3c;">Please select an artist from the suggestions.</span>';
-        return;
-    }
-    
-    // Show loading message
-    messageDiv.innerHTML = '<span style="color:#aaa;">Submitting suggestion...</span>';
-    
-    // Submit the suggestion
-    fetch('/suggest_artist', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            artist_name: artistName,
-            spotify_url: spotifyUrl,
-            spotify_id: selectedArtist ? selectedArtist.id : null
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            messageDiv.innerHTML = '<span style="color:#00ff7f;">✓ Thank you! Your suggestion has been submitted.</span>';
-            document.getElementById('suggestionForm').reset();
-            document.getElementById('selectedArtistPreview').style.display = 'none';
-            selectedArtist = null;
-        } else {
-            messageDiv.innerHTML = '<span style="color:#e74c3c;">❌ ' + (data.message || 'Error submitting suggestion.') + '</span>';
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        messageDiv.innerHTML = '<span style="color:#e74c3c;">❌ Error submitting suggestion. Please try again.</span>';
-    });
-});
+// Legacy suggestion form JS removed after workflow refactor
 </script>
 {% endblock %}

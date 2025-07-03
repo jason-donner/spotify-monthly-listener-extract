@@ -21,8 +21,8 @@ A modern web-based system for tracking Spotify artists' monthly listener counts 
 
 ### Real-Time Progress Indicator (June 25, 2025)
 - **📊 Live Progress Bar** - Beautiful visual progress bar during scraping operations
-- **🎯 Artist Counter** - Shows "current / total" artists being processed in real-time
-- **👁️ Current Artist Display** - See exactly which artist is being processed
+- **🎯 Artist Counter** - Shows "current / total" artists being scraped in real-time
+- **👁️ Current Artist Display** - See exactly which artist is being scraped
 - **⏱️ Phase Tracking** - Clear status updates (Starting, Scraping, Completed)
 - **🔄 Real-Time Updates** - Progress updates every 2 seconds with smooth animations
 

@@ -52,6 +52,7 @@ In your Spotify Developer Dashboard:
 The following files are no longer needed:
 - `src/spotify_follow_sync.py` (now deprecated)
 - Any `.cache-main` or `.cache-scrape` files (old authentication caches)
+- All suggestion/approval/processing scripts and data files (see `REMOVED_LEGACY_FILES.md`)
 
 ### 5. Test the New System
 1. Start the Flask app: `python app.py`
@@ -86,10 +87,10 @@ The following files are no longer needed:
 **A:** No, your existing data in `spotify-followed-artists-master.json` remains unchanged. The system will continue to work with your existing data.
 
 ### Q: Can I still use the command-line scripts?
-**A:** Yes, `process_suggestions.py` still works and will use the same single account. The web interface and command-line scripts are now fully compatible.
+**A:** No, the legacy `process_suggestions.py` and related suggestion/approval scripts have been removed. All artist management is now performed directly in the admin panel.
 
 ### Q: What about my existing suggestions?
-**A:** All existing suggestions in `artist_suggestions.json` will continue to work normally. You can process them through either the web interface or the command-line script.
+**A:** The suggestion/approval workflow and `artist_suggestions.json` are no longer supported. Please use the admin panel to add and follow artists directly.
 
 ## Troubleshooting
 

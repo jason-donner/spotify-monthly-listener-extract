@@ -48,10 +48,7 @@ The app will start on http://127.0.0.1:5000
 ### Following Artists
 With the new web-based system, you can:
 
-1. **Review Suggestions**: View all pending, approved, rejected, and processed suggestions
-2. **Approve for Following**: Click "✓ Follow on Spotify" to approve an artist for following
-3. **Follow Immediately**: Click "🎵 Follow Now" to immediately follow an approved artist on Spotify
-4. **Track Only**: Click "👁️ Track Only" to approve for tracking without following
+1. **Directly Add/Follow Artists**: Admins can add and follow artists for tracking immediately—no suggestions or approvals required.
 
 ### Authentication States
 - **Not Authenticated**: Follow buttons will show a warning message
@@ -85,8 +82,6 @@ With the new web-based system, you can:
 
 ### Admin Endpoints
 - `GET /admin` - Admin panel interface
-- `GET /admin/suggestions` - Get all suggestions (JSON)
-- `POST /admin/approve_suggestion` - Approve/reject suggestions
 - `POST /admin/follow_artist` - Follow artist on Spotify
 
 ## Troubleshooting
@@ -108,17 +103,4 @@ With the new web-based system, you can:
 
 ## Migration from Script-Based Authentication
 
-The old `process_suggestions.py` script still works for batch processing, but now you can:
-1. Use the web interface for individual artist follows
-2. Approve suggestions in the web interface
-3. Use either the web interface OR the script for following (not both simultaneously)
-
-The web-based system is ideal for:
-- Individual artist management
-- Real-time approval workflow
-- User-friendly interface
-
-The script-based system is still useful for:
-- Batch processing multiple suggestions
-- Automated workflows
-- Server environments without web access
+**Note:** The legacy suggestion/approval workflow and related scripts are no longer supported. All artist management is now performed directly in the admin panel.
