@@ -14,10 +14,10 @@ logger = logging.getLogger(__name__)
 class DataService:
     """Service class for data operations."""
     
-    def __init__(self, data_path: str, followed_artists_path: str, suggestions_file: str, blacklist_file: str):
+    def __init__(self, data_path: str, followed_artists_path: str, suggestions_file, blacklist_file: str):
         self.data_path = data_path
         self.followed_artists_path = followed_artists_path
-        self.suggestions_file = suggestions_file
+        self.suggestions_file = None  # suggestions are obsolete
         self.blacklist_file = blacklist_file
         self._data_cache = None
         self._cache_timestamp = None
@@ -411,22 +411,4 @@ class DataService:
                 return True
         return False
     
-    def is_artist_suggested(self, artist_name: str, spotify_id: str = None) -> bool:
-        """
-        Check if an artist has already been suggested.
-        
-        Args:
-            artist_name: Artist name
-            spotify_id: Spotify artist ID (optional)
-        
-        Returns:
-            True if artist is already suggested, False otherwise
-        """
-        suggestions = self.load_suggestions()
-        
-        for suggestion in suggestions:
-            if (suggestion.get("artist_name", "").lower() == artist_name.lower() or 
-                (spotify_id and suggestion.get("spotify_id") == spotify_id)):
-                return True
-        
-        return False
+    # Legacy: is_artist_suggested and suggestion logic removed

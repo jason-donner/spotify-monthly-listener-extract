@@ -96,7 +96,7 @@ def create_app():
     data_service = DataService(
         data_path=Config.DATA_PATH,
         followed_artists_path=Config.FOLLOWED_ARTISTS_PATH,
-        suggestions_file=Config.SUGGESTIONS_FILE,
+        suggestions_file=None,  # Legacy suggestions removed
         blacklist_file=Config.BLACKLIST_FILE
     )
     job_service = JobService(
