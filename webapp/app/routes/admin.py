@@ -77,7 +77,7 @@ def create_admin_routes(spotify_service, data_service, job_service):
 
     @admin_bp.route("/sync_lists", methods=["POST"])
     def sync_lists():
-        """Sync scraping list to match followed artists (Spotify)."""
+        """Sync scraping list to match followed artists (Spotify), and return changes."""
         try:
             # Fetch followed artists from Spotify
             followed = spotify_service.get_followed_artists()
@@ -89,29 +89,44 @@ def create_admin_routes(spotify_service, data_service, job_service):
             if os.path.exists(master_path):
                 with open(master_path, 'r', encoding='utf-8') as f:
                     scraping_list = json.load(f)
+            scraping_ids = set(a['artist_id'] for a in scraping_list if 'artist_id' in a)
+            scraping_map = {a['artist_id']: a for a in scraping_list if 'artist_id' in a}
             # Build new scraping list: keep only followed, add missing
             followed_map = {a['id']: a for a in followed}
             new_scraping_list = []
             today = datetime.now().strftime("%Y-%m-%d")
+            added_artists = []
             for fid in followed_ids:
-                # Try to preserve existing info if present
                 match = next((a for a in scraping_list if a.get('artist_id') == fid), None)
                 if match:
                     new_scraping_list.append(match)
                 else:
                     a = followed_map[fid]
-                    new_scraping_list.append({
+                    new_entry = {
                         "artist_name": a.get('name', ''),
                         "artist_id": a['id'],
                         "url": a.get('external_urls', {}).get('spotify', ''),
                         "date_added": today,
                         "removed": False,
                         "source": "sync"
-                    })
+                    }
+                    new_scraping_list.append(new_entry)
+                    added_artists.append({"id": a['id'], "name": a.get('name', '')})
+            # Artists removed
+            removed_artists = [
+                {"id": a['artist_id'], "name": a.get('artist_name', '')}
+                for a in scraping_list if a.get('artist_id') not in followed_ids
+            ]
             # Save new scraping list
             with open(master_path, 'w', encoding='utf-8') as f:
                 json.dump(new_scraping_list, f, indent=2)
-            return jsonify({"success": True, "message": "Scraping list synced to followed artists.", "new_count": len(new_scraping_list)})
+            return jsonify({
+                "success": True,
+                "message": "Scraping list synced to followed artists.",
+                "new_count": len(new_scraping_list),
+                "added_artists": added_artists,
+                "removed_artists": removed_artists
+            })
         except Exception as e:
             logger.error(f"Error in sync_lists: {e}")
             return jsonify({"success": False, "message": str(e)})
@@ -534,5 +549,29 @@ def create_admin_routes(spotify_service, data_service, job_service):
     
     # Scheduler endpoints removed (scheduler_service is deprecated)
     # Cleaned up: No scheduler code remains. If you see this comment, all scheduler code is removed.
+    
+    @admin_bp.route("/download_scraping_backup", methods=["GET"])
+    def download_scraping_backup():
+        """Download the current scraping list as a JSON file for backup."""
+        try:
+            from app.config import Config
+            master_path = Config.FOLLOWED_ARTISTS_PATH
+            if not os.path.exists(master_path):
+                return jsonify({"success": False, "message": "Scraping list file not found."}), 404
+            with open(master_path, 'r', encoding='utf-8') as f:
+                data = f.read()
+            from flask import Response
+            import datetime
+            filename = f"scraping_backup_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+            return Response(
+                data,
+                mimetype='application/json',
+                headers={
+                    'Content-Disposition': f'attachment;filename={filename}'
+                }
+            )
+        except Exception as e:
+            logger.error(f"Error in download_scraping_backup: {e}")
+            return jsonify({"success": False, "message": str(e)}), 500
     
     return admin_bp
