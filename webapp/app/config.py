@@ -23,7 +23,7 @@ class Config:
     # Data file paths
     DATA_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "results", "spotify-monthly-listeners-master.json")
     FOLLOWED_ARTISTS_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "results", "spotify-followed-artists-master.json")
-    SUGGESTIONS_FILE = os.path.join(os.path.dirname(__file__), "..", "artist_suggestions.json")
+    # SUGGESTIONS_FILE removed: no longer used after workflow refactor
     BLACKLIST_FILE = os.path.join(os.path.dirname(__file__), "..", "artist_blacklist.json")
     
     # Scraping settings

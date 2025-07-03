@@ -39,23 +39,21 @@
                     </form>
                     <div id="artistSearchResults"></div>
                     <div id="artistTopTracks"></div>
+                    <div id="addArtistSection" style="display:none;">
+                        <div class="card mt-3" style="background: rgba(40, 40, 60, 0.95); border: 1px solid rgba(0,255,127,0.3);">
+                            <div class="card-body">
+                                <div id="addArtistInfo" class="mb-3" style="color:#fff;"></div>
+                                <button id="addArtistBtn" class="btn btn-success">
+                                    <i class="fas fa-plus"></i> Add Artist
+                                </button>
+                                <div id="addArtistResult" class="mt-2"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Process Artist Section -->
-            <div class="card mb-4" style="background: rgba(40, 40, 60, 0.95); border: 1px solid rgba(0, 255, 127, 0.3);">
-                <div class="card-header" style="background: rgba(0, 255, 127, 0.1); border-bottom: 1px solid rgba(0, 255, 127, 0.3);">
-                    <h5 class="mb-0" style="color: #00ff7f;">
-                        <i class="fas fa-sync-alt"></i> Unprocessed Followed Artists
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div id="unprocessedArtistsList" class="mb-3"></div>
-                    <button class="btn btn-outline-primary" onclick="fetchUnprocessedArtists()">
-                        <i class="fas fa-sync-alt"></i> Refresh List
-                    </button>
-                </div>
-            </div>
+            <!-- Process Artist Section removed: Unprocessed Followed Artists logic is obsolete -->
             
             <!-- Loading spinner -->
             <div id="loading" class="text-center py-4" style="display: none;">
@@ -527,37 +525,7 @@ function formatScrapingOutput(output) {
     return formattedOutput;
 }
 
-// Fetch and render unprocessed followed artists
-function fetchUnprocessedArtists() {
-    const container = document.getElementById('unprocessedArtistsList');
-    container.innerHTML = '<div class="text-center py-2"><div class="spinner-border text-info"></div> Loading...</div>';
-    fetch('/admin/process_artist_list')
-        .then(response => response.json())
-        .then(data => {
-            if (data.success && data.unprocessed_artists.length > 0) {
-                container.innerHTML = renderUnprocessedArtists(data.unprocessed_artists);
-            } else {
-                container.innerHTML = '<div class="alert alert-warning">No unprocessed followed artists found.</div>';
-            }
-        })
-        .catch(error => {
-            container.innerHTML = '<div class="alert alert-danger">Failed to load unprocessed artists: ' + error.message + '</div>';
-        });
-}
-
-function renderUnprocessedArtists(artists) {
-    let html = '<ul class="list-group">';
-    artists.forEach(artist => {
-        html += `<li class="list-group-item d-flex justify-content-between align-items-center">
-            <span><strong>${artist.artist_name || artist.name}</strong> <small class="text-muted">(${artist.artist_id})</small></span>
-            <a href="https://open.spotify.com/artist/${artist.artist_id}" target="_blank" class="btn btn-sm btn-outline-success">Spotify</a>
-        </li>`;
-    });
-    html += '</ul>';
-    return html;
-}
-
-document.addEventListener('DOMContentLoaded', fetchUnprocessedArtists);
+// Unprocessed Followed Artists logic removed: no longer needed after workflow refactor
             
             <!-- ...Automated Scheduling Controls card removed... -->
             
@@ -644,42 +612,94 @@ if (searchInput && autocompleteBox) {
             autocompleteBox.style.display = 'none';
             autocompleteBox.innerHTML = '';
             // Show top tracks for confirmation
-            showArtistTopTracks(artistId, artistName);
+            setTimeout(() => showArtistTopTracks(artistId, artistName), 0);
         }
     });
 // Fetch and display top tracks for a selected artist
 function showArtistTopTracks(artistId, artistName) {
     const topTracksDiv = document.getElementById('artistTopTracks');
+    const addArtistSection = document.getElementById('addArtistSection');
+    const addArtistInfo = document.getElementById('addArtistInfo');
+    const addArtistBtn = document.getElementById('addArtistBtn');
+    const addArtistResult = document.getElementById('addArtistResult');
     if (!artistId) {
         topTracksDiv.innerHTML = '';
+        if (addArtistSection) addArtistSection.style.display = 'none';
         return;
     }
     topTracksDiv.innerHTML = '<div class="text-center py-2"><div class="spinner-border text-info"></div> Loading top tracks...</div>';
-    fetch(`/admin/artist_top_tracks?artist_id=${encodeURIComponent(artistId)}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success && data.tracks && data.tracks.length > 0) {
-                let html = `<div class='card mt-3' style="background: rgba(40, 40, 60, 0.95); border: 1px solid rgba(0, 255, 127, 0.3);">
-                    <div class='card-header' style="background: rgba(0, 255, 127, 0.1); border-bottom: 1px solid rgba(0, 255, 127, 0.3); color: #00ff7f;">
-                        <strong>Top Tracks for ${artistName}</strong>
+    // Fetch artist info and top tracks in parallel
+    Promise.all([
+        fetch(`/admin/artist_info?artist_id=${encodeURIComponent(artistId)}`).then(r => r.json()),
+        fetch(`/admin/artist_top_tracks?artist_id=${encodeURIComponent(artistId)}`).then(r => r.json())
+    ]).then(([artistData, tracksData]) => {
+        // Render top tracks
+        if (tracksData.success && tracksData.tracks && tracksData.tracks.length > 0) {
+            let html = `<div class='card mt-3' style="background: rgba(40, 40, 60, 0.95); border: 1px solid rgba(0, 255, 127, 0.3);">
+                <div class='card-header' style="background: rgba(0, 255, 127, 0.1); border-bottom: 1px solid rgba(0, 255, 127, 0.3); color: #00ff7f;">
+                    <strong>Top Tracks for ${artistData.success && artistData.artist ? artistData.artist.name : artistName}</strong>
+                </div>
+                <ul class='list-group list-group-flush' style="background: transparent;">`;
+            tracksData.tracks.forEach(track => {
+                html += `<li class='list-group-item d-flex align-items-center' style="background: transparent; color: #fff; border-color: rgba(0,255,127,0.1);">
+                    <img src='${track.album_image || '/static/default-artist.png'}' alt='' class='rounded me-3' style='width:40px;height:40px;object-fit:cover;'>
+                    <span><strong>${track.name}</strong></span>
+                    <a href='${track.url}' target='_blank' class='btn btn-sm btn-outline-success ms-auto'>Play <i class='fas fa-play'></i></a>
+                </li>`;
+            });
+            html += '</ul></div>';
+            topTracksDiv.innerHTML = html;
+        } else {
+            topTracksDiv.innerHTML = `<div class='alert alert-warning'>No top tracks found for this artist.</div>`;
+        }
+        // Show add artist section with API info
+        if (addArtistSection && addArtistInfo && addArtistBtn && addArtistResult) {
+            addArtistSection.style.display = 'block';
+            if (artistData.success && artistData.artist) {
+                const a = artistData.artist;
+                addArtistInfo.innerHTML = `
+                    <div class='d-flex align-items-center mb-2'>
+                        <img src='${a.image || '/static/default-artist.png'}' alt='' class='rounded me-3' style='width:60px;height:60px;object-fit:cover;'>
+                        <div>
+                            <strong style='font-size:1.2em;'>${a.name}</strong><br>
+                            <span style='color:#fff;'>Followers: ${a.followers ? a.followers.toLocaleString() : 'N/A'}</span><br>
+                            <a href='${a.url}' target='_blank' class='btn btn-sm btn-outline-info mt-1'>View on Spotify <i class='fab fa-spotify'></i></a>
+                        </div>
                     </div>
-                    <ul class='list-group list-group-flush' style="background: transparent;">`;
-                data.tracks.forEach(track => {
-                    html += `<li class='list-group-item d-flex align-items-center' style="background: transparent; color: #fff; border-color: rgba(0,255,127,0.1);">
-                        <img src='${track.album_image || '/static/default-artist.png'}' alt='' class='rounded me-3' style='width:40px;height:40px;object-fit:cover;'>
-                        <span><strong>${track.name}</strong></span>
-                        <a href='${track.url}' target='_blank' class='btn btn-sm btn-outline-success ms-auto'>Play <i class='fas fa-play'></i></a>
-                    </li>`;
-                });
-                html += '</ul></div>';
-                topTracksDiv.innerHTML = html;
+                `;
             } else {
-                topTracksDiv.innerHTML = `<div class='alert alert-warning'>No top tracks found for this artist.</div>`;
+                addArtistInfo.innerHTML = `<strong>${artistName}</strong>`;
             }
-        })
-        .catch(() => {
-            topTracksDiv.innerHTML = `<div class='alert alert-danger'>Failed to load top tracks.</div>`;
-        });
+            addArtistResult.innerHTML = '';
+            addArtistBtn.onclick = function() {
+                addArtistBtn.disabled = true;
+                addArtistBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
+                fetch('/admin/add_artist', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ artist_id: artistId, artist_name: artistName })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        addArtistResult.innerHTML = `<div class='alert alert-success'>${data.message || 'Artist added successfully!'}</div>`;
+                    } else {
+                        addArtistResult.innerHTML = `<div class='alert alert-danger'>${data.message || 'Failed to add artist.'}</div>`;
+                    }
+                    addArtistBtn.disabled = false;
+                    addArtistBtn.innerHTML = '<i class="fas fa-plus"></i> Add Artist';
+                })
+                .catch(() => {
+                    addArtistResult.innerHTML = `<div class='alert alert-danger'>Failed to add artist.</div>`;
+                    addArtistBtn.disabled = false;
+                    addArtistBtn.innerHTML = '<i class="fas fa-plus"></i> Add Artist';
+                });
+            };
+        }
+    }).catch(() => {
+        topTracksDiv.innerHTML = `<div class='alert alert-danger'>Failed to load top tracks or artist info.</div>`;
+        if (addArtistSection) addArtistSection.style.display = 'none';
+    });
 }
 
     // Hide autocomplete when clicking outside

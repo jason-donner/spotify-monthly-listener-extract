@@ -42,20 +42,14 @@ class SchedulerService:
             raise
     
     def _run_daily_scrape(self):
-        """Execute the daily scraping job and process suggestions."""
+        """Execute the daily scraping job."""
         try:
             logger.info("Starting automated daily scraping...")
-
-            # Process suggestions before scraping
-            logger.info("Processing artist suggestions before daily scrape...")
-            self.job_service.run_process_suggestions()
-
             # Create a full scraping job (not today-only)
             job_id = self.job_service.create_scraping_job(
                 headless=True,  # Run in headless mode for automation
                 today_only=False  # Full scrape
             )
-            
             if self.job_service.start_scraping_job(job_id):
                 logger.info(f"Daily scraping job started successfully. Job ID: {job_id}")
             else:

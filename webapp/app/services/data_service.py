@@ -307,35 +307,7 @@ class DataService:
             'tier': tier
         }
     
-    def load_suggestions(self) -> List[Dict[str, Any]]:
-        """Load artist suggestions from file."""
-        if not os.path.exists(self.suggestions_file):
-            return []
-        
-        try:
-            with open(self.suggestions_file, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception as e:
-            logger.error(f"Error loading suggestions: {e}")
-            return []
-    
-    def save_suggestions(self, suggestions: List[Dict[str, Any]]) -> bool:
-        """
-        Save suggestions to file.
-        
-        Args:
-            suggestions: List of suggestion dictionaries
-        
-        Returns:
-            True if successful, False otherwise
-        """
-        try:
-            with open(self.suggestions_file, "w", encoding="utf-8") as f:
-                json.dump(suggestions, f, indent=2, ensure_ascii=False)
-            return True
-        except Exception as e:
-            logger.error(f"Error saving suggestions: {e}")
-            return False
+    # Removed: suggestion loading/saving methods and all related logic
     
     def load_blacklist(self) -> tuple[List[str], List[str]]:
         """

@@ -39,11 +39,7 @@ A modern web-based system for tracking Spotify artists' monthly listener counts 
 - **🚀 Stable Admin Panel** - All admin functionality now works reliably with proper authentication
 
 ### Admin Panel Improvements
-- **🚀 Streamlined "Follow & Track" Process** - One-click approval that follows artists and marks suggestions as processed
-- **🔧 Fixed Suggestion Tab Management** - Properly moves processed suggestions between tabs
-- **📊 Enhanced Filtering Logic** - Accurate categorization of pending, approved, and processed suggestions
-- **🐛 Bug Fixes** - Resolved issues with stuck suggestions in "Pending Review"
-- **📝 Improved Logging** - Added detailed debug logging for suggestion processing
+// ...removed legacy suggestion/approval/processing features after workflow refactor...
 - **🎨 Modern Admin Login** - Beautiful Spotify-themed login page with improved UX
 - **🔒 Secure Authentication** - Environment variable-based password management
 - **🛡️ Security Logging** - Comprehensive admin activity and authentication logging
@@ -55,10 +51,7 @@ A modern web-based system for tracking Spotify artists' monthly listener counts 
 - **🎯 Refined Artist Selection** - Top tracks appear after artist selection, not on hover
 
 ### Backend Improvements
-- **🔄 Enhanced Suggestion Lifecycle** - Better handling of suggestion status transitions
-- **⚡ Optimized Admin Actions** - Combined follow and processing into single operation
-- **🛡️ Error Handling** - More robust error handling and user feedback
-- **📋 Data Consistency** - Fixed data structure inconsistencies in suggestion processing
+// ...removed legacy suggestion/approval/processing features after workflow refactor...
 
 ### Code Quality Enhancements
 - **🔍 Improved Logging** - Added detailed debug logging for better troubleshooting
