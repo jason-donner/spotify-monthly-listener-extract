@@ -40,6 +40,12 @@
             </span>
         </div>
         {% endif %}
+        {% if leaderboard|length == 0 %}
+        <div style="text-align:center; color:#ff4d4d; font-size:1.2em; font-weight:bold; margin:40px 0;">
+            No leaderboard data available for the selected period and tier.<br>
+            <span style="font-size:0.95em; color:#b2f7ef;">Try a different tier, or check back after more data is collected.</span>
+        </div>
+        {% else %}
         <table class="leaderboard-table">
             <tr>
                 <th>Artist</th>
@@ -66,9 +72,9 @@
                 </td>
                 <td class="change-col">
                     {% if row.change > 0 %}
-                        <span style="color:#00ff7f;">+{{ "{:,}".format(row.change) }}</span>
+                        <span style="color:#00ff7f;">+{{ ",".format(row.change) }}</span>
                     {% elif row.change < 0 %}
-                        <span style="color:#e74c3c;">{{ "{:,}".format(row.change) }}</span>
+                        <span style="color:#e74c3c;">{{ ",".format(row.change) }}</span>
                     {% else %}
                         <span style="color:#aaa;">—</span>
                     {% endif %}
@@ -82,11 +88,12 @@
                         <span style="color:#aaa;">—</span>
                     {% endif %}
                 </td>
-                <td>{{ "{:,}".format(row.start) }}</td>
-                <td>{{ "{:,}".format(row.end) }}</td>
+                <td>{{ ",".format(row.start) }}</td>
+                <td>{{ ",".format(row.end) }}</td>
             </tr>
             {% endfor %}
         </table>
+        {% endif %}
     </div>
 </div>
 <style>

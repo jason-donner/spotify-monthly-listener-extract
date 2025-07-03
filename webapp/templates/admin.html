@@ -163,13 +163,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const followMissingBtn = document.getElementById('followMissingBtn');
     const syncResult = document.getElementById('syncResult');
     const downloadBackupBtn = document.getElementById('downloadBackupBtn');
-    const runScrapingBtn = document.getElementById('runScrapingBtn');
     let lastSyncData = null;
-
-    // Attach event listener for Run Scraping button
-    if (runScrapingBtn) {
-        runScrapingBtn.addEventListener('click', runScraping);
-    }
 
     checkSyncBtn.addEventListener('click', function() {
         syncResult.innerHTML = 'Checking... <i class="fas fa-spinner fa-spin"></i>';
@@ -969,7 +963,7 @@ function searchArtist() {
     document.getElementById('artistSearchResults').innerHTML = '<div class="text-center py-2"><div class="spinner-border text-info"></div> Searching...</div>';
     fetch(`/admin/search_artist?q=${encodeURIComponent(query)}`)
         .then(response => response.json())
-        .then data => {
+        .then(data => {
             if (data.success && data.results.length > 0) {
                 renderArtistSearchResults(data.results);
             } else {
@@ -1018,6 +1012,13 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // --- END ALL ADMIN PANEL JS ---
+// Attach event listener for Run Scraping button (ensure runScraping is defined)
+document.addEventListener('DOMContentLoaded', function() {
+    const runScrapingBtn = document.getElementById('runScrapingBtn');
+    if (runScrapingBtn) {
+        runScrapingBtn.addEventListener('click', runScraping);
+    }
+});
 </script>
 {% endraw %}
 {% endblock %}
