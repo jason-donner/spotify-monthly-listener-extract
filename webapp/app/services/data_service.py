@@ -25,51 +25,36 @@ class DataService:
     
     def load_data(self, use_cache: bool = True) -> List[Dict[str, Any]]:
         """
-        Load the master data file with optional caching.
-        
-        Args:
-            use_cache: Whether to use cached data if available
-        
-        Returns:
-            List of artist data dictionaries
+        Load the master data file with optional caching, filtering out non-scraping entries.
+        Only entries with 'monthly_listeners' and 'date' are returned.
         """
         current_time = datetime.now()
-        
-        # Check if file exists
         if not os.path.exists(self.data_path):
             logger.error(f"Data file not found: {self.data_path}")
             return []
-        
-        # Get file modification time
         try:
             file_mtime = datetime.fromtimestamp(os.path.getmtime(self.data_path))
         except OSError as e:
             logger.error(f"Error getting file modification time: {e}")
             file_mtime = current_time
-        
-        # Check cache validity - invalidate if file is newer than cache
         cache_valid = (
             use_cache and 
             self._data_cache is not None and 
             self._cache_timestamp is not None and
             (current_time - self._cache_timestamp).seconds < self._cache_ttl and
-            (self._cache_timestamp >= file_mtime)  # Cache is newer than file
+            (self._cache_timestamp >= file_mtime)
         )
-        
         if cache_valid:
             return self._data_cache
-        
         try:
             with open(self.data_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                
-            # Update cache
-            self._data_cache = data
+            # Filter: only keep entries with both 'monthly_listeners' and 'date'
+            filtered = [d for d in data if 'monthly_listeners' in d and 'date' in d]
+            self._data_cache = filtered
             self._cache_timestamp = current_time
-            
-            logger.info(f"Loaded {len(data)} records from data file (cache {'refreshed' if not cache_valid else 'used'})")
-            return data
-        
+            logger.info(f"Loaded {len(filtered)} valid records from data file (cache {'refreshed' if not cache_valid else 'used'})")
+            return filtered
         except FileNotFoundError:
             logger.error(f"Data file not found: {self.data_path}")
             return []
@@ -200,6 +185,9 @@ class DataService:
         
         # Group data by artist
         for entry in data:
+            # Defensive: skip if missing required fields
+            if "artist_name" not in entry or "monthly_listeners" not in entry or "date" not in entry:
+                continue
             artist = entry["artist_name"]
             date_str = entry["date"]
             try:
@@ -239,11 +227,9 @@ class DataService:
             start_date = None
             end_date = None
         
-        # Debug: print how many artists and records are being processed
-        print(f"[DEBUG] Total artists in data: {len(artist_changes)}")
+        # Remove excessive debug prints in production
         for artist, records in artist_changes.items():
             recent = [r for r in records if r["date"] >= cutoff]
-            print(f"[DEBUG] Artist: {artist}, records in range: {len(recent)}")
             if len(recent) < 2:
                 continue
             recent.sort(key=lambda x: x["date"])
