@@ -26,7 +26,6 @@ def create_admin_routes(spotify_service, data_service, job_service):
     admin_bp = Blueprint('admin', __name__)
 
     @admin_bp.route("/check_sync", methods=["GET"])
-    @admin_login_required
     def check_sync():
         """Compare followed artists (Spotify) and scraping list, report differences."""
         try:
@@ -56,7 +55,6 @@ def create_admin_routes(spotify_service, data_service, job_service):
             return jsonify({"success": False, "message": str(e)})
 
     @admin_bp.route("/sync_lists", methods=["POST"])
-    @admin_login_required
     def sync_lists():
         """Sync scraping list to match followed artists (Spotify)."""
         try:
@@ -142,7 +140,6 @@ def create_admin_routes(spotify_service, data_service, job_service):
             return jsonify({"success": False, "results": [], "message": f"Error: {str(e)}"}), 200
 
     @admin_bp.route("/artist_top_tracks", methods=["GET"])
-    @admin_login_required
     def admin_artist_top_tracks():
         """Get top tracks for a given artist ID from Spotify."""
         try:
@@ -210,7 +207,6 @@ def create_admin_routes(spotify_service, data_service, job_service):
         return jsonify({"admin_authenticated": require_admin_auth()})
     
     @admin_bp.route("/")
-    @admin_login_required
     def admin():
         """Admin page to review and manage artist suggestions."""
         client_ip = get_client_ip()
@@ -226,7 +222,6 @@ def create_admin_routes(spotify_service, data_service, job_service):
         return render_template("admin.html")
     
     @admin_bp.route("/login")
-    @admin_login_required
     def login():
         """Initiate Spotify OAuth login"""
         # Check if force login is requested
@@ -274,7 +269,6 @@ def create_admin_routes(spotify_service, data_service, job_service):
     
 
     @admin_bp.route("/add_artist", methods=["POST"])
-    @admin_login_required
     def admin_add_artist():
         """Admin endpoint to directly add (follow) an artist by Spotify ID or URL."""
 
@@ -414,7 +408,6 @@ def create_admin_routes(spotify_service, data_service, job_service):
     # Removed: /follow_artist endpoint and all suggestion/approval processing logic
     
     @admin_bp.route("/run_scraping", methods=["POST"])
-    @admin_login_required
     def admin_run_scraping():
         """Admin endpoint to run the scraping script."""
         try:
@@ -444,7 +437,6 @@ def create_admin_routes(spotify_service, data_service, job_service):
             return jsonify({"success": False, "message": f"Error: {str(e)}"})
     
     @admin_bp.route("/scraping_status/<job_id>")
-    @admin_login_required
     def admin_scraping_status(job_id):
         """Get the status of a scraping job."""
         try:
@@ -463,7 +455,6 @@ def create_admin_routes(spotify_service, data_service, job_service):
             return jsonify({"success": False, "message": f"Error: {str(e)}"})
     
     @admin_bp.route("/scraping_jobs")
-    @admin_login_required
     def admin_scraping_jobs():
         """Get all scraping jobs."""
         try:
