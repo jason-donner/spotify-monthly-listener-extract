@@ -23,6 +23,8 @@ def get_client_ip():
     return request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr)
 
 def create_admin_routes(spotify_service, data_service, job_service):
+    admin_bp = Blueprint('admin', __name__)
+
     @admin_bp.route("/check_sync", methods=["GET"])
     @admin_login_required
     def check_sync():
@@ -94,7 +96,7 @@ def create_admin_routes(spotify_service, data_service, job_service):
         except Exception as e:
             logger.error(f"Error in sync_lists: {e}")
             return jsonify({"success": False, "message": str(e)})
-    admin_bp = Blueprint('admin', __name__)
+
 
     def admin_artist_info():
         """Get artist information via API (no admin auth required)."""
