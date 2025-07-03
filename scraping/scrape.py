@@ -536,17 +536,15 @@ def report(results, failed_urls):
 
 def save_results(results, today, output_path=None):
     """
-    Save the scraping results to a JSON file.
+    Save the scraping results to the master JSON file only.
     """
-    if not output_path:
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        results_dir = os.path.join(script_dir, "..", "data", "results")
-        os.makedirs(results_dir, exist_ok=True)
-        output_path = os.path.join(results_dir, f'spotify-monthly-listeners-{today}.json')
-    
-    with open(output_path, 'w', encoding='utf-8') as f:
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    results_dir = os.path.join(script_dir, "..", "data", "results")
+    os.makedirs(results_dir, exist_ok=True)
+    master_path = os.path.join(results_dir, 'spotify-monthly-listeners-master.json')
+    with open(master_path, 'w', encoding='utf-8') as f:
         json.dump(results, f, ensure_ascii=False, indent=2)
-    print(Fore.GREEN + f"Saved {len(results)} results to {output_path}")
+    print(Fore.GREEN + f"Saved {len(results)} results to {master_path}")
 
 
 def append_to_master(results, master_path=None):
@@ -692,15 +690,13 @@ def main():
             results.extend(retry_results)
             failed_urls = still_failed
             
-        save_results(results, today, args.output)
-        append_to_master(results)
+        save_results(results, today)
         report(results, failed_urls)
         
     except KeyboardInterrupt:
         print(Fore.YELLOW + "\n\nScraping interrupted by user. Saving partial results...")
         if 'results' in locals():
-            save_results(results, today, args.output)
-            append_to_master(results)
+            save_results(results, today)
             report(results, failed_urls if 'failed_urls' in locals() else [])
         print("Partial results saved.")
     except Exception as e:
@@ -709,8 +705,7 @@ def main():
         print("Try running the script again later or with fewer concurrent requests.")
         if 'results' in locals() and results:
             print("Saving partial results...")
-            save_results(results, today, args.output)
-            append_to_master(results)
+            save_results(results, today)
             print("Partial results saved.")
         raise
     finally:
