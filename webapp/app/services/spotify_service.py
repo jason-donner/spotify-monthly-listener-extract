@@ -11,6 +11,36 @@ import logging
 logger = logging.getLogger(__name__)
 
 class SpotifyService:
+    def get_followed_artists(self, limit=50):
+        """
+        Get the list of artists followed by the current user.
+        Args:
+            limit: Maximum number of artists to return per request (max 50 per Spotify API)
+        Returns:
+            List of artist dicts, or empty list if not authenticated or error.
+        """
+        sp = self.get_authenticated_client()
+        if not sp:
+            return []
+        artists = []
+        after = None
+        try:
+            while True:
+                if after:
+                    results = sp.current_user_followed_artists(limit=limit, after=after)
+                else:
+                    results = sp.current_user_followed_artists(limit=limit)
+                items = results.get('artists', {}).get('items', [])
+                if not items:
+                    break
+                artists.extend(items)
+                if len(items) < limit:
+                    break
+                after = items[-1]['id']
+            return artists
+        except Exception as e:
+            logger.error(f"Error fetching followed artists: {e}")
+            return []
     """Service class for Spotify API interactions."""
     
     def __init__(self, client_id, client_secret, redirect_uri, scope):

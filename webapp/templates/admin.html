@@ -173,9 +173,23 @@ document.addEventListener('DOMContentLoaded', function() {
                         msg += '<br><span style="color:#ffb347;">Lists are out of sync.</span>';
                         if (data.in_followed_not_scraping.length > 0) {
                             msg += `<br>Artists followed but not in scraping list: <b>${data.in_followed_not_scraping.length}</b>`;
+                            if (Array.isArray(data.in_followed_not_scraping_names)) {
+                                msg += `<details style='margin-top:4px;'><summary style='cursor:pointer;'>Show list</summary><ul style='text-align:left; max-height:200px; overflow:auto;'>`;
+                                data.in_followed_not_scraping_names.forEach(a => {
+                                    msg += `<li><b>${a.name}</b> <span style='color:#888;'>(${a.id})</span></li>`;
+                                });
+                                msg += `</ul></details>`;
+                            }
                         }
                         if (data.in_scraping_not_followed.length > 0) {
                             msg += `<br>Artists in scraping list but not followed: <b>${data.in_scraping_not_followed.length}</b>`;
+                            if (Array.isArray(data.in_scraping_not_followed_names)) {
+                                msg += `<details style='margin-top:4px;'><summary style='cursor:pointer;'>Show list</summary><ul style='text-align:left; max-height:200px; overflow:auto;'>`;
+                                data.in_scraping_not_followed_names.forEach(a => {
+                                    msg += `<li><b>${a.name}</b> <span style='color:#888;'>(${a.id})</span></li>`;
+                                });
+                                msg += `</ul></details>`;
+                            }
                         }
                         syncNowBtn.style.display = 'inline-block';
                     }

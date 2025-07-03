@@ -32,6 +32,7 @@ def create_admin_routes(spotify_service, data_service, job_service):
             # Fetch followed artists from Spotify
             followed = spotify_service.get_followed_artists()
             followed_ids = set(a['id'] for a in followed)
+            followed_map = {a['id']: a for a in followed}
             # Load scraping list from master file
             scraping_list = []
             from app.config import Config
@@ -40,13 +41,33 @@ def create_admin_routes(spotify_service, data_service, job_service):
                 with open(master_path, 'r', encoding='utf-8') as f:
                     scraping_list = json.load(f)
             scraping_ids = set(a['artist_id'] for a in scraping_list if 'artist_id' in a)
+            scraping_map = {a['artist_id']: a for a in scraping_list if 'artist_id' in a}
             # Compute differences
             in_followed_not_scraping = list(followed_ids - scraping_ids)
             in_scraping_not_followed = list(scraping_ids - followed_ids)
+
+            # Get artist names for each difference
+            in_followed_not_scraping_names = [
+                {
+                    "id": aid,
+                    "name": followed_map[aid]["name"] if aid in followed_map else "(unknown)"
+                }
+                for aid in in_followed_not_scraping
+            ]
+            in_scraping_not_followed_names = [
+                {
+                    "id": aid,
+                    "name": scraping_map[aid]["artist_name"] if aid in scraping_map else "(unknown)"
+                }
+                for aid in in_scraping_not_followed
+            ]
+
             return jsonify({
                 "success": True,
                 "in_followed_not_scraping": in_followed_not_scraping,
                 "in_scraping_not_followed": in_scraping_not_followed,
+                "in_followed_not_scraping_names": in_followed_not_scraping_names,
+                "in_scraping_not_followed_names": in_scraping_not_followed_names,
                 "followed_count": len(followed_ids),
                 "scraping_count": len(scraping_ids)
             })
