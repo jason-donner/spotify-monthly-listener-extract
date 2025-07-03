@@ -279,7 +279,8 @@ def create_admin_routes(spotify_service, data_service, job_service):
             # Only minimal fields: artist_name, artist_id, url, date_added, removed, source
             today = datetime.now().strftime("%Y-%m-%d")
             artist_url = f"https://open.spotify.com/artist/{artist_id}"
-            dataset_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "results", "spotify-monthly-listeners-master.json")
+            from app.config import Config
+            dataset_path = Config.FOLLOWED_ARTISTS_PATH
             try:
                 if os.path.exists(dataset_path):
                     with open(dataset_path, "r", encoding="utf-8") as f:
