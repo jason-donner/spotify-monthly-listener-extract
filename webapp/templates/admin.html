@@ -147,6 +147,9 @@
                     <button id="syncNowBtn" class="btn btn-lg btn-success fw-bold mt-3" style="display:none;">
                         <i class="fas fa-sync"></i> Sync Now
                     </button>
+                    <button id="followMissingBtn" class="btn btn-lg btn-warning fw-bold mt-3" style="display:none;">
+                        <i class="fas fa-user-plus"></i> Follow All Missing Artists
+                    </button>
                 </div>
             </div>
 
@@ -154,21 +157,25 @@
 document.addEventListener('DOMContentLoaded', function() {
     const checkSyncBtn = document.getElementById('checkSyncBtn');
     const syncNowBtn = document.getElementById('syncNowBtn');
+    const followMissingBtn = document.getElementById('followMissingBtn');
     const syncResult = document.getElementById('syncResult');
     let lastSyncData = null;
 
     checkSyncBtn.addEventListener('click', function() {
         syncResult.innerHTML = 'Checking... <i class="fas fa-spinner fa-spin"></i>';
         syncNowBtn.style.display = 'none';
+        followMissingBtn.style.display = 'none';
         fetch('/admin/check_sync')
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
                     lastSyncData = data;
                     let msg = `<b>Followed artists:</b> ${data.followed_count}<br><b>Scraping list:</b> ${data.scraping_count}`;
+                    let showFollowMissing = false;
                     if (data.in_followed_not_scraping.length === 0 && data.in_scraping_not_followed.length === 0) {
                         msg += '<br><span style="color:#00ff7f;">Lists are in sync!</span>';
                         syncNowBtn.style.display = 'none';
+                        followMissingBtn.style.display = 'none';
                     } else {
                         msg += '<br><span style="color:#ffb347;">Lists are out of sync.</span>';
                         if (data.in_followed_not_scraping.length > 0) {
@@ -189,17 +196,21 @@ document.addEventListener('DOMContentLoaded', function() {
                                     msg += `<li><b>${a.name}</b> <span style='color:#888;'>(${a.id})</span></li>`;
                                 });
                                 msg += `</ul></details>`;
+                                if (data.in_scraping_not_followed.length > 0) showFollowMissing = true;
                             }
                         }
                         syncNowBtn.style.display = 'inline-block';
+                        followMissingBtn.style.display = showFollowMissing ? 'inline-block' : 'none';
                     }
                     syncResult.innerHTML = msg;
                 } else {
                     syncResult.innerHTML = `<span style='color:#ff4d4d;'>Error: ${data.message}</span>`;
+                    followMissingBtn.style.display = 'none';
                 }
             })
             .catch(err => {
                 syncResult.innerHTML = `<span style='color:#ff4d4d;'>Error: ${err}</span>`;
+                followMissingBtn.style.display = 'none';
             });
     });
 
@@ -217,6 +228,33 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(err => {
                 syncResult.innerHTML = `<span style='color:#ff4d4d;'>Error: ${err}</span>`;
+            });
+    });
+
+    followMissingBtn.addEventListener('click', function() {
+        syncResult.innerHTML = 'Following missing artists... <i class="fas fa-spinner fa-spin"></i>';
+        followMissingBtn.disabled = true;
+        fetch('/admin/follow_missing_artists', {method: 'POST'})
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    let msg = `<span style='color:#00ff7f;'>Followed ${data.followed_count} of ${data.total} missing artists.</span>`;
+                    if (data.failed && data.failed.length > 0) {
+                        msg += `<br><span style='color:#ff4d4d;'>Failed to follow ${data.failed.length} artists:</span><ul style='text-align:left;'>`;
+                        data.failed.forEach(a => {
+                            msg += `<li><b>${a.name}</b> <span style='color:#888;'>(${a.id})</span> - ${a.error || 'Unknown error'}</li>`;
+                        });
+                        msg += `</ul>`;
+                    }
+                    syncResult.innerHTML = msg;
+                } else {
+                    syncResult.innerHTML = `<span style='color:#ff4d4d;'>Error: ${data.message}</span>`;
+                }
+                followMissingBtn.disabled = false;
+            })
+            .catch(err => {
+                syncResult.innerHTML = `<span style='color:#ff4d4d;'>Error: ${err}</span>`;
+                followMissingBtn.disabled = false;
             });
     });
 });

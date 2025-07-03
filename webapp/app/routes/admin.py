@@ -426,6 +426,47 @@ def create_admin_routes(spotify_service, data_service, job_service):
             logger.error(f"Error adding artist: {e}")
             return jsonify({"success": False, "message": f"Error: {str(e)}"})
     
+    @admin_bp.route("/follow_missing_artists", methods=["POST"])
+    def follow_missing_artists():
+        """Follow all artists in the scraping list but not currently followed."""
+        try:
+            # Fetch followed artists from Spotify
+            followed = spotify_service.get_followed_artists()
+            followed_ids = set(a['id'] for a in followed)
+            # Load scraping list from master file
+            from app.config import Config
+            master_path = Config.FOLLOWED_ARTISTS_PATH
+            scraping_list = []
+            if os.path.exists(master_path):
+                with open(master_path, 'r', encoding='utf-8') as f:
+                    scraping_list = json.load(f)
+            scraping_ids = set(a['artist_id'] for a in scraping_list if 'artist_id' in a)
+            scraping_map = {a['artist_id']: a for a in scraping_list if 'artist_id' in a}
+            # Find artists in scraping list but not followed
+            to_follow = list(scraping_ids - followed_ids)
+            results = []
+            for artist_id in to_follow:
+                name = scraping_map[artist_id]["artist_name"] if artist_id in scraping_map else artist_id
+                success, error = spotify_service.follow_artist(artist_id)
+                results.append({
+                    "id": artist_id,
+                    "name": name,
+                    "success": success,
+                    "error": error
+                })
+            followed_count = sum(1 for r in results if r["success"])
+            failed = [r for r in results if not r["success"]]
+            return jsonify({
+                "success": True,
+                "followed_count": followed_count,
+                "total": len(to_follow),
+                "results": results,
+                "failed": failed
+            })
+        except Exception as e:
+            logger.error(f"Error in follow_missing_artists: {e}")
+            return jsonify({"success": False, "message": str(e)})
+
     # Removed: /follow_artist endpoint and all suggestion/approval processing logic
     
     @admin_bp.route("/run_scraping", methods=["POST"])
