@@ -324,10 +324,13 @@ def create_admin_routes(spotify_service, data_service, job_service):
                 logger.error(f"Failed to save artist dataset: {e}")
                 return jsonify({"success": False, "message": f"Artist followed, but failed to update scraping dataset: {e}"})
 
-            follow_status_msg = "already followed" if already_following else "added and followed"
+            if already_following:
+                msg = f"Artist {artist_name} ({artist_id}) was already followed, and has been added to the scraping dataset."
+            else:
+                msg = f"Artist {artist_name} ({artist_id}) was added, followed, and added to the scraping dataset."
             return jsonify({
                 "success": True,
-                "message": f"Artist {artist_name} ({artist_id}) {follow_status_msg} and added to scraping dataset.",
+                "message": msg,
                 "warning": already_following
             })
         except Exception as e:
