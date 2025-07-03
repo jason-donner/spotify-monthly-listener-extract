@@ -294,18 +294,6 @@ Load Data → Display Charts → Search/Filter → Artist Details
 - ✅ **Log rotation**: Logs automatically rotate at 10MB (app.log) and 5MB (admin.log)
 
 ---
-
-## 📋 Migration from Dual-Account System
-
-If you were using the old dual-account system, see `MIGRATION_GUIDE.md` for detailed migration instructions.
-
-**Key Changes:**
-- ❌ No more main/scrape account separation
-- ❌ `spotify_follow_sync.py` script is deprecated (see `REMOVED_LEGACY_FILES.md`)
-- ✅ Single account for all operations
-- ✅ Web-based OAuth authentication
-- ✅ Simplified setup and configuration
-
 ---
 
 ## 📚 Additional Documentation
