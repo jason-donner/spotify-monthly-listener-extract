@@ -120,6 +120,7 @@ class JobService:
             # Set environment variables for the subprocess
             env = os.environ.copy()
             env['CHROMEDRIVER_PATH'] = self.chromedriver_path
+            env['PYTHONIOENCODING'] = 'utf-8'  # Force UTF-8 output for subprocess
             
             # Choose the appropriate scraping script
             script_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "scraping")
@@ -137,12 +138,10 @@ class JobService:
             input_file = os.path.join(data_dir, "spotify-followed-artists-master.json")
             cmd.extend(["--input", input_file])
 
-            # Add arguments
-            cmd.append("--no-prompt")  # Skip login prompt
-            
-            # Add headless mode for both scripts
+            # Add arguments based on headless mode
             if job_data.get('headless', True):
                 cmd.append("--headless")
+                cmd.append("--no-prompt")  # Only skip login prompt in headless mode
             
             # Add allow duplicates flag for both scripts
             if job_data.get('allow_duplicates', False):

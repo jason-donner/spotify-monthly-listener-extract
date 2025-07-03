@@ -623,70 +623,76 @@ def main():
     today = now()
     driver = None
 
+    def safe_print(text):
+        try:
+            print(text)
+        except UnicodeEncodeError:
+            print(text.encode('ascii', errors='replace').decode('ascii'))
+
     try:
         # Test network connectivity first, but allow override with --skip-network-test
         if not getattr(args, 'skip_network_test', False):
             if not test_network_connectivity():
-                print("Network connectivity issues detected. Proceeding anyway due to possible false positive (e.g., bot blocking).")
+                safe_print("Network connectivity issues detected. Proceeding anyway due to possible false positive (e.g., bot blocking).")
 
-        print("[DEBUG] scrape.py running in cwd:", os.getcwd())
-        print(f"[DEBUG] args.input: {args.input}")
+        safe_print(f"[DEBUG] scrape.py running in cwd: {os.getcwd()}")
+        safe_print(f"[DEBUG] args.input: {args.input}")
         if args.input and os.path.exists(args.input):
             with open(args.input, 'r', encoding='utf-8') as f:
                 preview = f.read(500)
-                print("[DEBUG] First 500 chars of input file:")
-                print(preview)
+                safe_print("[DEBUG] First 500 chars of input file:")
+                safe_print(preview)
 
         urls = load_urls(args.input)
-        print("\n[DEBUG] Loaded input artist list:")
+        safe_print("\n[DEBUG] Loaded input artist list:")
         for i, u in enumerate(urls):
             if isinstance(u, dict):
-                print(f"  - {u.get('artist_name', 'Unknown')} | {u.get('artist_id', extract_artist_id(u.get('url', '')))} | {u.get('url', '')}")
+                safe_print(f"  - {u.get('artist_name', 'Unknown')} | {u.get('artist_id', extract_artist_id(u.get('url', '')))} | {u.get('url', '')}")
             else:
-                print(f"  - [raw url] {u}")
+                safe_print(f"  - [raw url] {u}")
             if i > 10:
-                print("  ... (truncated)")
+                safe_print("  ... (truncated)")
                 break
 
         # Load existing listeners to prevent duplicates (unless bypassed)
         if args.allow_duplicates:
-            print("Duplicate protection disabled - will scrape all artists")
+            safe_print("Duplicate protection disabled - will scrape all artists")
             existing_artist_ids = set()
         else:
             existing_artist_ids = load_existing_listeners(today)
-        print("[DEBUG] Existing artist_ids for today:")
+        safe_print("[DEBUG] Existing artist_ids for today:")
         for eid in list(existing_artist_ids)[:10]:
-            print(f"  - {eid}")
+            safe_print(f"  - {eid}")
         if len(existing_artist_ids) > 10:
-            print("  ... (truncated)")
+            safe_print("  ... (truncated)")
 
-        print("\nSetting up Chrome WebDriver...")
+        safe_print("\nSetting up Chrome WebDriver...")
         try:
             driver = setup_driver(chromedriver_path=args.chromedriver, headless=args.headless)
         except Exception as e:
-            print(Fore.RED + f"Failed to create Chrome WebDriver: {e}")
-            print("\nTroubleshooting steps:")
-            print("1. Make sure Chrome is installed and updated")
-            print("2. Download the correct ChromeDriver version from https://chromedriver.chromium.org/")
-            print("3. Try running with --headless flag")
-            print("4. Restart your computer to clear stuck processes")
+            safe_print(f"Failed to create Chrome WebDriver: {e}")
+            safe_print("\nTroubleshooting steps:")
+            safe_print("1. Make sure Chrome is installed and updated")
+            safe_print("2. Download the correct ChromeDriver version from https://chromedriver.chromium.org/")
+            safe_print("3. Try running with --headless flag")
+            safe_print("4. Restart your computer to clear stuck processes")
             return
 
         # Initial navigation with retry logic
         max_init_retries = 3
         for attempt in range(max_init_retries):
             try:
-                print("Navigating to Spotify login page...")
+                safe_print("Navigating to Spotify login page...")
                 driver.get("https://accounts.spotify.com/login")
                 time.sleep(3)  # Wait for session/cookies to initialize
                 break
             except Exception as e:
                 if attempt < max_init_retries - 1:
-                    print(Fore.YELLOW + f"Failed to load Spotify login (attempt {attempt + 1}/{max_init_retries}): {e}")
-                    print("Retrying in 5 seconds...")
+                    safe_print(f"Failed to load Spotify login (attempt {attempt + 1}/{max_init_retries}): {e}")
+                    safe_print("Retrying in 5 seconds...")
                     time.sleep(5)
                 else:
-                    print(Fore.RED + f"Failed to load Spotify login after {max_init_retries} attempts: {e}")
+                    safe_print(f"Failed to load Spotify login after {max_init_retries} attempts: {e}")
                     raise
 
         # Only prompt if --no-prompt is NOT set
@@ -698,7 +704,7 @@ def main():
         results, failed_urls = scrape_all(driver, urls, today, bar_format, existing_artist_ids)
 
         if failed_urls:
-            print(Fore.YELLOW + f"\nRetrying {len(failed_urls)} failed URLs...")
+            safe_print(f"\nRetrying {len(failed_urls)} failed URLs...")
             retry_results, still_failed = retry_failed(driver, failed_urls, today)
             results.extend(retry_results)
             failed_urls = still_failed
@@ -707,27 +713,27 @@ def main():
         report(results, failed_urls)
 
     except KeyboardInterrupt:
-        print(Fore.YELLOW + "\n\nScraping interrupted by user. Saving partial results...")
+        safe_print("\n\nScraping interrupted by user. Saving partial results...")
         if 'results' in locals():
             save_results(results, today)
             report(results, failed_urls if 'failed_urls' in locals() else [])
-        print("Partial results saved.")
+        safe_print("Partial results saved.")
     except Exception as e:
-        print(Fore.RED + f"\nUnexpected error during scraping: {e}")
-        print("This might be due to network issues or Spotify blocking requests.")
-        print("Try running the script again later or with fewer concurrent requests.")
+        safe_print(f"\nUnexpected error during scraping: {e}")
+        safe_print("This might be due to network issues or Spotify blocking requests.")
+        safe_print("Try running the script again later or with fewer concurrent requests.")
         if 'results' in locals() and results:
-            print("Saving partial results...")
+            safe_print("Saving partial results...")
             save_results(results, today)
-            print("Partial results saved.")
+            safe_print("Partial results saved.")
         raise
     finally:
         if driver:
             try:
-                print("Closing browser...")
+                safe_print("Closing browser...")
                 driver.quit()
             except Exception as e:
-                print(Fore.YELLOW + f"Warning: Error closing browser: {e}")
+                safe_print(f"Warning: Error closing browser: {e}")
                 # Force kill if normal quit fails
                 kill_chrome_processes()
 
