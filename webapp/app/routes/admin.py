@@ -7,6 +7,7 @@ from datetime import datetime
 import logging
 import hashlib
 import os
+import json
 
 logger = logging.getLogger(__name__)
 admin_security_logger = logging.getLogger('admin_security')
@@ -22,6 +23,77 @@ def get_client_ip():
     return request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr)
 
 def create_admin_routes(spotify_service, data_service, job_service):
+    @admin_bp.route("/check_sync", methods=["GET"])
+    @admin_login_required
+    def check_sync():
+        """Compare followed artists (Spotify) and scraping list, report differences."""
+        try:
+            # Fetch followed artists from Spotify
+            followed = spotify_service.get_followed_artists()
+            followed_ids = set(a['id'] for a in followed)
+            # Load scraping list from master file
+            scraping_list = []
+            from app.config import Config
+            master_path = Config.FOLLOWED_ARTISTS_PATH
+            if os.path.exists(master_path):
+                with open(master_path, 'r', encoding='utf-8') as f:
+                    scraping_list = json.load(f)
+            scraping_ids = set(a['artist_id'] for a in scraping_list if 'artist_id' in a)
+            # Compute differences
+            in_followed_not_scraping = list(followed_ids - scraping_ids)
+            in_scraping_not_followed = list(scraping_ids - followed_ids)
+            return jsonify({
+                "success": True,
+                "in_followed_not_scraping": in_followed_not_scraping,
+                "in_scraping_not_followed": in_scraping_not_followed,
+                "followed_count": len(followed_ids),
+                "scraping_count": len(scraping_ids)
+            })
+        except Exception as e:
+            logger.error(f"Error in check_sync: {e}")
+            return jsonify({"success": False, "message": str(e)})
+
+    @admin_bp.route("/sync_lists", methods=["POST"])
+    @admin_login_required
+    def sync_lists():
+        """Sync scraping list to match followed artists (Spotify)."""
+        try:
+            # Fetch followed artists from Spotify
+            followed = spotify_service.get_followed_artists()
+            followed_ids = set(a['id'] for a in followed)
+            # Load scraping list from master file
+            from app.config import Config
+            master_path = Config.FOLLOWED_ARTISTS_PATH
+            scraping_list = []
+            if os.path.exists(master_path):
+                with open(master_path, 'r', encoding='utf-8') as f:
+                    scraping_list = json.load(f)
+            # Build new scraping list: keep only followed, add missing
+            followed_map = {a['id']: a for a in followed}
+            new_scraping_list = []
+            today = datetime.now().strftime("%Y-%m-%d")
+            for fid in followed_ids:
+                # Try to preserve existing info if present
+                match = next((a for a in scraping_list if a.get('artist_id') == fid), None)
+                if match:
+                    new_scraping_list.append(match)
+                else:
+                    a = followed_map[fid]
+                    new_scraping_list.append({
+                        "artist_name": a.get('name', ''),
+                        "artist_id": a['id'],
+                        "url": a.get('external_urls', {}).get('spotify', ''),
+                        "date_added": today,
+                        "removed": False,
+                        "source": "sync"
+                    })
+            # Save new scraping list
+            with open(master_path, 'w', encoding='utf-8') as f:
+                json.dump(new_scraping_list, f, indent=2)
+            return jsonify({"success": True, "message": "Scraping list synced to followed artists.", "new_count": len(new_scraping_list)})
+        except Exception as e:
+            logger.error(f"Error in sync_lists: {e}")
+            return jsonify({"success": False, "message": str(e)})
     admin_bp = Blueprint('admin', __name__)
 
     def admin_artist_info():
