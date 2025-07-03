@@ -1,118 +1,5 @@
 {% extends "base.html" %}
 {% block title %}Admin - Artist Management{% endblock %}
-
-
-
-function selectArtistForAdd(artistId, artistNameEnc) {
-    const artistName = decodeURIComponent(artistNameEnc);
-    // Show top tracks
-    document.getElementById('artistTopTracks').innerHTML = '<div class="text-center py-2"><div class="spinner-border text-success"></div> Loading top tracks...</div>';
-    fetch(`/admin/artist_top_tracks?artist_id=${artistId}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success && data.tracks.length > 0) {
-                renderArtistTopTracks(artistId, artistName, data.tracks);
-            } else {
-                document.getElementById('artistTopTracks').innerHTML = '<div class="alert alert-warning">No top tracks found for this artist.</div>';
-            }
-        })
-        .catch(error => {
-            document.getElementById('artistTopTracks').innerHTML = '<div class="alert alert-danger">Failed to load top tracks: ' + error.message + '</div>';
-        });
-}
-
-function renderArtistTopTracks(artistId, artistName, tracks) {
-    let html = `<div class="card mt-3"><div class="card-header bg-success text-white"><strong>Top Tracks for ${artistName}</strong></div><div class="card-body">`;
-    html += '<div class="row">';
-    tracks.forEach(track => {
-        let albumImage = track.album_image;
-        if (isInvalidUrl(albumImage)) {
-            albumImage = '/static/default-album.png';
-        }
-        let previewHtml = '';
-        if (track.preview_url && !isInvalidUrl(track.preview_url)) {
-            previewHtml = `<audio controls src="${track.preview_url}" style="width:100%;margin-top:4px;"></audio>`;
-        }
-        html += `
-            <div class="col-md-4 mb-3">
-                <div class="card h-100">
-                    <img src="${albumImage}" class="card-img-top" alt="Album Art" style="height:120px;object-fit:cover;">
-                    <div class="card-body p-2">
-                        <div class="fw-bold">${track.name}</div>
-                        <div class="text-muted" style="font-size:0.9em;">${track.album}</div>
-                        <div style="font-size:0.9em;">${track.artists.join(', ')}</div>
-                        <a href="${track.url}" target="_blank" class="btn btn-link btn-sm p-0">Open in Spotify</a>
-                        ${previewHtml}
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-    html += '</div>';
-    html += `<button class="btn btn-success mt-2" onclick="confirmAddArtist('${artistId}', '${encodeURIComponent(artistName)}')"><i class="fas fa-plus"></i> Add & Follow This Artist</button>`;
-    html += '</div></div>';
-    document.getElementById('artistTopTracks').innerHTML = html;
-}
-
-function confirmAddArtist(artistId, artistNameEnc) {
-    const artistName = decodeURIComponent(artistNameEnc);
-    fetch('/admin/add_artist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ artist_id: artistId, artist_name: artistName })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showToast('Success', data.message, 'success');
-            document.getElementById('artistTopTracks').innerHTML = '';
-            document.getElementById('artistSearchResults').innerHTML = '';
-            document.getElementById('searchArtistForm').reset();
-        } else {
-            showToast('Error', data.message, 'danger');
-        }
-    })
-    .catch(error => {
-        showToast('Error', 'Failed to add artist: ' + error.message, 'danger');
-    });
-}
-
-function processArtistDirectly() {
-    const artistIdOrUrl = document.getElementById('processArtistIdInput').value.trim();
-    const artistName = document.getElementById('processArtistNameInput').value.trim();
-    if (!artistIdOrUrl) {
-        showToast('Error', 'Please enter a Spotify Artist ID or URL.', 'danger');
-        return;
-    }
-    let artistId = artistIdOrUrl;
-    // Extract Spotify ID from URL if needed
-    if (artistIdOrUrl.includes('spotify.com')) {
-        const match = artistIdOrUrl.match(/artist\/([a-zA-Z0-9]+)/);
-        if (match) artistId = match[1];
-    }
-    fetch('/admin/process_artist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ artist_id: artistId, artist_name: artistName })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showToast('Success', data.message, 'success');
-            document.getElementById('processArtistForm').reset();
-        } else {
-            showToast('Error', data.message, 'danger');
-        }
-    })
-    .catch(error => {
-        showToast('Error', 'Failed to process artist: ' + error.message, 'danger');
-    });
-}
-<!-- JS moved to bottom of file -->
-
-
-
-
 {% block content %}
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -139,9 +26,10 @@ function processArtistDirectly() {
                     </h5>
                 </div>
                 <div class="card-body">
-                    <form id="searchArtistForm" class="row g-3 mb-3">
-                        <div class="col-md-10">
-                            <input type="text" class="form-control" id="searchArtistInput" placeholder="Search for artist by name..." required>
+                    <form id="searchArtistForm" class="row g-3 mb-3" autocomplete="off">
+                        <div class="col-md-10 position-relative">
+                            <input type="text" class="form-control" id="searchArtistInput" placeholder="Search for artist by name..." required autocomplete="off">
+                            <div id="artistAutocomplete" class="list-group position-absolute w-100" style="z-index: 1000; display: none;"></div>
                         </div>
                         <div class="col-md-2">
                             <button type="submit" class="btn btn-info w-100">
@@ -180,6 +68,7 @@ function processArtistDirectly() {
     </div>
 </div>
 
+
 <!-- Success/Error Messages -->
 <div class="toast-container position-fixed bottom-0 end-0 p-3">
     <div id="toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
@@ -189,184 +78,6 @@ function processArtistDirectly() {
         </div>
         <div class="toast-body" id="toast-message">
             Message here
-        </div>
-    ));
-    document.getElementById('processed-suggestions').innerHTML = renderSuggestionList(processed, 'processed');
-}
-
-function renderSuggestionList(suggestionList, type) {
-    if (suggestionList.length === 0) {
-        return `<div class="alert alert-info">No ${type} suggestions found.</div>`;
-    }
-    
-    return suggestionList.map(suggestion => {
-        const date = new Date(suggestion.timestamp).toLocaleDateString();
-        const adminDate = suggestion.admin_action_date ? new Date(suggestion.admin_action_date).toLocaleDateString() : '';
-        
-        let statusBadge = '';
-        if (suggestion.already_followed) {
-            statusBadge = '<span class="badge bg-info ms-2">Already Followed</span>';
-        }
-        
-        let actionButtons = '';
-        if (type === 'pending') {
-            actionButtons = `
-                <div class="btn-group" role="group">
-                    <button class="btn btn-success btn-sm" onclick="followArtistNow('${suggestion.spotify_id}', '${suggestion.artist_name}', '${suggestion.timestamp}')">
-                        🎵 Follow & Track
-                    </button>
-                    <button class="btn btn-warning btn-sm" onclick="approveForTracking('${suggestion.timestamp}', '${suggestion.artist_name}')">
-                        👁️ Track Only
-                    </button>
-                    <button class="btn btn-danger btn-sm" onclick="rejectSuggestion('${suggestion.timestamp}', '${suggestion.artist_name}')">
-                        ✗ Reject
-                    </button>
-                </div>
-            `;
-        }
-        
-        return `
-            <div class="card mb-3">
-                <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col-md-6">
-                            <h5 class="card-title mb-1">
-                                ${suggestion.artist_name}
-                                ${statusBadge}
-                            </h5>
-                            <p class="card-text small text-white mb-1" style="opacity: 0.7;">
-                                Suggested: ${date}
-                                ${adminDate ? ` | Admin Action: ${adminDate}` : ''}
-                            </p>
-                            ${suggestion.spotify_url ? `
-                                <a href="${suggestion.spotify_url}" target="_blank" class="btn btn-link btn-sm p-0">
-                                    🎵 View on Spotify
-                                </a>
-                            ` : ''}
-                        </div>
-                        <div class="col-md-6 text-end">
-                            ${actionButtons}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
-function updateCounts() {
-    const processed = suggestions.filter(s => (
-        s.status === 'approved_for_follow' ||
-        s.status === 'processed' ||
-        (!s.status && s.admin_approved === true)
-    )).length;
-    document.getElementById('processed-count').textContent = processed;
-}
-
-function approveForFollow(suggestionId, artistName) {
-    adminAction(suggestionId, 'approve_follow', `Approved ${artistName} for following`);
-}
-
-function approveForTracking(suggestionId, artistName) {
-    if (confirm(`Add "${artistName}" to tracking without following on Spotify?`)) {
-        adminAction(suggestionId, 'process_track_only', `Added ${artistName} to tracking`);
-    }
-}
-
-function rejectSuggestion(suggestionId, artistName) {
-    if (confirm(`Are you sure you want to reject the suggestion for "${artistName}"?`)) {
-        adminAction(suggestionId, 'reject', `Rejected ${artistName}`);
-    }
-}
-
-function adminAction(suggestionId, action, successMessage) {
-    fetch('/admin/approve_suggestion', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            suggestion_id: suggestionId,
-            action: action
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showToast('Success', successMessage, 'success');
-            loadSuggestions(); // Reload to update UI
-        } else {
-            showToast('Error', data.message, 'danger');
-        }
-    })
-    .catch(error => {
-        showToast('Error', 'Failed to process action: ' + error.message, 'danger');
-    });
-}
-
-function followArtistNow(artistId, artistName, timestamp = null) {
-    if (!isAuthenticated) {
-        showToast('Authentication Required', 'Please log in with Spotify first to follow artists.', 'warning');
-        return;
-    }
-    
-    if (confirm(`Follow "${artistName}" on Spotify and add to tracking?`)) {
-        // Show loading state
-        const button = event.target;
-        const originalText = button.innerHTML;
-        button.innerHTML = '⏳ Following...';
-        button.disabled = true;
-        
-        // Debug logging
-        console.log('Processing suggestion:', {
-            artist_id: artistId,
-            artist_name: artistName,
-            suggestion_id: timestamp
-        });
-        
-        fetch('/admin/follow_artist', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                artist_id: artistId,
-                artist_name: artistName,
-                suggestion_id: timestamp // Pass the suggestion ID for automatic processing
-            })
-        })
-        .then(response => {
-            console.log('Response status:', response.status);
-            console.log('Response headers:', response.headers);
-            return response.json();
-        })
-        .then(data => {
-            console.log('Response data:', data);
-            if (data.success) {
-                // Show warning for already followed artists, success for newly followed
-                const toastType = data.warning ? 'warning' : 'success';
-                const toastTitle = data.warning ? 'Already Followed' : 'Success';
-                console.log('Showing toast:', toastTitle, data.message, toastType);
-                showToast(toastTitle, data.message, toastType);
-                // Reload suggestions to reflect the changes
-                loadSuggestions();
-            } else {
-                button.innerHTML = originalText;
-                button.disabled = false;
-                
-                if (data.auth_required) {
-                    showToast('Authentication Required', data.message, 'warning');
-                    // Check auth status again to update UI
-                    checkAuthStatus();
-                } else {
-                    showToast('Error', data.message, 'danger');
-                }
-            }
-        })
-        .catch(error => {
-            console.error('Fetch error:', error);
-            button.innerHTML = originalText;
-            button.disabled = false;
             showToast('Error', 'Failed to follow artist: ' + error.message, 'danger');
         });
     }
@@ -878,8 +589,165 @@ document.addEventListener('DOMContentLoaded', fetchUnprocessedArtists);
 {% raw %}
 <script>
 // All admin panel JS goes here. This block is fully raw to avoid Jinja2 interfering with template literals.
-// ...PASTE ALL JS FROM THE FILE HERE, from the very top to the very bottom, including all functions and event listeners...
-// (For brevity, the code is not repeated here, but in your actual file, paste all the JS code from the top of this file to here.)
+
+// --- BEGIN ALL ADMIN PANEL JS ---
+// --- Artist Search with Autocomplete Suggestions ---
+let autocompleteTimeout = null;
+const searchInput = document.getElementById('searchArtistInput');
+const autocompleteBox = document.getElementById('artistAutocomplete');
+
+if (searchInput && autocompleteBox) {
+    searchInput.addEventListener('input', function() {
+        const query = searchInput.value.trim();
+        if (autocompleteTimeout) clearTimeout(autocompleteTimeout);
+        if (!query) {
+            autocompleteBox.style.display = 'none';
+            autocompleteBox.innerHTML = '';
+            return;
+        }
+        autocompleteTimeout = setTimeout(() => {
+            fetch(`/admin/search_artist?q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.results.length > 0) {
+                        autocompleteBox.innerHTML = data.results.map(artist => {
+                            let imageUrl = artist.image;
+                            if (!imageUrl || imageUrl === undefined || imageUrl === null || imageUrl.trim() === '') {
+                                imageUrl = '/static/default-artist.png';
+                            }
+                            return `<button type="button" class="list-group-item list-group-item-action d-flex align-items-center" data-artist-id="${artist.id}" data-artist-name="${encodeURIComponent(artist.name)}">
+                                <img src="${imageUrl}" alt="" class="rounded me-2" style="width:32px;height:32px;object-fit:cover;">
+                                <span><strong>${artist.name}</strong></span>
+                                <span class="text-muted ms-2" style="font-size:0.9em;">Followers: ${artist.followers ? artist.followers.toLocaleString() : 'N/A'}</span>
+                            </button>`;
+                        }).join('');
+                        autocompleteBox.style.display = 'block';
+                    } else {
+                        autocompleteBox.innerHTML = '';
+                        autocompleteBox.style.display = 'none';
+                    }
+                })
+                .catch(() => {
+                    autocompleteBox.innerHTML = '';
+                    autocompleteBox.style.display = 'none';
+                });
+        }, 200);
+    });
+
+    // Handle click on suggestion
+    autocompleteBox.addEventListener('click', function(e) {
+        const btn = e.target.closest('button[data-artist-id]');
+        if (btn) {
+            const artistId = btn.getAttribute('data-artist-id');
+            const artistName = decodeURIComponent(btn.getAttribute('data-artist-name'));
+            searchInput.value = artistName;
+            autocompleteBox.style.display = 'none';
+            autocompleteBox.innerHTML = '';
+            // Show top tracks for confirmation
+            showArtistTopTracks(artistId, artistName);
+        }
+    });
+// Fetch and display top tracks for a selected artist
+function showArtistTopTracks(artistId, artistName) {
+    const topTracksDiv = document.getElementById('artistTopTracks');
+    if (!artistId) {
+        topTracksDiv.innerHTML = '';
+        return;
+    }
+    topTracksDiv.innerHTML = '<div class="text-center py-2"><div class="spinner-border text-info"></div> Loading top tracks...</div>';
+    fetch(`/admin/artist_top_tracks?artist_id=${encodeURIComponent(artistId)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.tracks && data.tracks.length > 0) {
+                let html = `<div class='card mt-3' style="background: rgba(40, 40, 60, 0.95); border: 1px solid rgba(0, 255, 127, 0.3);">
+                    <div class='card-header' style="background: rgba(0, 255, 127, 0.1); border-bottom: 1px solid rgba(0, 255, 127, 0.3); color: #00ff7f;">
+                        <strong>Top Tracks for ${artistName}</strong>
+                    </div>
+                    <ul class='list-group list-group-flush' style="background: transparent;">`;
+                data.tracks.forEach(track => {
+                    html += `<li class='list-group-item d-flex align-items-center' style="background: transparent; color: #fff; border-color: rgba(0,255,127,0.1);">
+                        <img src='${track.album_image || '/static/default-artist.png'}' alt='' class='rounded me-3' style='width:40px;height:40px;object-fit:cover;'>
+                        <span><strong>${track.name}</strong></span>
+                        <a href='${track.url}' target='_blank' class='btn btn-sm btn-outline-success ms-auto'>Play <i class='fas fa-play'></i></a>
+                    </li>`;
+                });
+                html += '</ul></div>';
+                topTracksDiv.innerHTML = html;
+            } else {
+                topTracksDiv.innerHTML = `<div class='alert alert-warning'>No top tracks found for this artist.</div>`;
+            }
+        })
+        .catch(() => {
+            topTracksDiv.innerHTML = `<div class='alert alert-danger'>Failed to load top tracks.</div>`;
+        });
+}
+
+    // Hide autocomplete when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!autocompleteBox.contains(e.target) && e.target !== searchInput) {
+            autocompleteBox.style.display = 'none';
+        }
+    });
+}
+
+function searchArtist() {
+    const query = document.getElementById('searchArtistInput').value.trim();
+    if (!query) {
+        showToast('Error', 'Please enter an artist name to search.', 'danger');
+        return;
+    }
+    document.getElementById('artistSearchResults').innerHTML = '<div class="text-center py-2"><div class="spinner-border text-info"></div> Searching...</div>';
+    fetch(`/admin/search_artist?q=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.results.length > 0) {
+                renderArtistSearchResults(data.results);
+            } else {
+                document.getElementById('artistSearchResults').innerHTML = `<div class="alert alert-warning">${data.message || 'No artists found.'}</div>`;
+            }
+        })
+        .catch(error => {
+            document.getElementById('artistSearchResults').innerHTML = '<div class="alert alert-danger">Search failed: ' + error.message + '</div>';
+        });
+}
+
+function renderArtistSearchResults(artists) {
+    let html = '<div class="list-group">';
+    artists.forEach(artist => {
+        let imageUrl = artist.image;
+        if (!imageUrl || imageUrl === undefined || imageUrl === null || imageUrl.trim() === '') {
+            imageUrl = '/static/default-artist.png';
+        }
+        html += `
+            <button type="button" class="list-group-item list-group-item-action d-flex align-items-center" onclick="selectArtistForAdd('${artist.id}', '${encodeURIComponent(artist.name)}')">
+                <img src="${imageUrl}" alt="" class="rounded me-3" style="width:48px;height:48px;object-fit:cover;">
+                <div>
+                    <div><strong>${artist.name}</strong></div>
+                    <div class="text-muted" style="font-size:0.9em;">Followers: ${artist.followers ? artist.followers.toLocaleString() : 'N/A'} &nbsp; <a href="${artist.url}" target="_blank">Spotify <i class="fab fa-spotify"></i></a></div>
+                </div>
+            </button>
+        `;
+    });
+    html += '</div>';
+    document.getElementById('artistSearchResults').innerHTML = html;
+}
+
+// Move all other JS functions here (from above)
+// ...existing code for selectArtistForAdd, renderArtistTopTracks, confirmAddArtist, processArtistDirectly, etc...
+
+// Add event listener for search form
+document.addEventListener('DOMContentLoaded', function() {
+    const searchForm = document.getElementById('searchArtistForm');
+    if (searchForm) {
+        searchForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            searchArtist();
+        });
+    }
+    // ...existing code for fetchUnprocessedArtists, etc...
+});
+
+// --- END ALL ADMIN PANEL JS ---
 </script>
 {% endraw %}
 {% endblock %}
