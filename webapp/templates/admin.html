@@ -163,7 +163,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const followMissingBtn = document.getElementById('followMissingBtn');
     const syncResult = document.getElementById('syncResult');
     const downloadBackupBtn = document.getElementById('downloadBackupBtn');
+    const runScrapingBtn = document.getElementById('runScrapingBtn');
     let lastSyncData = null;
+
+    // Attach event listener for Run Scraping button
+    if (runScrapingBtn) {
+        runScrapingBtn.addEventListener('click', runScraping);
+    }
 
     checkSyncBtn.addEventListener('click', function() {
         syncResult.innerHTML = 'Checking... <i class="fas fa-spinner fa-spin"></i>';
