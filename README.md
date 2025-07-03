@@ -64,15 +64,14 @@ A modern web-based system for tracking Spotify artists' monthly listener counts 
 
 ## 🌟 Features
 
-- **🎵 Web-based Artist Management** - Manage followed artists through a modern web interface
-- **📅 Current Month Leaderboard** - Track artist performance for the current calendar month (e.g., "June 2025")
-- **📊 Real-Time Progress Tracking** - Live progress bars and artist counters during scraping operations
-- **✨ Artist Suggestion System** - Users can suggest new artists to track
-- **👨‍💼 Admin Panel** - Review, approve, and manage artist suggestions with real-time feedback
-- **🔗 Direct Spotify Integration** - Follow artists directly from the web interface using OAuth
-- **🤖 Automated Scraping** - Collect monthly listener data automatically
-- **📊 Data Persistence** - JSON storage with master results tracking
-- **📝 Comprehensive Logging** - Detailed logs for troubleshooting
+* **🎵 Web-based Artist Management** - Manage followed artists through a modern web interface
+* **📅 Current Month Leaderboard** - Track artist performance for the current calendar month (e.g., "June 2025")
+* **📊 Real-Time Progress Tracking** - Live progress bars and artist counters during scraping operations
+* **👨‍💼 Admin Panel** - Admins can directly add and follow artists for tracking (no suggestions/approvals)
+* **🔗 Direct Spotify Integration** - Follow artists directly from the web interface using OAuth
+* **🤖 Automated Scraping** - Collect monthly listener data automatically
+* **📊 Data Persistence** - JSON storage with master results tracking
+* **📝 Comprehensive Logging** - Detailed logs for troubleshooting
 
 ---
 
@@ -140,20 +139,7 @@ python app.py
 1. **Home/Leaderboard**: View artist performance rankings
 2. **Search**: Find and explore artist data
 3. **Artist Pages**: Detailed views with historical data
-4. **Suggest Artists**: Submit new artists for tracking
-
-### Admin Panel
-1. **Login**: Visit `/admin_login` and enter your admin password
-2. **OAuth Setup**: After login, click "Login with Spotify" to authenticate API access
-3. **Review Suggestions**: View pending, approved, and rejected suggestions
-4. **Process Suggestions**: 
-   - **🎵 Follow & Track** - Immediately follows artist on Spotify and adds to tracking (direct to processed)
-   - **👁️ Track Only** - Adds to tracking without following on Spotify (direct to processed)
-   - **✗ Reject** - Rejects the suggestion
-5. **Tab Management**: Suggestions automatically move between tabs based on status:
-   - **Pending Review** - New suggestions awaiting admin action
-   - **Processed** - Completed suggestions (followed/tracked)
-   - **Rejected** - Declined suggestions
+4. **Admin Panel**: Admins can directly add and follow artists for tracking (no suggestions/approvals)
 
 ### Data Collection
 1. **Manual Collection**: Run scripts individually
@@ -223,16 +209,12 @@ Spotify Monthly Listener Extract/
 - `GET /` - Home page/leaderboard
 - `GET /search` - Search artists with top tracks preview
 - `GET /artist/<slug>/<id>` - Artist detail page
-- `POST /suggest_artist` - Submit artist suggestion
 - `GET /api/artist/<artist_id>/top-tracks` - Get artist's top tracks (JSON)
 
 ### Admin Endpoints
 - `GET /admin` - Admin panel interface
-- `GET /admin/suggestions` - Get all suggestions (JSON)
-- `POST /admin/approve_suggestion` - Approve/reject suggestions
-- `POST /admin/follow_artist` - Follow artist on Spotify and process suggestion
+- `POST /admin/follow_artist` - Follow artist on Spotify and add to tracking
 - `POST /admin/run_scraping` - Start automated scraping job
-- `POST /admin/process_suggestions` - Process approved suggestions in batch
 - `GET /admin/scraping_status/<job_id>` - Check scraping job status
 
 ### Authentication Endpoints
@@ -247,7 +229,7 @@ Spotify Monthly Listener Extract/
 
 ### 1. Artist Management
 ```
-User Suggestion → Admin Review → Direct Processing (Follow & Track OR Track Only) → Processed
+Admin adds/follows artist → Immediately ready for scraping/tracking
 ```
 
 ### 2. Data Collection
@@ -319,7 +301,7 @@ If you were using the old dual-account system, see `MIGRATION_GUIDE.md` for deta
 
 **Key Changes:**
 - ❌ No more main/scrape account separation
-- ❌ `spotify_follow_sync.py` script is deprecated (but still present)
+- ❌ `spotify_follow_sync.py` script is deprecated (see `REMOVED_LEGACY_FILES.md`)
 - ✅ Single account for all operations
 - ✅ Web-based OAuth authentication
 - ✅ Simplified setup and configuration
