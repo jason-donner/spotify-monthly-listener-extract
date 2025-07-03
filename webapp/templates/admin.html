@@ -17,6 +17,27 @@
 
             <!-- Spotify Authentication Status -->
             <div id="auth-status" class="alert" style="display: none;"></div>
+        <div id="spotify-auth-section" class="mb-4 text-center">
+            <div id="spotify-auth-message" class="mb-2" style="color: #b2f7ef; font-size: 1.1rem;"></div>
+            <button id="spotify-login-btn" class="btn btn-lg btn-spotify fw-bold" style="background: #1db954; color: #fff; display: none;">
+                <i class="fab fa-spotify"></i> Login to Spotify
+            </button>
+            <button id="spotify-logout-btn" class="btn btn-outline-danger btn-sm ms-2" style="display: none;">
+                <i class="fas fa-sign-out-alt"></i> Logout from Spotify
+            </button>
+        </div>
+
+<style>
+    .btn-spotify {
+        background: #1db954 !important;
+        color: #fff !important;
+        border: none;
+    }
+    .btn-spotify:hover, .btn-spotify:focus {
+        background: #1ed760 !important;
+        color: #fff !important;
+    }
+</style>
 
             <!-- Search and Add Artist Section -->
             <div class="card mb-4 shadow-lg" style="background: #23243a; border: 1px solid #00ff7f;">
@@ -594,6 +615,38 @@ function formatScrapingOutput(output) {
 {% raw %}
 <script>
 // All admin panel JS goes here. This block is fully raw to avoid Jinja2 interfering with template literals.
+
+// --- Spotify Auth UI ---
+function updateSpotifyAuthUI(auth) {
+    const msg = document.getElementById('spotify-auth-message');
+    const loginBtn = document.getElementById('spotify-login-btn');
+    const logoutBtn = document.getElementById('spotify-logout-btn');
+    if (auth && auth.authenticated) {
+        msg.innerHTML = `<span style='color:#1db954;'><i class='fab fa-spotify'></i> Connected to Spotify${auth.display_name ? ` as <b>${auth.display_name}</b>` : ''}</span>`;
+        loginBtn.style.display = 'none';
+        logoutBtn.style.display = '';
+    } else {
+        msg.innerHTML = `<span style='color:#ff4d4d;'><i class='fab fa-spotify'></i> Not connected to Spotify</span>`;
+        loginBtn.style.display = '';
+        logoutBtn.style.display = 'none';
+    }
+}
+
+function fetchSpotifyAuthStatus() {
+    fetch('/admin/auth_status').then(r => r.json()).then(auth => {
+        updateSpotifyAuthUI(auth);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    fetchSpotifyAuthStatus();
+    document.getElementById('spotify-login-btn').onclick = function() {
+        window.location.href = '/admin/login';
+    };
+    document.getElementById('spotify-logout-btn').onclick = function() {
+        window.location.href = '/admin/spotify_logout';
+    };
+});
 
 // --- BEGIN ALL ADMIN PANEL JS ---
 // --- Artist Search with Autocomplete Suggestions ---
