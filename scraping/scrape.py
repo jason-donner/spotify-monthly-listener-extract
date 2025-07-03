@@ -709,13 +709,13 @@ def main():
             results.extend(retry_results)
             failed_urls = still_failed
 
-        save_results(results, today)
+        append_to_master(results)
         report(results, failed_urls)
 
     except KeyboardInterrupt:
         safe_print("\n\nScraping interrupted by user. Saving partial results...")
         if 'results' in locals():
-            save_results(results, today)
+            append_to_master(results)
             report(results, failed_urls if 'failed_urls' in locals() else [])
         safe_print("Partial results saved.")
     except Exception as e:
@@ -724,7 +724,7 @@ def main():
         safe_print("Try running the script again later or with fewer concurrent requests.")
         if 'results' in locals() and results:
             safe_print("Saving partial results...")
-            save_results(results, today)
+            append_to_master(results)
             safe_print("Partial results saved.")
         raise
     finally:
