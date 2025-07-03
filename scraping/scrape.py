@@ -622,20 +622,31 @@ def main():
     args = parse_args()
     today = now()
     driver = None
-    
+
     try:
         # Test network connectivity first, but allow override with --skip-network-test
         if not getattr(args, 'skip_network_test', False):
             if not test_network_connectivity():
                 print("Network connectivity issues detected. Proceeding anyway due to possible false positive (e.g., bot blocking).")
-        
+
+        print("[DEBUG] scrape.py running in cwd:", os.getcwd())
+        print(f"[DEBUG] args.input: {args.input}")
+        if args.input and os.path.exists(args.input):
+            with open(args.input, 'r', encoding='utf-8') as f:
+                preview = f.read(500)
+                print("[DEBUG] First 500 chars of input file:")
+                print(preview)
+
         urls = load_urls(args.input)
         print("\n[DEBUG] Loaded input artist list:")
-        for u in urls:
+        for i, u in enumerate(urls):
             if isinstance(u, dict):
                 print(f"  - {u.get('artist_name', 'Unknown')} | {u.get('artist_id', extract_artist_id(u.get('url', '')))} | {u.get('url', '')}")
             else:
                 print(f"  - [raw url] {u}")
+            if i > 10:
+                print("  ... (truncated)")
+                break
 
         # Load existing listeners to prevent duplicates (unless bypassed)
         if args.allow_duplicates:
@@ -644,8 +655,10 @@ def main():
         else:
             existing_artist_ids = load_existing_listeners(today)
         print("[DEBUG] Existing artist_ids for today:")
-        for eid in existing_artist_ids:
+        for eid in list(existing_artist_ids)[:10]:
             print(f"  - {eid}")
+        if len(existing_artist_ids) > 10:
+            print("  ... (truncated)")
 
         print("\nSetting up Chrome WebDriver...")
         try:
@@ -658,7 +671,7 @@ def main():
             print("3. Try running with --headless flag")
             print("4. Restart your computer to clear stuck processes")
             return
-        
+
         # Initial navigation with retry logic
         max_init_retries = 3
         for attempt in range(max_init_retries):
@@ -681,18 +694,18 @@ def main():
             input("Please sign in to Spotify in the opened browser window, then press Enter here to continue...")
 
         bar_format = "{l_bar}{bar}| {n_fmt}/{total_fmt} artists | Elapsed: {elapsed} | ETA: {remaining}"
-        
+
         results, failed_urls = scrape_all(driver, urls, today, bar_format, existing_artist_ids)
-        
+
         if failed_urls:
             print(Fore.YELLOW + f"\nRetrying {len(failed_urls)} failed URLs...")
             retry_results, still_failed = retry_failed(driver, failed_urls, today)
             results.extend(retry_results)
             failed_urls = still_failed
-            
+
         save_results(results, today)
         report(results, failed_urls)
-        
+
     except KeyboardInterrupt:
         print(Fore.YELLOW + "\n\nScraping interrupted by user. Saving partial results...")
         if 'results' in locals():

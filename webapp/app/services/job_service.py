@@ -132,6 +132,11 @@ class JobService:
             # Build the command
             cmd = [sys.executable, scrape_script]
             
+            # Always pass the input file explicitly
+            data_dir = os.path.abspath(os.path.join(script_dir, "..", "data", "results"))
+            input_file = os.path.join(data_dir, "spotify-followed-artists-master.json")
+            cmd.extend(["--input", input_file])
+
             # Add arguments
             cmd.append("--no-prompt")  # Skip login prompt
             
@@ -151,17 +156,19 @@ class JobService:
                 # Full scraping with scrape.py (now supports headless too)
                 pass
             
-            logger.info(f"Running scraping command for job {job_id}: {' '.join(cmd)}")
-            
+
+            logger.info(f"Running scraping command for job {job_id}: {' '.join(cmd)} (cwd={os.path.dirname(scrape_script)})")
+
             # Update status to running
             update_job_status({'status': 'running'})
-            
+
             # Run the script with real-time progress tracking
             progress_data = {'current': 0, 'total': 0, 'phase': 'Initializing'}
             output_lines = []
             error_lines = []
-            
+
             try:
+                # Set working directory to the scraping folder
                 process = subprocess.Popen(
                     cmd,
                     cwd=os.path.dirname(scrape_script),
@@ -172,12 +179,11 @@ class JobService:
                     universal_newlines=True,
                     env=env
                 )
-                
-                # Read output line by line for progress tracking
+                # Read output line by line for progress tracking and print to stdout
                 for line in iter(process.stdout.readline, ''):
                     if line:
                         output_lines.append(line.rstrip())
-                        
+                        print(f"[SCRAPER] {line.rstrip()}")
                         # Parse progress information from output
                         parsed_progress = self._parse_progress_line(line.rstrip())
                         if parsed_progress:
