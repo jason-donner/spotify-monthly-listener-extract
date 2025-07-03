@@ -295,11 +295,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
         </div>
         <div class="toast-body" id="toast-message">
-            Message here
-            showToast('Error', 'Failed to follow artist: ' + error.message, 'danger');
-        });
-    }
-}
+
 
 function showToast(title, message, type) {
     const toast = document.getElementById('toast');
@@ -333,6 +329,10 @@ function showToast(title, message, type) {
     bsToast.show();
 }
 
+// Ensure showToast is globally accessible
+window.showToast = showToast;
+}
+
 // Scraping functionality
 let currentScrapingJobId = null;
 let scrapingStatusInterval = null;
@@ -345,13 +345,11 @@ function runScraping() {
     const alert = document.getElementById('scrapingAlert');
     const statusText = document.getElementById('scrapingStatusText');
     const spinner = document.getElementById('scrapingSpinner');
-    
     // Disable button and show status
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting...';
     status.style.display = 'block';
     alert.className = 'alert alert-info';
-    
     let statusMessage = 'Starting scraping...';
     if (todayOnly) {
         statusMessage = 'Starting scraping for today\'s new artists...';
@@ -360,11 +358,9 @@ function runScraping() {
     }
     statusText.textContent = statusMessage;
     spinner.style.display = 'inline-block';
-    
     // Hide previous outputs
     document.getElementById('scrapingOutput').style.display = 'none';
     document.getElementById('scrapingError').style.display = 'none';
-    
     fetch('/admin/run_scraping', {
         method: 'POST',
         headers: {
@@ -381,10 +377,8 @@ function runScraping() {
         if (data.success) {
             currentScrapingJobId = data.job_id;
             statusText.textContent = 'Scraping is running...';
-            
             // Start polling for status updates
             scrapingStatusInterval = setInterval(checkScrapingStatus, 2000);
-            
             showToast('Success', 'Scraping started successfully!', 'success');
         } else {
             resetScrapingUI();
@@ -396,6 +390,7 @@ function runScraping() {
         showToast('Error', 'Failed to start scraping: ' + error.message, 'danger');
     });
 }
+window.runScraping = runScraping;
 
 function checkScrapingStatus() {
     if (!currentScrapingJobId) return;
@@ -873,10 +868,10 @@ function showArtistTopTracks(artistId, artistName) {
     }
     topTracksDiv.innerHTML = '<div class="text-center py-2"><div class="spinner-border text-info"></div> Loading top tracks...</div>';
     // Fetch artist info and top tracks in parallel
-    Promise.all([
-        fetch(`/admin/artist_info?artist_id=${encodeURIComponent(artistId)}`).then(r => r.json()),
-        fetch(`/admin/artist_top_tracks?artist_id=${encodeURIComponent(artistId)}`).then(r => r.json())
-    ]).then(([artistData, tracksData]) => {
+Promise.all([
+    fetch(`/admin/artist_info?artist_id=${encodeURIComponent(artistId)}`).then(r => r.json()),
+    fetch(`/admin/artist_top_tracks?artist_id=${encodeURIComponent(artistId)}`).then(r => r.json())
+]).then(([artistData, tracksData]) => {
         // Render top tracks
         if (tracksData.success && tracksData.tracks && tracksData.tracks.length > 0) {
             let html = `<div class='card mt-3' style="background: rgba(40, 40, 60, 0.95); border: 1px solid rgba(0, 255, 127, 0.3);">
@@ -1013,10 +1008,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // --- END ALL ADMIN PANEL JS ---
 // Attach event listener for Run Scraping button (ensure runScraping is defined)
+// Attach event listener for Run Scraping button (ensure runScraping is defined)
 document.addEventListener('DOMContentLoaded', function() {
     const runScrapingBtn = document.getElementById('runScrapingBtn');
     if (runScrapingBtn) {
-        runScrapingBtn.addEventListener('click', runScraping);
+        runScrapingBtn.addEventListener('click', function() {
+            if (typeof runScraping === 'function') {
+                runScraping();
+            } else {
+                showToast('Error', 'Scraping function is not available.', 'danger');
+            }
+        });
     }
 });
 </script>
