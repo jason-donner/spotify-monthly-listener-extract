@@ -325,8 +325,20 @@
                         <span style="color:#1DB954;font-weight:bold;font-size:1.13em;">{{ row.artist }}</span>
                     </a>
                     </td>
-                    <td>{{ "{:,}".format(row.start) }}</td>
-                    <td>{{ "{:,}".format(row.end) }}</td>
+                    <td>
+                        {% if row.start is not none %}
+                            {{ "{:,}".format(row.start) }}
+                        {% else %}
+                            <span style="color:#aaa;">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if row.end is not none %}
+                            {{ "{:,}".format(row.end) }}
+                        {% else %}
+                            <span style="color:#aaa;">—</span>
+                        {% endif %}
+                    </td>
                     <td>
                         {% if row.change > 0 %}
                             <span style="color:#1DB954;">+{{ "{:,}".format(row.change) }}</span>

@@ -172,23 +172,21 @@ class DataService:
         """
         data = self.load_data()
         artist_changes = {}
-        
         # Set date range based on current_month parameter
         if current_month:
-            # Get start and end of current month
             now = datetime.now()
             start_of_month = datetime(now.year, now.month, 1)
             cutoff = start_of_month
         else:
-            # Use traditional 30-day lookback
             cutoff = datetime.now() - timedelta(days=30)
-        
-        # Group data by artist
+
+        # Group data by artist_id (fallback to name if missing)
         for entry in data:
-            # Defensive: skip if missing required fields
-            if "artist_name" not in entry or "monthly_listeners" not in entry or "date" not in entry:
+            if "monthly_listeners" not in entry or "date" not in entry:
                 continue
-            artist = entry["artist_name"]
+            artist_id = entry.get("artist_id")
+            artist_name = entry.get("artist_name", "Unknown Artist")
+            group_key = artist_id if artist_id else artist_name.lower()
             date_str = entry["date"]
             try:
                 if '-' in date_str:
@@ -198,16 +196,18 @@ class DataService:
             except Exception:
                 continue
             listeners = entry["monthly_listeners"]
-            if artist not in artist_changes:
-                artist_changes[artist] = []
-            # Use 'artist_url' if present, else fallback to 'url'
             artist_url = entry.get("artist_url") or entry.get("url", "")
-            artist_changes[artist].append({
+            if group_key not in artist_changes:
+                artist_changes[group_key] = {
+                    "artist_id": artist_id,
+                    "artist_name": artist_name,
+                    "artist_url": artist_url,
+                    "slug": self.slugify(artist_name),
+                    "records": []
+                }
+            artist_changes[group_key]["records"].append({
                 "date": date,
-                "listeners": listeners,
-                "artist_url": artist_url,
-                "artist_id": entry.get("artist_id"),
-                "slug": self.slugify(artist)
+                "listeners": listeners
             })
         
         leaderboard_data = []
@@ -228,36 +228,26 @@ class DataService:
             end_date = None
         
         # Remove excessive debug prints in production
-        for artist, records in artist_changes.items():
-            recent = [r for r in records if r["date"] >= cutoff]
-            if len(recent) < 2:
+        for group in artist_changes.values():
+            records = [r for r in group["records"] if r["date"] >= cutoff]
+            if len(records) < 2:
                 continue
-            recent.sort(key=lambda x: x["date"])
-            start = recent[0]["listeners"]
-            end = recent[-1]["listeners"]
+            records.sort(key=lambda x: x["date"])
+            start = records[0]["listeners"]
+            end = records[-1]["listeners"]
             if start == 0 or (start < 50 and end < 50):
                 continue
             change = end - start
-            percent_change = ((end - start) / start) * 100
-            # Get artist metadata
-            artist_id = None
-            artist_url = None
-            slug = None
-            for r in reversed(recent):
-                if r and r.get("artist_id"):
-                    artist_id = r["artist_id"]
-                    artist_url = r.get("artist_url")
-                    slug = r.get("slug")
-                    break
+            percent_change = ((end - start) / start) * 100 if start != 0 else 0
             leaderboard_data.append({
-                "artist": artist,
-                "artist_id": artist_id,
-                "slug": slug,
+                "artist": group["artist_name"],
+                "artist_id": group["artist_id"],
+                "slug": group["slug"],
                 "change": change,
                 "percent_change": percent_change,
                 "start": start,
                 "end": end,
-                "artist_url": artist_url
+                "artist_url": group["artist_url"]
             })
         
         # Filter by tier
