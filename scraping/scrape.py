@@ -433,9 +433,9 @@ def scrape_all(driver, urls, today, bar_format, existing_artist_ids, wait_time=0
         print(Fore.YELLOW + "No new artists to scrape - all artists already have data for today!")
         return results, failed_urls
 
-    is_tty = sys.stdout.isatty()
-    with tqdm(total=len(urls_to_scrape), desc="Scraping artists", bar_format=bar_format if is_tty else None,
-              colour="#1DB954" if is_tty else None, disable=not is_tty, dynamic_ncols=is_tty, file=sys.stdout) as pbar:
+    # Always show tqdm progress bar, even if not a TTY (for continuous bar in logs and subprocesses)
+    with tqdm(total=len(urls_to_scrape), desc="Scraping artists", bar_format=bar_format,
+              colour="#1DB954", disable=False, dynamic_ncols=True, file=sys.stdout) as pbar:
         for i, url in enumerate(urls_to_scrape):
             try:
                 # Output progress for admin dashboard
